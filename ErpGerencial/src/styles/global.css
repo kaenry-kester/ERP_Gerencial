@@ -1,0 +1,126 @@
+:root {
+  font-family: Inter, "Segoe UI", sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #1f2937;
+  background: #f3f6fb;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --background-primary: #f3f6fb;
+  --background-secondary: #ffffff;
+  --card-border: #dfe7f3;
+  --primary-color: #155dfc;
+  --primary-dark: #0f47d6;
+  --text-strong: #111827;
+  --text-muted: #5f6b7a;
+  --surface-soft: #edf4ff;
+  --shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  background: var(--background-primary);
+}
+
+body {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #eef4ff 0%, #f5f7fb 100%);
+  color: var(--text-strong);
+}
+
+button,
+input {
+  font: inherit;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.primary-button,
+.primary2-button,
+.secondary-button,
+.ghost-button,
+.danger-button {
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    filter 0.2s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.primary-button {
+  background-color: #155dfc;
+  color: #fff;
+  padding: 0.9rem 1.2rem;
+  box-shadow: 0 14px 28px rgba(21, 93, 252, 0.2);
+}
+
+.primary2-button {
+  background-color: #dddcdc;
+  color: #222222;
+  padding: 0.9rem 1.2rem;
+  box-shadow: 0 14px 28px rgba(21, 93, 252, 0.2);
+}
+
+.secondary-button {
+  background: var(--surface-soft);
+  color: var(--primary-color);
+  padding: 0.7rem 0.9rem;
+}
+
+.ghost-button {
+  background: transparent;
+  color: var(--text-muted);
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--card-border);
+}
+
+.danger-button {
+  background: #fef2f2;
+  color: #b91c1c;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.85rem;
+  border: 1px solid #fecaca;
+}
+
+.primary-button:not(.registered-login-button):hover,
+.secondary-button:hover,
+.ghost-button:hover,
+.danger-button:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.02);
+}
+
+.eyebrow {
+  font-size: 0.76rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--primary-color);
+  font-weight: 700;
+  margin-bottom: 8px;
+}
