@@ -1,0 +1,19 @@
+.app-footer {
+  width: min(1200px, calc(100% - 32px));
+  margin: 0 auto 24px;
+  padding: 18px 8px 0;
+  border-top: 1px solid var(--card-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+@media (max-width: 640px) {
+  .app-footer {
+    flex-direction: column;
+    text-align: center;
+    gap: 8px;
+  }
+}
