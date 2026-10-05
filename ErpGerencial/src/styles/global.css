@@ -1,23 +1,65 @@
+/*
+  Tema Órion — paleta do sistema: preto, azul e branco (tirados do logo).
+  Preto (fundo do logo), azul petróleo (seta) e branco (nome), com neutros frios de apoio.
+  Pensado para leitura confortável (dislexia):
+  fonte Lexend, texto grande, espaçamento generoso,
+  fundo branco suave (sem branco puro) e texto quase preto (sem preto puro).
+*/
 :root {
-  font-family: Inter, "Segoe UI", sans-serif;
-  line-height: 1.5;
+  font-family: "Lexend", "Segoe UI", Verdana, sans-serif;
+  font-size: 18px;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+  word-spacing: 0.08em;
   font-weight: 400;
-  color: #1f2937;
-  background: #f3f6fb;
+  color: #11161a;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --background-primary: #f3f6fb;
-  --background-secondary: #ffffff;
-  --card-border: #dfe7f3;
-  --primary-color: #155dfc;
-  --primary-dark: #0f47d6;
-  --text-strong: #111827;
-  --text-muted: #5f6b7a;
-  --surface-soft: #edf4ff;
-  --shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.08);
+  /* Marca */
+  --preto: #0b0a09;
+  --azul: #145369;
+  --azul-inicio: #19607a;
+  --azul-fim: #145369;
+  --azul-escuro: #0f4255;
+  --azul-claro: #e3eef2;
+  --azul-vivo: #1f7a99; /* azul mais claro, para detalhes sobre o preto */
+  /* Marrom da caixa de papelão do logo — usado apenas nos ícones */
+  --icone-inicio: #8a663b;
+  --icone-fim: #7a5a33;
+  --branco: #f8f8f8;
+
+  /* Estrutura (neutros frios, combinando com preto e azul) */
+  --cinza-escuro: #1c2329;
+  --cinza: #5b6670;
+  --cinza-claro: #e6eaed;
+  --cinza-claro-hover: #e0e5e8; /* hover leve: quase igual ao cinza-claro */
+
+  --fundo: #eef1f3;
+  --superficie: #f7f8f9;
+  --borda: #cdd4da;
+  --texto: #11161a;
+  --texto-suave: #4a5560;
+  --foco: #1f7a99;
+  --erro: #b42318;
+  --erro-fundo: #fdecea;
+  --info-fundo: var(--azul-claro);
+
+  --raio: 6px;
+  --sombra: 0 12px 32px rgba(11, 10, 9, 0.1);
+
+  /* Nomes antigos mantidos para compatibilidade com telas anteriores */
+  --background-primary: var(--fundo);
+  --background-secondary: var(--superficie);
+  --card-border: var(--borda);
+  --primary-color: var(--azul);
+  --primary-dark: var(--azul-escuro);
+  --text-strong: var(--texto);
+  --text-muted: var(--texto-suave);
+  --surface-soft: var(--azul-claro);
+  --shadow-soft: var(--sombra);
 }
 
 * {
@@ -27,18 +69,21 @@
 }
 
 html {
-  background: var(--background-primary);
+  background: var(--fundo);
 }
 
 body {
   min-height: 100vh;
-  background: linear-gradient(180deg, #eef4ff 0%, #f5f7fb 100%);
-  color: var(--text-strong);
+  background: var(--fundo);
+  color: var(--texto);
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
+  letter-spacing: inherit;
 }
 
 img {
@@ -55,72 +100,88 @@ a {
   min-height: 100vh;
 }
 
+/* Garante que [hidden] vença classes que definem display */
+[hidden] {
+  display: none !important;
+}
+
+/* Foco bem visível para navegação por teclado */
+:focus-visible {
+  outline: 3px solid var(--foco);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Botões genéricos (usados também pelas telas antigas) */
 .primary-button,
 .primary2-button,
 .secondary-button,
 .ghost-button,
 .danger-button {
   border: none;
-  border-radius: 12px;
+  border-radius: 6px;
   font-weight: 600;
   cursor: pointer;
   transition:
-    transform 0.2s ease,
-    filter 0.2s ease;
-  text-decoration: none;
+    filter 0.25s ease,
+    background-color 0.25s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.5rem;
 }
 
 .primary-button {
-  background-color: #155dfc;
+  background: linear-gradient(160deg, var(--azul-inicio) 0%, var(--azul-fim) 100%);
   color: #fff;
   padding: 0.9rem 1.2rem;
-  box-shadow: 0 14px 28px rgba(21, 93, 252, 0.2);
+}
+
+/* Hover leve: escurece o azul só um pouco, mantendo o degradê */
+.primary-button:hover {
+  filter: brightness(0.94);
 }
 
 .primary2-button {
-  background-color: #dddcdc;
-  color: #222222;
+  background-color: var(--cinza-claro);
+  color: var(--texto);
   padding: 0.9rem 1.2rem;
-  box-shadow: 0 14px 28px rgba(21, 93, 252, 0.2);
 }
 
 .secondary-button {
-  background: var(--surface-soft);
-  color: var(--primary-color);
+  background: var(--azul-claro);
+  color: var(--azul-escuro);
   padding: 0.7rem 0.9rem;
 }
 
 .ghost-button {
-  background: transparent;
-  color: var(--text-muted);
+  background: var(--cinza-claro);
+  color: var(--cinza-escuro);
   padding: 0.7rem 0.9rem;
-  border: 1px solid var(--card-border);
+}
+
+.ghost-button:hover {
+  background: var(--cinza-claro-hover);
 }
 
 .danger-button {
-  background: #fef2f2;
-  color: #b91c1c;
+  background: var(--erro-fundo);
+  color: var(--erro);
   padding: 0.4rem 0.7rem;
   font-size: 0.85rem;
-  border: 1px solid #fecaca;
-}
-
-.primary-button:not(.registered-login-button):hover,
-.secondary-button:hover,
-.ghost-button:hover,
-.danger-button:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.02);
 }
 
 .eyebrow {
-  font-size: 0.76rem;
-  letter-spacing: 0.12em;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--primary-color);
+  color: var(--azul);
   font-weight: 700;
   margin-bottom: 8px;
 }
