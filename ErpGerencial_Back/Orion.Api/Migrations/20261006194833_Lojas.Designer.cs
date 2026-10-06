@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Orion.Api.Data;
@@ -11,9 +12,11 @@ using Orion.Api.Data;
 namespace Orion.Api.Migrations
 {
     [DbContext(typeof(OrionDbContext))]
-    partial class OrionDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261006194833_Lojas")]
+    partial class Lojas
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -113,11 +116,6 @@ namespace Orion.Api.Migrations
                         .HasColumnType("character varying(254)")
                         .HasColumnName("email");
 
-                    b.Property<string>("GoogleId")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("google_id");
-
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(120)
@@ -125,10 +123,12 @@ namespace Orion.Api.Migrations
                         .HasColumnName("nome");
 
                     b.Property<string>("SenhaHash")
+                        .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("senha_hash");
 
                     b.Property<string>("Telefone")
+                        .IsRequired()
                         .HasMaxLength(11)
                         .HasColumnType("character varying(11)")
                         .HasColumnName("telefone");
@@ -136,9 +136,6 @@ namespace Orion.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
-                        .IsUnique();
-
-                    b.HasIndex("GoogleId")
                         .IsUnique();
 
                     b.ToTable("usuarios", (string)null);

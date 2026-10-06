@@ -8,9 +8,14 @@ public class Usuario
     /// <summary>Sempre salvo em minúsculas e sem espaços nas pontas.</summary>
     public required string Email { get; set; }
 
-    /// <summary>Só dígitos, com DDD (10 ou 11).</summary>
-    public required string Telefone { get; set; }
+    /// <summary>Só dígitos, com DDD (10 ou 11). Vazio em contas criadas com o Google.</summary>
+    public string? Telefone { get; set; }
 
-    public string SenhaHash { get; set; } = "";
+    /// <summary>Vazio em contas criadas com o Google (elas entram só pelo Google).</summary>
+    public string? SenhaHash { get; set; }
+
+    /// <summary>Identificador da conta Google ("sub" do token), quando ligada.</summary>
+    public string? GoogleId { get; set; }
+
     public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
 }
