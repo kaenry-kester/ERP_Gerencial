@@ -1,0 +1,404 @@
+/*
+  Telas das lojas — todas usam a estrutura de src/styles/tela-dividida.css.
+  - Suas lojas (lista + cadastrar nova)
+  - Cadastro da loja (reaproveita o formulário de duas colunas de cadastro.css)
+  - Entrar na loja (reaproveita a coluna do login.css)
+  (O painel de dentro da loja fica em src/pages/loja.)
+*/
+
+/* ---------- Conta / sair, no pé do painel preto ---------- */
+
+.painel-conta {
+  margin-top: auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(0.6rem, 2vh, 1rem);
+  padding-top: clamp(1rem, 3vh, 1.5rem);
+  border-top: 1px solid rgba(248, 248, 248, 0.14);
+}
+
+.painel-conta-textos {
+  max-width: 100%;
+}
+
+.painel-conta-nome {
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--branco);
+}
+
+.painel-conta-email {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: #c3cad0;
+  overflow-wrap: anywhere;
+}
+
+/* Mesmo visual do "Voltar" do painel (seletor com .tela-painel vence o .ghost-button) */
+.tela-painel .botao-painel {
+  min-height: clamp(40px, 6vh, 48px);
+  background: rgba(248, 248, 248, 0.1);
+  color: var(--branco);
+}
+
+.tela-painel .botao-painel:hover {
+  background: rgba(248, 248, 248, 0.15);
+}
+
+/* ---------- Suas lojas ---------- */
+
+.lojas-conteudo {
+  width: min(760px, calc(100% - var(--area-esquerda) - var(--area-direita)));
+  margin: 0 var(--area-direita) 0 var(--area-esquerda);
+  padding-block: clamp(1rem, 4vh, 2.5rem) var(--tela-base);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.75rem, 2.2vh, 1.25rem);
+}
+
+.lojas-carregando {
+  color: var(--texto-suave);
+  font-weight: 600;
+}
+
+.lojas-lista {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.6rem, 1.8vh, 1rem);
+}
+
+/* Cada loja: linha cinza clicável que abre o login da loja */
+.loja-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: clamp(72px, 11vh, 92px);
+  padding: clamp(0.6rem, 1.6vh, 0.9rem) 1.2rem;
+  border-radius: 8px;
+  background: var(--cinza-claro);
+  color: var(--cinza-escuro);
+  transition:
+    background-color 0.25s ease,
+    transform 0.25s ease;
+}
+
+.loja-item:hover {
+  background: var(--cinza-claro-hover);
+  transform: translateY(-1px);
+}
+
+/* Ícones na cor da caixa de papelão do logo */
+.loja-item-icone,
+.loja-nova-icone {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: linear-gradient(160deg, var(--icone-inicio) 0%, var(--icone-fim) 100%);
+  color: var(--branco);
+}
+
+.loja-item-icone {
+  width: 50px;
+  height: 50px;
+}
+
+.loja-item-textos {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.loja-item-nome {
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.loja-item-detalhe {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--texto-suave);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loja-item-entrar {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 700;
+  color: var(--azul);
+  transition: transform 0.25s ease;
+}
+
+.loja-item:hover .loja-item-entrar {
+  transform: translateX(2px);
+}
+
+/* Cadastrar nova loja: azul (ação de destaque) */
+.loja-nova {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: clamp(64px, 10vh, 80px);
+  padding: clamp(0.6rem, 1.6vh, 0.9rem) 1.2rem;
+  border-radius: 8px;
+  background: linear-gradient(160deg, var(--azul-inicio) 0%, var(--azul-fim) 100%);
+  color: #fff;
+  transition:
+    filter 0.25s ease,
+    transform 0.25s ease;
+}
+
+.loja-nova:hover {
+  filter: brightness(0.95);
+  transform: translateY(-1px);
+}
+
+/* Sobre o azul, o ícone fica num quadrado azul mais escuro */
+.loja-nova-icone {
+  width: 44px;
+  height: 44px;
+  background: rgba(11, 10, 9, 0.22);
+}
+
+.loja-nova-textos {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.loja-nova-titulo {
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.loja-nova-descricao {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: #d6e6ec;
+}
+
+/* Sem lojas: o cadastro é a única ação, então fica maior (como o Login da tela inicial) */
+.loja-nova.destaque {
+  min-height: clamp(96px, 16vh, 132px);
+  padding-inline: 1.4rem;
+  box-shadow: 0 8px 20px rgba(20, 83, 105, 0.28);
+}
+
+.loja-nova.destaque .loja-nova-icone {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(160deg, var(--icone-inicio) 0%, var(--icone-fim) 100%);
+}
+
+.loja-nova.destaque .loja-nova-titulo {
+  font-size: clamp(1.4rem, 2.6vw, 1.8rem);
+}
+
+.loja-nova.destaque .loja-nova-descricao {
+  font-size: 0.95rem;
+}
+
+/* ---------- Cadastro da loja ---------- */
+
+/*
+  Nove campos: um pouco mais largo que o cadastro da conta, com campos mais baixos
+  e mais espaço entre eles, para cada campo ficar bem separado do próximo.
+*/
+.loja-cadastro {
+  --campo-altura: clamp(36px, 5.2vh, 46px);
+  --linha-gap: clamp(0.8rem, 2.6vh, 1.6rem);
+  --rotulo-gap: clamp(0.2rem, 0.7vh, 0.4rem);
+}
+
+.loja-cadastro .cadastro-form {
+  width: min(820px, calc(100% - var(--area-esquerda) - var(--area-direita)));
+  padding-top: clamp(0.5rem, 2vh, 2rem);
+  column-gap: clamp(1.25rem, 3vw, 2.25rem);
+}
+
+.loja-cadastro .campo input {
+  font-size: 1rem;
+}
+
+/* O botão acompanha a altura menor dos campos */
+.loja-cadastro .botao-acao {
+  min-height: clamp(44px, 6.6vh, 54px);
+}
+
+/*
+  Em tela grande as etapas não existem: os campos entram direto na grade do formulário.
+  (Seletores com .loja-form: o global.css é carregado depois e o .primary-button dele
+  também define display.)
+*/
+.loja-form .etapa {
+  display: contents;
+}
+
+.loja-form .etapa-indicador,
+.loja-form .botao-continuar,
+.loja-form .botao-etapa-voltar {
+  display: none;
+}
+
+.loja-acoes {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.loja-acoes .botao-acao {
+  flex: 1;
+  min-width: 0;
+}
+
+/*
+  Telas pequenas (mesma media query de MODO_ETAPAS em LojaCadastroPage.tsx):
+  uma coluna, começando logo abaixo da faixa, em duas etapas —
+  1) dados da empresa → Continuar; 2) dono e senha → Voltar / Cadastrar loja.
+*/
+@media (max-width: 1279px), (max-height: 760px) {
+  .loja-cadastro .loja-form {
+    grid-template-columns: minmax(0, 1fr);
+    width: min(620px, calc(100% - var(--area-esquerda) - var(--area-direita)));
+    margin-block: 0 auto;
+    padding-top: clamp(0.75rem, 3vh, 2rem);
+  }
+
+  .loja-form.etapa-1 .etapa-dono,
+  .loja-form.etapa-2 .etapa-empresa,
+  .loja-form.etapa-1 .botao-cadastrar {
+    display: none;
+  }
+
+  .loja-form .etapa-indicador {
+    display: block;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--azul);
+  }
+
+  .loja-form.etapa-1 .botao-continuar,
+  .loja-form.etapa-2 .botao-etapa-voltar {
+    display: inline-flex;
+  }
+
+  /* Voltar só do tamanho do conteúdo; a ação principal fica com o resto */
+  .loja-acoes .botao-etapa-voltar {
+    flex: 0 0 auto;
+    width: auto;
+    padding-inline: 1.1rem;
+  }
+}
+
+/* ---------- Entrar na loja ---------- */
+
+.login-alternativas.unica {
+  grid-template-columns: 1fr;
+}
+
+/* ---------- Tablets e celulares ---------- */
+
+@media (max-width: 900px) {
+  /* Na faixa preta compacta, só o botão de sair, no canto direito */
+  .painel-conta {
+    order: 3;
+    width: auto;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+  }
+
+  .painel-conta-textos,
+  .botao-painel-texto {
+    display: none;
+  }
+
+  .tela-painel .botao-painel {
+    min-height: 0;
+    padding: 0.45rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .loja-item,
+  .loja-nova {
+    gap: 0.8rem;
+    padding-inline: 0.9rem;
+  }
+
+  .loja-item-icone {
+    width: 42px;
+    height: 42px;
+  }
+
+  .loja-item-entrar-texto {
+    display: none;
+  }
+
+  .loja-item-nome {
+    font-size: 1.05rem;
+  }
+
+  .loja-item-detalhe {
+    font-size: 0.82rem;
+  }
+
+  .loja-nova.destaque .loja-nova-icone {
+    width: 52px;
+    height: 52px;
+  }
+
+  .loja-nova-icone {
+    width: 40px;
+    height: 40px;
+  }
+
+  .loja-nova-titulo {
+    font-size: 1.05rem;
+  }
+
+  .loja-nova.destaque .loja-nova-titulo {
+    font-size: 1.3rem;
+  }
+
+  /* O título já diz tudo; a descrição só aparece quando é a única ação */
+  .loja-nova:not(.destaque) .loja-nova-descricao {
+    display: none;
+  }
+
+  .loja-nova-descricao {
+    font-size: 0.85rem;
+  }
+
+  .loja-cadastro .loja-form {
+    padding-top: 0.5rem;
+  }
+
+  /* Ao lado do Voltar, "Cadastrar loja" cabe em uma linha só sem o ícone */
+  .loja-acoes .botao-cadastrar svg {
+    display: none;
+  }
+
+  .loja-form .etapa-indicador {
+    font-size: 0.84rem;
+  }
+}
+
+/* Celulares baixos: um pouco menos de espaço entre os campos, para tudo caber na tela */
+@media (max-width: 600px) and (max-height: 700px) {
+  .loja-cadastro {
+    --linha-gap: 0.65rem;
+    --rotulo-gap: 0.15rem;
+  }
+}

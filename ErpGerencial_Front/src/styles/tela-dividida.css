@@ -135,6 +135,11 @@
   color: var(--erro);
 }
 
+/* Título curto da faixa: só nos celulares estreitos (ver o fim deste arquivo) */
+.faixa-titulo-curto {
+  display: none;
+}
+
 /* Campos compactos, acompanhando a altura da janela */
 .tela-dividida .campo {
   gap: var(--rotulo-gap);
@@ -323,5 +328,21 @@
 
   .tela-dividida .botao-voltar {
     min-height: 34px;
+  }
+}
+
+/* Celulares estreitos (360px): a frase da faixa vira a versão curta, para ocupar uma linha */
+@media (max-width: 400px) {
+  .faixa-titulo-longo {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .faixa-titulo-curto {
+    display: inline;
   }
 }
