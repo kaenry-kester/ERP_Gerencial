@@ -148,6 +148,12 @@ a {
   filter: brightness(0.94);
 }
 
+/* Enquanto espera o servidor */
+.primary-button:disabled {
+  cursor: wait;
+  filter: saturate(0.6);
+}
+
 .primary2-button {
   background-color: var(--cinza-claro);
   color: var(--texto);

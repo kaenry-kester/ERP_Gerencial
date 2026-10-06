@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "api": "dotnet run --project ../ErpGerencial_Back/Orion.Api --launch-profile http",
+    "dev:tudo": "concurrently -k -n API,FRONT -c blue,cyan \"npm:api\" \"npm:dev\""
   },
   "dependencies": {
     "react": "^19.2.8",
@@ -19,6 +21,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
+    "concurrently": "^10.0.5",
     "oxlint": "^1.79.0",
     "typescript": "~6.0.2",
     "vite": "^8.2.2"

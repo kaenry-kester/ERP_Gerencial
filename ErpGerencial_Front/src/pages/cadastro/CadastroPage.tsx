@@ -3,7 +3,14 @@ import { Link } from 'react-router-dom'
 import BotaoGoogle from '../../components/formulario/BotaoGoogle'
 import CampoSenha from '../../components/formulario/CampoSenha'
 import CampoTexto from '../../components/formulario/CampoTexto'
-import { IconeCadastro, IconeCheck, IconePendente, IconeVoltar } from '../../components/icones/Icones'
+import {
+  IconeAlerta,
+  IconeCadastro,
+  IconeCheck,
+  IconePendente,
+  IconeVoltar,
+} from '../../components/icones/Icones'
+import { cadastrar, ErroApi, salvarSessao } from '../../services/api'
 import {
   emailValido,
   formatarTelefone,
@@ -17,6 +24,7 @@ import './cadastro.css'
 type Campo = 'nome' | 'email' | 'telefone' | 'senha' | 'confirmacao'
 type Valores = Record<Campo, string>
 type Erros = Partial<Record<Campo, string>>
+type Aviso = { tipo: 'ok' | 'erro'; texto: string } | null
 
 const ORDEM_CAMPOS: Campo[] = ['nome', 'email', 'telefone', 'senha', 'confirmacao']
 
@@ -68,9 +76,12 @@ export default function CadastroPage() {
   const [valores, setValores] = useState<Valores>(VALORES_INICIAIS)
   const [tocados, setTocados] = useState<Partial<Record<Campo, boolean>>>({})
   const [enviado, setEnviado] = useState(false)
-  const [aviso, setAviso] = useState('')
+  const [aviso, setAviso] = useState<Aviso>(null)
+  const [enviando, setEnviando] = useState(false)
+  // Erro vindo da API para um campo (ex.: e-mail já cadastrado); some quando o campo muda.
+  const [errosServidor, setErrosServidor] = useState<Erros>({})
 
-  const erros = validar(valores)
+  const erros: Erros = { ...errosServidor, ...validar(valores) }
   const requisitos = requisitosSenha(valores.senha)
 
   // Erros só aparecem depois que a pessoa sai do campo ou tenta enviar.
@@ -81,13 +92,15 @@ export default function CadastroPage() {
       ...atual,
       [campo]: campo === 'telefone' ? formatarTelefone(valor) : valor,
     }))
-    setAviso('')
+    setErrosServidor((atual) => ({ ...atual, [campo]: undefined }))
+    setAviso(null)
   }
 
   const tocar = (campo: Campo) => () => setTocados((atual) => ({ ...atual, [campo]: true }))
 
-  const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (enviando) return
     setEnviado(true)
 
     const primeiroInvalido = ORDEM_CAMPOS.find((campo) => erros[campo])
@@ -96,13 +109,37 @@ export default function CadastroPage() {
       return
     }
 
-    // TODO: enviar para a API ASP.NET quando o back-end estiver pronto.
-    setAviso('Dados corretos! A criação da conta chega na próxima etapa.')
+    setEnviando(true)
+    setAviso(null)
+    try {
+      const sessao = await cadastrar({
+        nome: valores.nome,
+        email: valores.email,
+        telefone: valores.telefone,
+        senha: valores.senha,
+      })
+      salvarSessao(sessao)
+      setValores(VALORES_INICIAIS)
+      setTocados({})
+      setEnviado(false)
+      setAviso({ tipo: 'ok', texto: `Conta criada! Olá, ${sessao.nome.split(' ')[0]}.` })
+    } catch (erro) {
+      if (erro instanceof ErroApi && erro.status === 409) {
+        setErrosServidor({ email: 'Já cadastrado' })
+        document.getElementById('email')?.focus()
+      }
+      setAviso({
+        tipo: 'erro',
+        texto: erro instanceof ErroApi ? erro.message : 'Algo deu errado. Tente de novo.',
+      })
+    } finally {
+      setEnviando(false)
+    }
   }
 
   // TODO: ligar ao Google Identity Services + validação do token na API ASP.NET.
   const cadastrarComGoogle = () =>
-    setAviso('O cadastro com o Google será ligado ao servidor na próxima etapa.')
+    setAviso({ tipo: 'ok', texto: 'O cadastro com o Google será ligado ao servidor na próxima etapa.' })
 
   return (
     <main className="tela-dividida cadastro">
@@ -134,11 +171,11 @@ export default function CadastroPage() {
           >
             Preencha seus dados para concluir seu cadastro:
           </h2>
-          <p className="tela-status" role="status">
+          <p className={aviso?.tipo === 'erro' ? 'tela-status erro' : 'tela-status'} role="status">
             {aviso && (
               <>
-                <IconeCheck tamanho={16} />
-                {aviso}
+                {aviso.tipo === 'erro' ? <IconeAlerta tamanho={16} /> : <IconeCheck tamanho={16} />}
+                {aviso.texto}
               </>
             )}
           </p>
@@ -225,9 +262,9 @@ export default function CadastroPage() {
           </div>
 
           <div className="cadastro-acoes largo">
-            <button type="submit" className="primary-button botao-acao">
+            <button type="submit" className="primary-button botao-acao" disabled={enviando}>
               <IconeCadastro tamanho={22} />
-              Criar minha conta
+              {enviando ? 'Criando conta...' : 'Criar minha conta'}
             </button>
             <BotaoGoogle
               texto="Cadastre-se com uma conta Google"

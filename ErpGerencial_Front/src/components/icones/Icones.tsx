@@ -82,6 +82,16 @@ export function IconeCheck({ tamanho = 24 }: IconeProps) {
   )
 }
 
+export function IconeAlerta({ tamanho = 24 }: IconeProps) {
+  return (
+    <svg {...base(tamanho)} strokeWidth={2.5}>
+      <circle cx="12" cy="12" r="9" />
+      <line x1="12" y1="7.5" x2="12" y2="12.5" />
+      <line x1="12" y1="16.5" x2="12" y2="16.5" />
+    </svg>
+  )
+}
+
 export function IconePendente({ tamanho = 24 }: IconeProps) {
   return (
     <svg {...base(tamanho)}>

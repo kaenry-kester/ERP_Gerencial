@@ -3,7 +3,14 @@ import { Link } from 'react-router-dom'
 import BotaoGoogle from '../../components/formulario/BotaoGoogle'
 import CampoSenha from '../../components/formulario/CampoSenha'
 import CampoTexto from '../../components/formulario/CampoTexto'
-import { IconeCadastro, IconeCheck, IconeLogin, IconeVoltar } from '../../components/icones/Icones'
+import {
+  IconeAlerta,
+  IconeCadastro,
+  IconeCheck,
+  IconeLogin,
+  IconeVoltar,
+} from '../../components/icones/Icones'
+import { entrar, ErroApi, salvarSessao } from '../../services/api'
 import { emailValido } from '../../utils/validacao'
 import '../../styles/acesso.css'
 import '../../styles/tela-dividida.css'
@@ -13,6 +20,8 @@ type Erros = {
   email?: string
   senha?: string
 }
+
+type Aviso = { tipo: 'ok' | 'erro'; texto: string } | null
 
 function validar(email: string, senha: string): Erros {
   const erros: Erros = {}
@@ -31,18 +40,20 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [enviado, setEnviado] = useState(false)
-  const [aviso, setAviso] = useState('')
+  const [aviso, setAviso] = useState<Aviso>(null)
+  const [enviando, setEnviando] = useState(false)
 
   // Erros aparecem depois da primeira tentativa e somem assim que o campo é corrigido.
   const erros = enviado ? validar(email, senha) : {}
 
   const alterar = (setter: (valor: string) => void) => (valor: string) => {
     setter(valor)
-    setAviso('')
+    setAviso(null)
   }
 
-  const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (enviando) return
     setEnviado(true)
 
     const novos = validar(email, senha)
@@ -52,13 +63,28 @@ export default function LoginPage() {
       return
     }
 
-    // TODO: enviar para a API ASP.NET quando o back-end estiver pronto.
-    setAviso('Dados conferidos! O acesso será ligado ao servidor na próxima etapa.')
+    setEnviando(true)
+    setAviso(null)
+    try {
+      const sessao = await entrar({ email, senha })
+      salvarSessao(sessao)
+      setSenha('')
+      setEnviado(false)
+      setAviso({ tipo: 'ok', texto: `Acesso liberado! Olá, ${sessao.nome.split(' ')[0]}.` })
+    } catch (erro) {
+      if (erro instanceof ErroApi && erro.status === 401) document.getElementById('senha')?.focus()
+      setAviso({
+        tipo: 'erro',
+        texto: erro instanceof ErroApi ? erro.message : 'Algo deu errado. Tente de novo.',
+      })
+    } finally {
+      setEnviando(false)
+    }
   }
 
   // TODO: ligar ao Google Identity Services + validação do token na API ASP.NET.
   const entrarComGoogle = () =>
-    setAviso('O acesso com o Google será ligado ao servidor na próxima etapa.')
+    setAviso({ tipo: 'ok', texto: 'O acesso com o Google será ligado ao servidor na próxima etapa.' })
 
   return (
     <main className="tela-dividida login">
@@ -82,11 +108,11 @@ export default function LoginPage() {
           <h2 id="login-titulo" className={aviso ? 'tela-faixa-titulo sr-only' : 'tela-faixa-titulo'}>
             Entre com seus dados para acessar o sistema:
           </h2>
-          <p className="tela-status" role="status">
+          <p className={aviso?.tipo === 'erro' ? 'tela-status erro' : 'tela-status'} role="status">
             {aviso && (
               <>
-                <IconeCheck tamanho={16} />
-                {aviso}
+                {aviso.tipo === 'erro' ? <IconeAlerta tamanho={16} /> : <IconeCheck tamanho={16} />}
+                {aviso.texto}
               </>
             )}
           </p>
@@ -115,9 +141,9 @@ export default function LoginPage() {
               erro={erros.senha}
             />
 
-            <button type="submit" className="primary-button botao-acao">
+            <button type="submit" className="primary-button botao-acao" disabled={enviando}>
               <IconeLogin tamanho={22} />
-              Entrar
+              {enviando ? 'Entrando...' : 'Entrar'}
             </button>
           </form>
 

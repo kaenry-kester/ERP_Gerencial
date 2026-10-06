@@ -131,6 +131,10 @@
   display: none;
 }
 
+.tela-status.erro {
+  color: var(--erro);
+}
+
 /* Campos compactos, acompanhando a altura da janela */
 .tela-dividida .campo {
   gap: var(--rotulo-gap);
