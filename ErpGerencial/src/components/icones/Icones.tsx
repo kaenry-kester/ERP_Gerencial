@@ -73,3 +73,19 @@ export function IconeSeta({ tamanho = 24 }: IconeProps) {
     </svg>
   )
 }
+
+export function IconeCheck({ tamanho = 24 }: IconeProps) {
+  return (
+    <svg {...base(tamanho)} strokeWidth={3}>
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  )
+}
+
+export function IconePendente({ tamanho = 24 }: IconeProps) {
+  return (
+    <svg {...base(tamanho)}>
+      <circle cx="12" cy="12" r="4" />
+    </svg>
+  )
+}

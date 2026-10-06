@@ -1,52 +1,6 @@
-/* Estilos das telas de acesso: login e cadastro */
-
-.acesso-pagina {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2rem;
-  padding: 2rem 1rem;
-  background:
-    linear-gradient(180deg, #e7ebee 0%, var(--fundo) 100%);
-}
-
-.acesso-cartao {
-  width: min(720px, 100%);
-  background: var(--superficie);
-  border: 1px solid var(--borda);
-  border-radius: 10px;
-  box-shadow: var(--sombra);
-  padding: clamp(1.5rem, 4vw, 3rem);
-}
-
-.acesso-cartao.estreito {
-  width: min(480px, 100%);
-}
-
-.acesso-titulo {
-  font-size: clamp(1.6rem, 4vw, 2.1rem);
-  font-weight: 700;
-  color: var(--cinza-escuro);
-  line-height: 1.3;
-}
-
-.acesso-texto {
-  margin-top: 0.5rem;
-  font-size: 1.05rem;
-  color: var(--texto-suave);
-  max-width: 60ch;
-}
+/* Campos de formulário e botões compartilhados pelas telas de acesso (login e cadastro) */
 
 /* ---------- Formulários ---------- */
-
-.formulario {
-  margin-top: 1.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
 
 .campo {
   display: flex;
@@ -54,14 +8,17 @@
   gap: 0.4rem;
 }
 
+/* Rótulo à esquerda e mensagem de erro à direita, na mesma linha */
+.campo-cabecalho {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
 .campo-rotulo {
   font-weight: 600;
   color: var(--cinza-escuro);
-}
-
-.campo-ajuda {
-  font-size: 0.88rem;
-  color: var(--texto-suave);
 }
 
 .campo-entrada {
@@ -80,10 +37,11 @@
   border-radius: 6px;
 }
 
-.campo input:focus {
+/* Ao clicar no campo, nada muda: mesma borda, sem sombra nem contorno */
+.campo input:focus,
+.campo input:focus-visible {
   outline: none;
-  border-color: var(--azul);
-  box-shadow: 0 0 0 4px rgba(20, 83, 105, 0.22);
+  box-shadow: none;
 }
 
 .campo input[aria-invalid='true'] {
@@ -91,8 +49,10 @@
 }
 
 .campo-erro {
-  font-size: 0.92rem;
-  font-weight: 500;
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: right;
   color: var(--erro);
 }
 
@@ -122,41 +82,11 @@
   background: var(--cinza-claro-hover);
 }
 
-.aviso {
-  padding: 0.9rem 1rem;
-  border-radius: 6px;
-  font-size: 0.98rem;
-  border-left: 4px solid;
-}
-
-.aviso.erro {
-  background: var(--erro-fundo);
-  border-color: var(--erro);
-  color: var(--erro);
-}
-
-.aviso.info {
-  background: var(--info-fundo);
-  border-color: var(--azul);
-  color: var(--cinza-escuro);
-}
-
 .botao-acao {
   width: 100%;
   min-height: 60px;
   font-size: 1.1rem;
   border-radius: 6px;
-}
-
-.acesso-rodape-form {
-  margin-top: 1.5rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--cinza-claro);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
 }
 
 .link-destaque {
@@ -168,15 +98,5 @@
 
 .botao-voltar {
   min-height: 48px;
-}
-
-/* ---------- Telas pequenas ---------- */
-
-@media (max-width: 600px) {
-  .acesso-rodape-form {
-    flex-direction: column;
-    align-items: stretch;
-    text-align: center;
-  }
 }
 

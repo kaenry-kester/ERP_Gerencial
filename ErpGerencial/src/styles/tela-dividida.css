@@ -1,0 +1,323 @@
+/*
+  Estrutura compartilhada das telas de acesso (login e cadastro):
+  página inteira dividida em duas áreas de cor, sem caixa.
+  - Painel preto (mais estreito) com logo, título e texto.
+  - Área branca com faixa cinza de ponta a ponta e o conteúdo da tela.
+
+  Sem rolagem: a página tem exatamente a altura da janela e os tamanhos
+  (campos, espaços, botões) acompanham a altura disponível.
+*/
+
+.tela-dividida {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 4fr 8fr;
+  background: var(--superficie);
+
+  /* Medidas que acompanham a altura da janela */
+  --tela-topo: clamp(1rem, 6vh, 4.5rem);
+  --tela-base: clamp(0.75rem, 4vh, 3rem);
+  --campo-altura: clamp(40px, 6.6vh, 56px);
+  --linha-gap: clamp(0.5rem, 2.1vh, 1.35rem);
+  --rotulo-gap: clamp(0.15rem, 0.6vh, 0.4rem);
+  --area-esquerda: clamp(1.5rem, 5vw, 5rem);
+  --area-direita: clamp(1.5rem, 6vw, 6rem);
+}
+
+/* ---------- Painel da marca ---------- */
+
+.tela-painel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  /* Topo menor: o logo fica no canto superior esquerdo, como na tela inicial */
+  padding: clamp(1rem, 3.5vh, 2rem) clamp(1.5rem, 4vw, 4rem) var(--tela-base) clamp(1.5rem, 5vw, 5rem);
+  background: var(--preto);
+  color: var(--branco);
+}
+
+.tela-logo-link {
+  display: block;
+}
+
+.tela-logo {
+  width: clamp(150px, min(17vw, 30vh), 260px);
+  height: auto;
+}
+
+.tela-titulo {
+  margin-top: clamp(1.5rem, 8vh, 4.5rem);
+  font-size: clamp(1.5rem, min(2.8vw, 5vh), 2.4rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0;
+  color: var(--branco);
+}
+
+/* Linha azul (cor da seta do logo), igual à da tela inicial */
+.tela-titulo::after {
+  content: '';
+  display: block;
+  width: 72px;
+  height: 4px;
+  margin-top: clamp(0.7rem, 2.5vh, 1.25rem);
+  background: var(--azul-vivo);
+}
+
+.tela-texto {
+  margin-top: clamp(0.7rem, 2.5vh, 1.25rem);
+  max-width: 30ch;
+  font-size: 1.02rem;
+  line-height: 1.6;
+  color: #c3cad0;
+}
+
+/* Voltar no canto inferior esquerdo do painel preto
+   (seletor com .tela-painel para vencer o .ghost-button do CSS global) */
+.tela-painel .botao-voltar-painel {
+  margin-top: auto;
+  background: rgba(248, 248, 248, 0.1);
+  color: var(--branco);
+}
+
+.tela-painel .botao-voltar-painel:hover {
+  background: rgba(248, 248, 248, 0.15);
+}
+
+/* ---------- Área de conteúdo ---------- */
+
+.tela-area {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  /* Segurança: se a janela for baixa demais, rola só esta área (a página nunca rola) */
+  overflow-y: auto;
+}
+
+/* Faixa cinza de ponta a ponta da área branca, com a instrução da tela */
+.tela-faixa {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 1.5rem;
+  padding: clamp(0.8rem, 3vh, 1.5rem) var(--area-direita) clamp(0.8rem, 3vh, 1.5rem)
+    var(--area-esquerda);
+  background: var(--cinza-claro);
+}
+
+.tela-faixa-titulo {
+  font-size: clamp(1rem, min(1.8vw, 2.8vh), 1.2rem);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--cinza-escuro);
+}
+
+/* Aviso que aparece no lugar da frase da faixa */
+.tela-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--azul);
+}
+
+.tela-status:empty {
+  display: none;
+}
+
+/* Campos compactos, acompanhando a altura da janela */
+.tela-dividida .campo {
+  gap: var(--rotulo-gap);
+}
+
+.tela-dividida .campo-rotulo {
+  font-size: clamp(0.88rem, 2.1vh, 1rem);
+}
+
+.tela-dividida .campo input {
+  min-height: var(--campo-altura);
+  padding-block: 0.4rem;
+}
+
+/* ---------- Botões ---------- */
+
+.tela-dividida .botao-acao {
+  min-height: clamp(46px, 7.5vh, 60px);
+}
+
+.tela-rodape {
+  padding-top: clamp(0.5rem, 1.8vh, 1.25rem);
+  border-top: 1px solid var(--cinza-claro);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.tela-dividida .botao-voltar {
+  min-height: clamp(40px, 6vh, 48px);
+}
+
+/* ---------- Tablets e celulares: empilhado ---------- */
+
+@media (max-width: 900px) {
+  .tela-dividida {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    --tela-topo: clamp(0.75rem, 2.5vh, 1.5rem);
+    --tela-base: clamp(0.75rem, 2.5vh, 1.5rem);
+    --linha-gap: clamp(0.45rem, 1.5vh, 1rem);
+    --area-esquerda: clamp(1.25rem, 6vw, 3rem);
+    --area-direita: clamp(1.25rem, 6vw, 3rem);
+  }
+
+  /* Faixa compacta: [←] [logo] ............ [título] */
+  .tela-painel {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: clamp(0.6rem, 2vw, 1rem);
+    padding: clamp(0.75rem, 2vh, 1.25rem) clamp(1.25rem, 6vw, 3rem);
+  }
+
+  .tela-logo-link {
+    margin-right: auto;
+  }
+
+  /* Voltar só com a seta, no canto esquerdo da faixa */
+  .tela-painel .botao-voltar-painel {
+    order: -1;
+    margin-top: 0;
+    min-height: 0;
+    padding: 0.4rem;
+  }
+
+  .botao-voltar-texto {
+    display: none;
+  }
+
+  .tela-logo {
+    width: clamp(120px, 34vw, 220px);
+  }
+
+  .tela-titulo {
+    margin-top: 0;
+    font-size: clamp(1.05rem, 4.4vw, 1.5rem);
+  }
+
+  .tela-titulo::after,
+  .tela-texto,
+  .tela-painel-extra {
+    display: none;
+  }
+}
+
+/* Celulares: textos e espaços compactos para tudo caber na altura da tela */
+@media (max-width: 600px) {
+  /* Na faixa estreita, o título sai (a faixa cinza logo abaixo já orienta a tela) */
+  .tela-titulo {
+    display: none;
+  }
+
+  .tela-dividida {
+    --campo-altura: clamp(40px, 6vh, 48px);
+    --linha-gap: clamp(0.4rem, 1.3vh, 0.75rem);
+    --rotulo-gap: 0.15rem;
+  }
+
+  .tela-dividida .campo-rotulo {
+    font-size: 0.86rem;
+  }
+
+  .tela-faixa {
+    padding-block: 0.55rem;
+  }
+
+  .tela-faixa-titulo,
+  .tela-status {
+    font-size: 0.86rem;
+    letter-spacing: 0;
+  }
+
+  .tela-dividida .campo-erro {
+    font-size: 0.8rem;
+  }
+
+  .tela-dividida .campo input {
+    padding-inline: 0.7rem;
+    font-size: 0.95rem;
+  }
+
+  /* Botão de mostrar senha só com o ícone */
+  .tela-dividida .botao-mostrar-texto {
+    display: none;
+  }
+
+  .tela-dividida .campo-entrada input.com-botao {
+    padding-right: 2.9rem;
+  }
+
+  .tela-dividida .botao-mostrar-senha {
+    right: 4px;
+    padding: 0.4rem;
+  }
+
+  .tela-dividida .botao-acao {
+    min-height: 46px;
+    font-size: 1rem;
+  }
+
+  .tela-rodape {
+    padding-top: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .tela-dividida .botao-voltar {
+    min-height: 40px;
+    padding-block: 0.35rem;
+  }
+}
+
+/* Celulares baixos: compacta mais um pouco */
+@media (max-width: 600px) and (max-height: 700px) {
+  .tela-dividida {
+    --campo-altura: 36px;
+    --linha-gap: 0.35rem;
+    --tela-base: 0.5rem;
+  }
+
+  .tela-painel {
+    padding-block: 0.5rem;
+  }
+
+  .tela-logo {
+    width: 110px;
+  }
+
+  .tela-dividida .campo-rotulo {
+    font-size: 0.82rem;
+  }
+
+  .tela-faixa {
+    padding-block: 0.45rem;
+  }
+
+  .tela-dividida .botao-acao {
+    min-height: 40px;
+  }
+
+  .tela-rodape {
+    padding-top: 0.35rem;
+  }
+
+  .tela-dividida .botao-voltar {
+    min-height: 34px;
+  }
+}

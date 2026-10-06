@@ -1,0 +1,112 @@
+/*
+  Tela de login — usa a estrutura de src/styles/tela-dividida.css.
+  Uma coluna: e-mail, senha e Entrar; abaixo, o divisor "ou" e as alternativas
+  (Google e criar conta) lado a lado. A coluna fica centralizada (na largura e na
+  altura) apenas dentro da área branca. O Voltar fica no painel preto.
+*/
+
+/* Faixa cinza do login: mais alta e com o texto maior (aqui há espaço de sobra) */
+.login .tela-faixa {
+  padding-block: clamp(1.1rem, 4.5vh, 2.25rem);
+}
+
+.login .tela-faixa-titulo {
+  font-size: clamp(1.15rem, min(2.2vw, 3.6vh), 1.55rem);
+}
+
+.login .tela-status {
+  font-size: clamp(0.95rem, min(1.6vw, 2.6vh), 1.1rem);
+}
+
+.login-conteudo {
+  flex: 1;
+  width: min(620px, calc(100% - var(--area-esquerda) - var(--area-direita)));
+  margin: clamp(1rem, 4vh, 3rem) auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(1rem, 3vh, 1.75rem);
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--linha-gap);
+}
+
+.login-form .botao-acao {
+  margin-top: clamp(0.25rem, 1vh, 0.5rem);
+}
+
+/* Divisor horizontal com "ou" no meio */
+.login-divisor {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.login-divisor::before,
+.login-divisor::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--borda);
+}
+
+/* Google e criar conta lado a lado, mesma altura */
+.login-alternativas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(0.75rem, 2vw, 1.25rem);
+}
+
+.login-alternativas .botao-google,
+.login-botao-cadastro {
+  min-height: clamp(46px, 7vh, 56px);
+  white-space: nowrap;
+}
+
+.login-botao-cadastro .texto-curto {
+  display: none;
+}
+
+.login-alternativas svg {
+  flex-shrink: 0;
+}
+
+/* ---------- Celulares ---------- */
+
+@media (max-width: 600px) {
+  /* O conteúdo começa logo abaixo da faixa */
+  .login-conteudo {
+    margin-top: clamp(0.75rem, 3vh, 1.5rem);
+    justify-content: flex-start;
+  }
+  .login .tela-faixa {
+    padding-block: 0.8rem;
+  }
+
+  .login .tela-faixa-titulo,
+  .login .tela-status {
+    font-size: 0.98rem;
+  }
+
+
+  /* Textos curtos para os dois botões caberem lado a lado */
+  .login-botao-cadastro .texto-longo {
+    display: none;
+  }
+
+  .login-botao-cadastro .texto-curto {
+    display: inline;
+  }
+
+  .login-alternativas .botao-google,
+  .login-botao-cadastro {
+    gap: 0.5rem;
+    padding-inline: 0.6rem;
+  }
+}
