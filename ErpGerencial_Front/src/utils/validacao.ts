@@ -55,7 +55,7 @@ export function requisitosSenha(senha: string): RequisitoSenha[] {
   ]
 }
 
-// ---------- Documentos e celular (cadastro da loja) ----------
+// ---------- CPF e CNPJ ----------
 
 export const apenasDigitos = (valor: string) => valor.replace(/\D/g, '')
 
@@ -113,9 +113,6 @@ export function cnpjValido(cnpj: string) {
   }
   return digito(12) === Number(c[12]) && digito(13) === Number(c[13])
 }
-
-/** Celular com DDD: 11 dígitos, começando com 9 depois do DDD. */
-export const celularValido = (celular: string) => /^[1-9]\d9\d{8}$/.test(apenasDigitos(celular))
 
 // ---------- CNPJ ou CPF no mesmo campo (dados da empresa) ----------
 

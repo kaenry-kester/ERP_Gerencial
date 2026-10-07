@@ -27,8 +27,6 @@
   --azul-claro: #e3eef2;
   --azul-vivo: #1f7a99; /* azul mais claro, para detalhes sobre o preto */
   /* Marrom da caixa de papelão e creme da fita, do logo */
-  --icone-inicio: #8a663b;
-  --icone-fim: #7a5a33;
   --marrom: #8a663b;
   --marrom-escuro: #5f4527;
   --creme: #e6d89a;
@@ -57,21 +55,8 @@
   --foco: #1f7a99;
   --erro: #b42318;
   --erro-fundo: #fdecea;
-  --info-fundo: var(--azul-claro);
 
-  --raio: 6px;
   --sombra: 0 12px 32px rgba(11, 10, 9, 0.1);
-
-  /* Nomes antigos mantidos para compatibilidade com telas anteriores */
-  --background-primary: var(--fundo);
-  --background-secondary: var(--superficie);
-  --card-border: var(--borda);
-  --primary-color: var(--azul);
-  --primary-dark: var(--azul-escuro);
-  --text-strong: var(--texto);
-  --text-muted: var(--texto-suave);
-  --surface-soft: var(--azul-claro);
-  --shadow-soft: var(--sombra);
 }
 
 * {
@@ -130,12 +115,9 @@ a {
   }
 }
 
-/* Botões genéricos (usados também pelas telas antigas) */
+/* Botões genéricos */
 .primary-button,
-.primary2-button,
-.secondary-button,
-.ghost-button,
-.danger-button {
+.ghost-button {
   border: none;
   border-radius: 6px;
   font-weight: 600;
@@ -166,18 +148,6 @@ a {
   filter: saturate(0.6);
 }
 
-.primary2-button {
-  background-color: var(--cinza-claro);
-  color: var(--texto);
-  padding: 0.9rem 1.2rem;
-}
-
-.secondary-button {
-  background: var(--azul-claro);
-  color: var(--azul-escuro);
-  padding: 0.7rem 0.9rem;
-}
-
 .ghost-button {
   background: var(--cinza-claro);
   color: var(--cinza-escuro);
@@ -186,22 +156,6 @@ a {
 
 .ghost-button:hover {
   background: var(--cinza-claro-hover);
-}
-
-.danger-button {
-  background: var(--erro-fundo);
-  color: var(--erro);
-  padding: 0.4rem 0.7rem;
-  font-size: 0.85rem;
-}
-
-.eyebrow {
-  font-size: 0.8rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--azul);
-  font-weight: 700;
-  margin-bottom: 8px;
 }
 
 /* Texto lido apenas por leitores de tela */

@@ -238,7 +238,6 @@
 
   .tela-titulo::after,
   .tela-texto,
-  .tela-painel-extra,
   .tela-painel-arte {
     display: none;
   }

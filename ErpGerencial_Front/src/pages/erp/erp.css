@@ -127,14 +127,6 @@
   gap: clamp(1rem, 3.5vh, 2rem);
 }
 
-.erp-inicio-titulo {
-  font-size: clamp(1.4rem, min(2.4vw, 4vh), 1.9rem);
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--cinza-escuro);
-  overflow-wrap: anywhere;
-}
-
 .erp-inicio-texto {
   margin-top: 0.25rem;
   color: var(--texto-suave);
@@ -293,18 +285,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 1rem;
-}
-
-/* Ícone de linha na cor da caixa de papelão do logo (Empresa, Usuários) */
-.erp-pagina-icone {
-  flex-shrink: 0;
-  width: 56px;
-  height: 56px;
-  display: grid;
-  place-items: center;
-  border-radius: 7px;
-  background: linear-gradient(160deg, var(--icone-inicio) 0%, var(--icone-fim) 100%);
-  color: var(--branco);
 }
 
 /* Ilustração do módulo, no fundo da cor dele (configurações: creme) */
@@ -548,8 +528,7 @@
 }
 
 .erp-opcao input,
-.erp-permissao input,
-.erp-permissoes-grupo-titulo input {
+.erp-permissao input {
   flex-shrink: 0;
   width: 18px;
   height: 18px;
@@ -573,38 +552,6 @@
   font-size: 0.88rem;
   line-height: 1.4;
   color: var(--texto-suave);
-}
-
-/* Módulos que pode usar: um bloco por grupo, lado a lado */
-.erp-permissoes-grupos {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 1rem clamp(1rem, 3vw, 2rem);
-}
-
-.erp-permissoes-grupo {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-
-.erp-permissoes-grupo-titulo {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding-bottom: 0.3rem;
-  margin-bottom: 0.15rem;
-  border-bottom: 1px solid var(--cinza-claro);
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--cinza);
-  cursor: pointer;
-}
-
-.erp-permissoes-grupo-titulo input {
-  margin-top: 0;
 }
 
 .erp-permissao {
@@ -730,11 +677,6 @@
 /* Módulos que pode usar: três opções com a ilustração */
 .erp-opcoes.tres {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.erp-opcao-ilustracao {
-  flex-shrink: 0;
-  display: grid;
 }
 
 /* Permissões por módulo: um bloco branco por módulo, com a ilustração e as opções */
@@ -867,19 +809,6 @@
   gap: 0.6rem 1rem;
 }
 
-/* Valor atual (ex.: e-mail), em cima do botão de alterar */
-.erp-valor-atual {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-}
-
-.erp-valor-rotulo {
-  font-size: 0.86rem;
-  font-weight: 600;
-  color: var(--texto-suave);
-}
-
 .erp-valor {
   font-size: 1.05rem;
   font-weight: 700;
@@ -910,12 +839,6 @@
 /* Excluir conta: vermelho só aqui, para não ser confundido com as outras ações */
 .erp-secao.perigo .erp-secao-titulo {
   color: var(--erro);
-}
-
-.erp-perigo-texto {
-  font-weight: 600;
-  line-height: 1.5;
-  color: var(--cinza-escuro);
 }
 
 .erp-botao-perigo {
@@ -1048,11 +971,6 @@
     height: 48px;
   }
 
-  .erp-pagina-icone {
-    width: 46px;
-    height: 46px;
-  }
-
   .erp-pagina-subtitulo {
     font-size: 0.88rem;
     line-height: 1.45;
@@ -1060,10 +978,6 @@
 
   .erp-dado {
     padding-block: 0.4rem;
-  }
-
-  .erp-dado.largo-celular {
-    grid-column: 1 / -1;
   }
 
   .erp-dado dt {

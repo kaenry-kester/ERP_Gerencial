@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from 'react'
 
 type Props = {
-  /** Caminho da imagem dentro de public/imgs, ex.: "/imgs/login.png" */
   src: string
   /** Ícone mostrado enquanto a imagem não carrega ou caso ela ainda não exista na pasta */
   reserva: ReactNode

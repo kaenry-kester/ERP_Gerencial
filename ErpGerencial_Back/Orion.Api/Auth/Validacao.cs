@@ -47,15 +47,6 @@ public static partial class Validacao
         return erros;
     }
 
-    /// <summary>Criação da empresa (depois do cadastro pelo Google): nome obrigatório, CNPJ/CPF opcional.</summary>
-    public static Dictionary<string, string[]> NovaEmpresa(CriarEmpresaRequest req)
-    {
-        var erros = new Dictionary<string, string[]>();
-        Nome(erros, "nome", req.Nome, "Digite o nome da empresa", 100, minimo: 2);
-        Documento(erros, "documento", req.Documento);
-        return erros;
-    }
-
     /// <summary>Edição em "Dados da empresa": só o nome é obrigatório.</summary>
     public static Dictionary<string, string[]> Empresa(EditarEmpresaRequest req)
     {

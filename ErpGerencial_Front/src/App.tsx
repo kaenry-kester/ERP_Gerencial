@@ -2,7 +2,6 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import InicioPage from './pages/inicio/InicioPage'
 import LoginPage from './pages/login/login'
 import CadastroPage from './pages/cadastro/CadastroPage'
-import EmpresaNovaPage from './pages/empresa/EmpresaNovaPage'
 import ErpLayout from './pages/erp/ErpLayout'
 import ErpInicioPage from './pages/erp/InicioPage'
 import EmpresaPage from './pages/erp/EmpresaPage'
@@ -22,9 +21,6 @@ export default function App() {
         <Route path="/" element={<InicioPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/cadastro" element={<CadastroPage />} />
-
-        {/* Quem entrou pelo Google ainda sem empresa */}
-        <Route path="/empresa/nova" element={<EmpresaNovaPage />} />
 
         {/* ERP da empresa: tela inicial com os botões grandes e as páginas dos módulos */}
         <Route path="/app" element={<ErpLayout />}>

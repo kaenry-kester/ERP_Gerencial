@@ -99,7 +99,6 @@ export default function ContaPage() {
           <SecaoDados conta={conta} aoAtualizar={aoAtualizar} />
           <SecaoEmail conta={conta} aoAtualizar={aoAtualizar} />
           <SecaoSenha
-            conta={conta}
             aoAtualizar={(c) => {
               aoAtualizar(c)
               setVersaoDispositivos((v) => v + 1)
@@ -289,8 +288,6 @@ function SecaoEmail({ conta, aoAtualizar }: PropsSecao) {
               setAviso(null)
               requestAnimationFrame(() => document.getElementById('conta-novo-email')?.focus())
             }}
-            disabled={!conta.temSenha}
-            title={conta.temSenha ? undefined : 'Crie uma senha primeiro'}
           >
             Alterar
           </button>
@@ -371,7 +368,7 @@ function SecaoEmail({ conta, aoAtualizar }: PropsSecao) {
 
 // ---------- Senha ----------
 
-function SecaoSenha({ conta, aoAtualizar }: PropsSecao) {
+function SecaoSenha({ aoAtualizar }: Pick<PropsSecao, 'aoAtualizar'>) {
   const { sessao } = useErp()
   const sessaoExpirada = useSessaoExpirada()
   const [atual, setAtual] = useState('')
@@ -385,7 +382,7 @@ function SecaoSenha({ conta, aoAtualizar }: PropsSecao) {
   const erros = !enviado
     ? { atual: erroAtual }
     : {
-        atual: erroAtual ?? (conta.temSenha && !atual ? 'Obrigatório' : undefined),
+        atual: erroAtual ?? (!atual ? 'Obrigatório' : undefined),
         nova: !nova ? 'Obrigatório' : requisitosSenha(nova).some((r) => !r.atendido) ? 'Faltam requisitos' : undefined,
         confirmacao: !confirmacao ? 'Obrigatório' : confirmacao !== nova ? 'Diferente' : undefined,
       }
@@ -398,7 +395,7 @@ function SecaoSenha({ conta, aoAtualizar }: PropsSecao) {
   const salvar = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()
     setEnviado(true)
-    if ((conta.temSenha && !atual) || !nova || requisitosSenha(nova).some((r) => !r.atendido) || confirmacao !== nova)
+    if (!atual || !nova || requisitosSenha(nova).some((r) => !r.atendido) || confirmacao !== nova)
       return
     setSalvando(true)
     try {
@@ -423,20 +420,18 @@ function SecaoSenha({ conta, aoAtualizar }: PropsSecao) {
   return (
     <Secao titulo="Senha">
       <form className="erp-form" onSubmit={salvar} noValidate>
-        {conta.temSenha && (
-          <CampoSenha
-            id="conta-senha-atual"
-            rotulo="Senha atual"
-            autoComplete="current-password"
-            valor={atual}
-            onChange={(v) => {
-              setAtual(v)
-              limpar()
-            }}
-            erro={erros.atual}
-            className="largo"
-          />
-        )}
+        <CampoSenha
+          id="conta-senha-atual"
+          rotulo="Senha atual"
+          autoComplete="current-password"
+          valor={atual}
+          onChange={(v) => {
+            setAtual(v)
+            limpar()
+          }}
+          erro={erros.atual}
+          className="largo"
+        />
         <CampoSenha
           id="conta-senha-nova"
           rotulo="Nova senha"
@@ -464,7 +459,7 @@ function SecaoSenha({ conta, aoAtualizar }: PropsSecao) {
         <div className="erp-form-acoes largo">
           <button type="submit" className="primary-button erp-botao" disabled={salvando}>
             <IconeCheck tamanho={20} />
-            {salvando ? 'Salvando...' : conta.temSenha ? 'Alterar senha' : 'Criar senha'}
+            {salvando ? 'Salvando...' : 'Alterar senha'}
           </button>
           {aviso && <AvisoPagina aviso={aviso} />}
         </div>
@@ -561,7 +556,7 @@ function SecaoExcluir({ conta }: { conta: Conta }) {
 
   const excluir = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (conta.temSenha && !senha) {
+    if (!senha) {
       setErroSenha('Obrigatório')
       return
     }
@@ -591,19 +586,17 @@ function SecaoExcluir({ conta }: { conta: Conta }) {
         </button>
       ) : (
         <form className="erp-form" onSubmit={excluir} noValidate>
-          {conta.temSenha && (
-            <CampoSenha
-              id="conta-senha-excluir"
-              rotulo="Confirme sua senha"
-              autoComplete="current-password"
-              valor={senha}
-              onChange={(v) => {
-                setSenha(v)
-                setErroSenha(undefined)
-              }}
-              erro={erroSenha}
-            />
-          )}
+          <CampoSenha
+            id="conta-senha-excluir"
+            rotulo="Confirme sua senha"
+            autoComplete="current-password"
+            valor={senha}
+            onChange={(v) => {
+              setSenha(v)
+              setErroSenha(undefined)
+            }}
+            erro={erroSenha}
+          />
           <div className="erp-form-acoes largo">
             <button type="submit" className="erp-botao-perigo forte" disabled={excluindo}>
               <IconeLixeira tamanho={20} />

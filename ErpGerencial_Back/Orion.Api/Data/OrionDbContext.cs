@@ -20,14 +20,12 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
             e.Property(u => u.Email).HasColumnName("email").HasMaxLength(254);
             e.Property(u => u.Telefone).HasColumnName("telefone").HasMaxLength(11);
             e.Property(u => u.SenhaHash).HasColumnName("senha_hash");
-            e.Property(u => u.GoogleId).HasColumnName("google_id").HasMaxLength(255);
             e.Property(u => u.EmpresaId).HasColumnName("empresa_id");
             e.Property(u => u.Administrador).HasColumnName("administrador");
             e.Property(u => u.Permissoes).HasColumnName("permissoes");
             e.Property(u => u.Ativo).HasColumnName("ativo").HasDefaultValue(true);
             e.Property(u => u.CriadoEm).HasColumnName("criado_em");
             e.HasIndex(u => u.Email).IsUnique();
-            e.HasIndex(u => u.GoogleId).IsUnique();
             e.HasOne(u => u.Empresa)
                 .WithMany(emp => emp.Usuarios)
                 .HasForeignKey(u => u.EmpresaId)

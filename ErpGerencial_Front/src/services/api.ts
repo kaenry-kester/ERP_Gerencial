@@ -28,11 +28,11 @@ export type Empresa = EmpresaResumo & {
   criadoEm: string
 }
 
-/** Sessão salva no navegador. empresa = null só entre o cadastro pelo Google e a criação da empresa. */
+/** Sessão salva no navegador. */
 export type Sessao = {
   token: string
   usuario: Usuario
-  empresa: EmpresaResumo | null
+  empresa: EmpresaResumo
 }
 
 export class ErroApi extends Error {
@@ -144,23 +144,7 @@ export const reenviarCodigo = (desafioId: string) =>
 /** Sessão atualizada (permissões, empresa e status podem ter mudado). */
 export const sessaoAtual = (token: string) => requisicao<Sessao>('GET', '/api/auth/eu', { token })
 
-/** Client ID público do Google; null quando o servidor ainda não foi configurado. */
-export const configGoogle = () => requisicao<{ clientId: string | null }>('GET', '/api/auth/google/config')
-
-/** contaNova: a conta foi criada agora (o próximo passo é criar a empresa). */
-export type SessaoGoogle = Sessao & { contaNova: boolean }
-
-export const entrarComGoogle = (codigo: string) =>
-  login(
-    requisicao<SessaoGoogle>('POST', '/api/auth/google', { corpo: { codigo } }),
-    'O Google não confirmou o acesso. Tente de novo.',
-  )
-
 // ---------- Empresa ----------
-
-/** Para quem entrou pelo Google e ainda não tem empresa. */
-export const criarEmpresa = (token: string, dados: { nome: string; documento: string }) =>
-  requisicao<Sessao>('POST', '/api/empresa', { corpo: dados, token })
 
 export const obterEmpresa = (token: string) => requisicao<Empresa>('GET', '/api/empresa', { token })
 
@@ -255,8 +239,6 @@ export type Conta = {
   nome: string
   email: string
   telefone: string | null
-  temSenha: boolean
-  googleVinculado: boolean
   administrador: boolean
   empresa: string | null
   criadoEm: string
@@ -366,6 +348,3 @@ export function esquecerLembrado() {
     // nada a limpar
   }
 }
-
-/** Para onde a pessoa vai depois de entrar: sem empresa, cria a empresa; com empresa, o ERP. */
-export const destinoDepoisDeEntrar = (sessao: Sessao) => (sessao.empresa ? '/app' : '/empresa/nova')

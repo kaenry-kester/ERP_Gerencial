@@ -6,7 +6,6 @@ import FaixaAviso, { type Aviso } from '../../components/formulario/FaixaAviso'
 import { IconeCadastro, IconeCheck, IconeLogin, IconeVoltar } from '../../components/icones/Icones'
 import { IlustracaoConta, IlustracaoEntrar } from '../../components/icones/Ilustracoes'
 import {
-  destinoDepoisDeEntrar,
   entrar,
   ErroApi,
   esquecerLembrado,
@@ -122,7 +121,7 @@ export default function LoginPage() {
       }
       // Navegador lembrado: entra direto
       salvarSessao(resposta)
-      navigate(destinoDepoisDeEntrar(resposta))
+      navigate('/app')
     } catch (erro) {
       if (erro instanceof ErroApi && erro.status === 401) document.getElementById('senha')?.focus()
       setAviso({ tipo: 'erro', texto: mensagemDe(erro) })
@@ -149,7 +148,7 @@ export default function LoginPage() {
       })
       salvarSessao(sessao)
       if (dispositivo) salvarLembrado({ email: sessao.usuario.email, token: dispositivo })
-      navigate(destinoDepoisDeEntrar(sessao))
+      navigate('/app')
     } catch (erro) {
       setEnviando(false)
       const texto = mensagemDe(erro)

@@ -16,8 +16,6 @@ public record ContaDto(
     string Nome,
     string Email,
     string? Telefone,
-    bool TemSenha,
-    bool GoogleVinculado,
     bool Administrador,
     string? Empresa,
     DateTime CriadoEm,
@@ -76,7 +74,7 @@ public static class ContaEndpoints
         return Results.Ok(await Dto(db, usuario));
     }
 
-    /// <summary>Troca (ou cria, em conta do Google) a senha; os computadores lembrados são esquecidos.</summary>
+    /// <summary>Troca a senha; os computadores lembrados são esquecidos.</summary>
     private static async Task<IResult> TrocarSenha(
         TrocarSenhaRequest req, ClaimsPrincipal user, OrionDbContext db, IPasswordHasher<Usuario> hasher)
     {
@@ -103,8 +101,6 @@ public static class ContaEndpoints
     {
         var usuario = await UsuarioAtual.Carregar(user, db, ct);
         if (usuario is null) return Results.Unauthorized();
-        if (usuario.SenhaHash is null)
-            return Results.BadRequest(new { erro = "Crie uma senha antes de trocar o e-mail", campo = "senha" });
         if (!SenhaConfere(usuario, req.Senha, hasher))
             return Results.BadRequest(new { erro = "A senha está incorreta", campo = "senha" });
 
@@ -224,14 +220,14 @@ public static class ContaEndpoints
 
         if (!string.Equals(req.Confirmacao?.Trim(), "EXCLUIR", StringComparison.Ordinal))
             return Results.BadRequest(new { erro = "Digite EXCLUIR para confirmar", campo = "confirmacao" });
-        if (usuario.SenhaHash is not null && !SenhaConfere(usuario, req.Senha, hasher))
+        if (!SenhaConfere(usuario, req.Senha, hasher))
             return Results.BadRequest(new { erro = "A senha está incorreta", campo = "senha" });
 
         var exclusao = await TipoDeExclusao(db, usuario);
 
         await using var transacao = await db.Database.BeginTransactionAsync();
         var empresaId = usuario.EmpresaId;
-        if (exclusao == "conta-e-empresa" && empresaId is not null)
+        if (exclusao == "conta-e-empresa")
         {
             // Única administradora: sai a empresa inteira (usuários, códigos e dispositivos vão junto).
             await db.Usuarios.Where(u => u.EmpresaId == empresaId).ExecuteDeleteAsync();
@@ -248,12 +244,10 @@ public static class ContaEndpoints
     }
 
     private static bool SenhaConfere(Usuario usuario, string? senha, IPasswordHasher<Usuario> hasher) =>
-        usuario.SenhaHash is null // conta só do Google: não tem senha atual para conferir
-        || hasher.VerifyHashedPassword(usuario, usuario.SenhaHash, senha ?? "") != PasswordVerificationResult.Failed;
+        hasher.VerifyHashedPassword(usuario, usuario.SenhaHash, senha ?? "") != PasswordVerificationResult.Failed;
 
     private static async Task<string> TipoDeExclusao(OrionDbContext db, Usuario usuario)
     {
-        if (usuario.EmpresaId is null) return "conta";
         var outros = await db.Usuarios.Where(u => u.EmpresaId == usuario.EmpresaId && u.Id != usuario.Id).ToListAsync();
         if (outros.Count == 0) return "conta-e-empresa";
         // Quem não é administrador, ou tem outro administrador ativo na empresa, sai sozinho.
@@ -262,7 +256,7 @@ public static class ContaEndpoints
     }
 
     private static async Task<ContaDto> Dto(OrionDbContext db, Usuario u) =>
-        new(u.Id, u.Nome, u.Email, u.Telefone, u.SenhaHash is not null, u.GoogleId is not null, u.Administrador,
+        new(u.Id, u.Nome, u.Email, u.Telefone, u.Administrador,
             u.Empresa?.Nome, u.CriadoEm, await TipoDeExclusao(db, u));
 
     private static IResult CodigoInvalido(string mensagem) =>

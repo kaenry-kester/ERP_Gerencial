@@ -22,8 +22,6 @@ var chaveJwt = builder.Configuration["Jwt:Chave"]
 builder.Services.AddDbContext<OrionDbContext>(o => o.UseNpgsql(conexao));
 builder.Services.AddScoped<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>();
 builder.Services.AddSingleton<TokenService>();
-builder.Services.AddHttpClient();
-builder.Services.AddSingleton<GoogleService>();
 builder.Services.AddSingleton<EmailService>();
 
 builder.Services

@@ -199,3 +199,19 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Celulares estreitos (360px): letra e espaços menores para a tabela caber na largura */
+@media (max-width: 400px) {
+  .produtos-tabela {
+    font-size: 0.86rem;
+  }
+
+  .produtos-tabela th,
+  .produtos-tabela td {
+    padding-inline: 0.4rem;
+  }
+
+  .produtos-id {
+    width: 2.2rem;
+  }
+}

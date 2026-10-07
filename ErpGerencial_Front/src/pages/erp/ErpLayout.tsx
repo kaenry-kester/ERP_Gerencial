@@ -43,10 +43,9 @@ export default function ErpLayout() {
   }, [sessao?.token])
 
   if (!sessao) return <Navigate to="/login" replace />
-  if (!sessao.empresa) return <Navigate to="/empresa/nova" replace />
 
   const { empresa } = sessao
-  const contexto: ContextoErp = { sessao: { ...sessao, empresa }, atualizarSessao }
+  const contexto: ContextoErp = { sessao, atualizarSessao }
 
   const sairDaConta = () => {
     sair()

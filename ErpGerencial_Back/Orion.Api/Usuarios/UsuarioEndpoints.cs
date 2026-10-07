@@ -107,7 +107,7 @@ public static class UsuarioEndpoints
     {
         var usuario = await UsuarioAtual.Carregar(user, db);
         if (usuario is null) return (null, Results.Unauthorized());
-        if (usuario.EmpresaId is null || !usuario.Administrador)
+        if (!usuario.Administrador)
             return (null, Results.Json(new { erro = "Só o administrador da empresa pode gerenciar usuários" },
                 statusCode: StatusCodes.Status403Forbidden));
         return (usuario, null);

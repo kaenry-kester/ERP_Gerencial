@@ -100,7 +100,7 @@ public static class ProdutoEndpoints
         var erros = Validar(req);
         if (erros.Count > 0) return Results.ValidationProblem(erros);
 
-        var produto = new Produto { EmpresaId = usuario.EmpresaId!.Value, Nome = "" };
+        var produto = new Produto { EmpresaId = usuario.EmpresaId, Nome = "" };
         Preencher(produto, req);
         db.Produtos.Add(produto);
 
@@ -203,13 +203,13 @@ public static class ProdutoEndpoints
         p.Observacao = Opcional(req.Observacao);
     }
 
-    /// <summary>Quem chamou, se tiver empresa e a permissão; senão, a resposta de erro.</summary>
+    /// <summary>Quem chamou, se tiver a permissão; senão, a resposta de erro.</summary>
     private static async Task<(Usuario? Usuario, IResult? Negado)> Permitido(
         ClaimsPrincipal user, OrionDbContext db, string permissao)
     {
         var usuario = await UsuarioAtual.Carregar(user, db);
         if (usuario is null) return (null, Results.Unauthorized());
-        if (usuario.EmpresaId is null || !Permissoes.Tem(usuario, permissao))
+        if (!Permissoes.Tem(usuario, permissao))
             return (null, Results.Json(new { erro = "Você não tem permissão para isso" },
                 statusCode: StatusCodes.Status403Forbidden));
         return (usuario, null);
