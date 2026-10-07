@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
-using Orion.Api.Lojas;
+using Orion.Api.Empresas;
+using Orion.Api.Usuarios;
 
 namespace Orion.Api.Auth;
 
@@ -27,6 +28,9 @@ public static partial class Validacao
     public static string NormalizarCnpj(string valor) =>
         new(valor.Where(char.IsAsciiLetterOrDigit).Select(char.ToUpperInvariant).ToArray());
 
+    /// <summary>Tira pontuação e espaços e deixa as letras maiúsculas (CPF ou CNPJ, inclusive alfanumérico).</summary>
+    public static string NormalizarDocumento(string valor) => NormalizarCnpj(valor);
+
     public static Dictionary<string, string[]> Cadastro(CadastroRequest req)
     {
         var erros = new Dictionary<string, string[]>();
@@ -38,40 +42,63 @@ public static partial class Validacao
         if (telefone.Length == 0) erros["telefone"] = ["Digite com DDD"];
         else if (telefone.Length is not (10 or 11)) erros["telefone"] = ["Número incompleto"];
 
+        Nome(erros, "nomeEmpresa", req.NomeEmpresa, "Digite o nome da empresa", 100, minimo: 2);
         Senha(erros, "senha", req.Senha);
         return erros;
     }
 
-    public static Dictionary<string, string[]> Loja(CriarLojaRequest req)
+    /// <summary>Criação da empresa (depois do cadastro pelo Google): nome obrigatório, CNPJ/CPF opcional.</summary>
+    public static Dictionary<string, string[]> NovaEmpresa(CriarEmpresaRequest req)
     {
         var erros = new Dictionary<string, string[]>();
+        Nome(erros, "nome", req.Nome, "Digite o nome da empresa", 100, minimo: 2);
+        Documento(erros, "documento", req.Documento);
+        return erros;
+    }
 
-        Nome(erros, "razaoSocial", req.RazaoSocial, "Digite o nome da companhia", 150);
-        Nome(erros, "nomeFantasia", req.NomeFantasia, "Digite o nome fantasia", 100, minimo: 2);
+    /// <summary>Edição em "Dados da empresa": só o nome é obrigatório.</summary>
+    public static Dictionary<string, string[]> Empresa(EditarEmpresaRequest req)
+    {
+        var erros = new Dictionary<string, string[]>();
+        Nome(erros, "nome", req.Nome, "Digite o nome da empresa", 100, minimo: 2);
+        if (!string.IsNullOrWhiteSpace(req.RazaoSocial)) Nome(erros, "razaoSocial", req.RazaoSocial, "", 150);
+        Documento(erros, "documento", req.Documento);
+        if (!string.IsNullOrWhiteSpace(req.Email)) Email(erros, "email", req.Email);
 
-        var cnpj = NormalizarCnpj(req.Cnpj ?? "");
-        if (cnpj.Length == 0) erros["cnpj"] = ["Digite o CNPJ"];
-        else if (cnpj.Length != 14) erros["cnpj"] = ["CNPJ incompleto"];
-        else if (!CnpjValido(cnpj)) erros["cnpj"] = ["CNPJ inválido"];
+        var telefone = SoDigitos(req.Telefone ?? "");
+        if (telefone.Length > 0 && telefone.Length is not (10 or 11)) erros["telefone"] = ["Número incompleto"];
+        return erros;
+    }
 
-        Nome(erros, "nomeDono", req.NomeDono, "Digite o nome do dono", 120);
-        if (!erros.ContainsKey("nomeDono") && !req.NomeDono.Trim().Contains(' '))
-            erros["nomeDono"] = ["Falta o sobrenome"];
-
-        var cpf = SoDigitos(req.CpfDono ?? "");
-        if (cpf.Length == 0) erros["cpfDono"] = ["Digite o CPF"];
-        else if (cpf.Length != 11) erros["cpfDono"] = ["CPF incompleto"];
-        else if (!CpfValido(cpf)) erros["cpfDono"] = ["CPF inválido"];
-
+    /// <summary>Usuário criado pelo administrador em "Usuários e permissões".</summary>
+    public static Dictionary<string, string[]> NovoUsuario(CriarUsuarioRequest req)
+    {
+        var erros = new Dictionary<string, string[]>();
+        Nome(erros, "nome", req.Nome, "Digite o nome", 120);
         Email(erros, "email", req.Email);
-
-        var celular = SoDigitos(req.Celular ?? "");
-        if (celular.Length == 0) erros["celular"] = ["Digite com DDD"];
-        else if (celular.Length != 11) erros["celular"] = ["Número incompleto"];
-        else if (celular[2] != '9' || celular[0] == '0') erros["celular"] = ["Celular inválido"];
-
         Senha(erros, "senha", req.Senha);
         return erros;
+    }
+
+    public static Dictionary<string, string[]> EdicaoUsuario(EditarUsuarioRequest req)
+    {
+        var erros = new Dictionary<string, string[]>();
+        Nome(erros, "nome", req.Nome, "Digite o nome", 120);
+        return erros;
+    }
+
+    /// <summary>CPF (11 dígitos) ou CNPJ (14, pode ter letras), com dígitos verificadores; vazio é aceito.</summary>
+    private static void Documento(Dictionary<string, string[]> erros, string campo, string? valor)
+    {
+        var doc = NormalizarDocumento(valor ?? "");
+        if (doc.Length == 0) return;
+        var valido = doc.Length switch
+        {
+            11 => CpfValido(doc),
+            14 => CnpjValido(doc),
+            _ => false,
+        };
+        if (!valido) erros[campo] = [doc.Length is 11 or 14 ? "Documento inválido" : "CNPJ ou CPF incompleto"];
     }
 
     /// <summary>CPF com 11 dígitos e os dois dígitos verificadores corretos.</summary>
@@ -113,7 +140,7 @@ public static partial class Validacao
         return Digito(12) == cnpj[12] - '0' && Digito(13) == cnpj[13] - '0';
     }
 
-    private static void Nome(Dictionary<string, string[]> erros, string campo, string? valor,
+    public static void Nome(Dictionary<string, string[]> erros, string campo, string? valor,
         string vazio, int maximo, int minimo = 3)
     {
         var nome = valor?.Trim() ?? "";
@@ -122,14 +149,14 @@ public static partial class Validacao
         else if (nome.Length > maximo) erros[campo] = [$"Máximo de {maximo} letras"];
     }
 
-    private static void Email(Dictionary<string, string[]> erros, string campo, string? valor)
+    public static void Email(Dictionary<string, string[]> erros, string campo, string? valor)
     {
         var email = valor?.Trim() ?? "";
         if (email.Length == 0) erros[campo] = ["Digite o e-mail"];
         else if (email.Length > 254 || !EmailRegex().IsMatch(email)) erros[campo] = ["E-mail inválido"];
     }
 
-    private static void Senha(Dictionary<string, string[]> erros, string campo, string? valor)
+    public static void Senha(Dictionary<string, string[]> erros, string campo, string? valor)
     {
         var senha = valor ?? "";
         if (senha.Length == 0) erros[campo] = ["Crie uma senha"];

@@ -7,46 +7,34 @@ using Orion.Api.Data;
 namespace Orion.Api.Auth;
 
 /// <summary>
-/// Dois tipos de acesso: a conta da pessoa (vê e cria lojas) e a loja
-/// (entra com CNPJ e senha e trabalha dentro dela). A claim "tipo" separa os dois.
+/// Token de acesso da pessoa. Leva só a identidade; empresa, administrador e permissões
+/// são lidos do banco a cada requisição (UsuarioAtual), para mudanças valerem na hora.
 /// </summary>
 public class TokenService(IConfiguration config)
 {
     public const string Emissor = "orion-api";
     public const string Publico = "orion-front";
 
-    public const string ClaimTipo = "tipo";
-    public const string TipoUsuario = "usuario";
-    public const string TipoLoja = "loja";
-
     private readonly SigningCredentials _credenciais = new(
         new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["Jwt:Chave"]!)),
         SecurityAlgorithms.HmacSha256);
 
-    public string GerarUsuario(Usuario usuario) => Gerar(TipoUsuario,
-    [
-        new Claim(JwtRegisteredClaimNames.Sub, usuario.Id.ToString()),
-        new Claim(JwtRegisteredClaimNames.Name, usuario.Nome),
-        new Claim(JwtRegisteredClaimNames.Email, usuario.Email),
-    ]);
-
-    public string GerarLoja(Loja loja) => Gerar(TipoLoja,
-    [
-        new Claim(JwtRegisteredClaimNames.Sub, loja.Id.ToString()),
-        new Claim(JwtRegisteredClaimNames.Name, loja.NomeFantasia),
-    ]);
-
-    private string Gerar(string tipo, Claim[] claims) =>
+    public string Gerar(Usuario usuario) =>
         new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
         {
             Issuer = Emissor,
             Audience = Publico,
-            Subject = new ClaimsIdentity([.. claims, new Claim(ClaimTipo, tipo)]),
+            Subject = new ClaimsIdentity(
+            [
+                new Claim(JwtRegisteredClaimNames.Sub, usuario.Id.ToString()),
+                new Claim(JwtRegisteredClaimNames.Name, usuario.Nome),
+                new Claim(JwtRegisteredClaimNames.Email, usuario.Email),
+            ]),
             Expires = DateTime.UtcNow.AddHours(8),
             SigningCredentials = _credenciais,
         });
 
-    /// <summary>Id (usuário ou loja) do token da requisição.</summary>
-    public static Guid IdDe(ClaimsPrincipal principal) =>
-        Guid.Parse(principal.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
+    /// <summary>Id do usuário do token da requisição (null se o token não tiver um id válido).</summary>
+    public static Guid? IdDe(ClaimsPrincipal principal) =>
+        Guid.TryParse(principal.FindFirstValue(JwtRegisteredClaimNames.Sub), out var id) ? id : null;
 }

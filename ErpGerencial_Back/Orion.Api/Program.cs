@@ -5,8 +5,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Orion.Api.Auth;
+using Orion.Api.Conta;
 using Orion.Api.Data;
-using Orion.Api.Lojas;
+using Orion.Api.Empresas;
+using Orion.Api.Produtos;
+using Orion.Api.Usuarios;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,16 +21,16 @@ var chaveJwt = builder.Configuration["Jwt:Chave"]
 
 builder.Services.AddDbContext<OrionDbContext>(o => o.UseNpgsql(conexao));
 builder.Services.AddScoped<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>();
-builder.Services.AddScoped<IPasswordHasher<Loja>, PasswordHasher<Loja>>();
 builder.Services.AddSingleton<TokenService>();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<GoogleService>();
+builder.Services.AddSingleton<EmailService>();
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(o =>
     {
-        // Mantém os nomes das claims como no token ("sub", "tipo").
+        // Mantém os nomes das claims como no token ("sub").
         o.MapInboundClaims = false;
         o.TokenValidationParameters = new TokenValidationParameters
         {
@@ -37,9 +40,8 @@ builder.Services
         };
     });
 
-builder.Services.AddAuthorizationBuilder()
-    .AddPolicy(Politicas.Usuario, p => p.RequireClaim(TokenService.ClaimTipo, TokenService.TipoUsuario))
-    .AddPolicy(Politicas.Loja, p => p.RequireClaim(TokenService.ClaimTipo, TokenService.TipoLoja));
+// Empresa, administrador e permissões são conferidos no banco em cada rota (UsuarioAtual).
+builder.Services.AddAuthorization();
 
 // Até 10 tentativas de login por minuto para cada endereço.
 builder.Services.AddRateLimiter(o =>
@@ -48,6 +50,15 @@ builder.Services.AddRateLimiter(o =>
     o.AddPolicy(Politicas.Login, contexto => RateLimitPartition.GetFixedWindowLimiter(
         contexto.Connection.RemoteIpAddress?.ToString() ?? "desconhecido",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1) }));
+    // Código por e-mail: até 20 conferências/reenvios por minuto por endereço
+    // (cada código também só aceita 5 tentativas erradas).
+    o.AddPolicy(Politicas.Codigo, contexto => RateLimitPartition.GetFixedWindowLimiter(
+        contexto.Connection.RemoteIpAddress?.ToString() ?? "desconhecido",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(1) }));
+    // Minha conta (trocar senha/e-mail, excluir): já exige estar logado; até 15 por minuto.
+    o.AddPolicy(Politicas.Conta, contexto => RateLimitPartition.GetFixedWindowLimiter(
+        contexto.Connection.RemoteIpAddress?.ToString() ?? "desconhecido",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 15, Window = TimeSpan.FromMinutes(1) }));
 });
 
 // Front-end Vite em desenvolvimento.
@@ -64,6 +75,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapAuthEndpoints();
-app.MapLojaEndpoints();
+app.MapEmpresaEndpoints();
+app.MapUsuarioEndpoints();
+app.MapContaEndpoints();
+app.MapProdutoEndpoints();
 
 app.Run();

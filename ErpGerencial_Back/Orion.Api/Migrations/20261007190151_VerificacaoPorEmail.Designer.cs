@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Orion.Api.Data;
@@ -12,9 +13,11 @@ using Orion.Api.Data;
 namespace Orion.Api.Migrations
 {
     [DbContext(typeof(OrionDbContext))]
-    partial class OrionDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261007190151_VerificacaoPorEmail")]
+    partial class VerificacaoPorEmail
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -47,11 +50,6 @@ namespace Orion.Api.Migrations
                     b.Property<DateTime>("ExpiraEm")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("expira_em");
-
-                    b.Property<string>("NovoEmail")
-                        .HasMaxLength(254)
-                        .HasColumnType("character varying(254)")
-                        .HasColumnName("novo_email");
 
                     b.Property<int>("Tentativas")
                         .HasColumnType("integer")
@@ -162,97 +160,6 @@ namespace Orion.Api.Migrations
                     b.ToTable("empresas", (string)null);
                 });
 
-            modelBuilder.Entity("Orion.Api.Data.Produto", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("AtualizadoEm")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("atualizado_em");
-
-                    b.Property<string>("Codigo")
-                        .HasMaxLength(60)
-                        .HasColumnType("character varying(60)")
-                        .HasColumnName("codigo");
-
-                    b.Property<string>("Cor")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("cor");
-
-                    b.Property<DateTime>("CriadoEm")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("criado_em");
-
-                    b.Property<Guid>("EmpresaId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("empresa_id");
-
-                    b.Property<string>("Marca")
-                        .HasMaxLength(80)
-                        .HasColumnType("character varying(80)")
-                        .HasColumnName("marca");
-
-                    b.Property<string>("Modelo")
-                        .HasMaxLength(80)
-                        .HasColumnType("character varying(80)")
-                        .HasColumnName("modelo");
-
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("nome");
-
-                    b.Property<int>("Numero")
-                        .HasColumnType("integer")
-                        .HasColumnName("numero");
-
-                    b.Property<string>("Observacao")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)")
-                        .HasColumnName("observacao");
-
-                    b.Property<decimal>("PrecoCusto")
-                        .HasPrecision(14, 2)
-                        .HasColumnType("numeric(14,2)")
-                        .HasColumnName("preco_custo");
-
-                    b.Property<decimal>("PrecoVendaPf")
-                        .HasPrecision(14, 2)
-                        .HasColumnType("numeric(14,2)")
-                        .HasColumnName("preco_venda_pf");
-
-                    b.Property<decimal>("PrecoVendaPj")
-                        .HasPrecision(14, 2)
-                        .HasColumnType("numeric(14,2)")
-                        .HasColumnName("preco_venda_pj");
-
-                    b.Property<decimal>("Quantidade")
-                        .HasPrecision(14, 3)
-                        .HasColumnType("numeric(14,3)")
-                        .HasColumnName("quantidade");
-
-                    b.Property<string>("Voltagem")
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
-                        .HasColumnName("voltagem");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EmpresaId", "Codigo")
-                        .IsUnique()
-                        .HasFilter("codigo IS NOT NULL");
-
-                    b.HasIndex("EmpresaId", "Numero")
-                        .IsUnique();
-
-                    b.ToTable("produtos", (string)null);
-                });
-
             modelBuilder.Entity("Orion.Api.Data.Usuario", b =>
                 {
                     b.Property<Guid>("Id")
@@ -342,17 +249,6 @@ namespace Orion.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Usuario");
-                });
-
-            modelBuilder.Entity("Orion.Api.Data.Produto", b =>
-                {
-                    b.HasOne("Orion.Api.Data.Empresa", "Empresa")
-                        .WithMany()
-                        .HasForeignKey("EmpresaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Empresa");
                 });
 
             modelBuilder.Entity("Orion.Api.Data.Usuario", b =>
