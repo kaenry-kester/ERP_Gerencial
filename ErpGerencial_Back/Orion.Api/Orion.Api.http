@@ -1,0 +1,23 @@
+@Orion.Api_HostAddress = http://localhost:5193
+
+POST {{Orion.Api_HostAddress}}/api/auth/cadastro
+Content-Type: application/json
+
+{
+  "nome": "Teste Órion",
+  "email": "teste@orion.com",
+  "telefone": "(11) 91234-5678",
+  "senha": "Senha@123"
+}
+
+###
+
+POST {{Orion.Api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "teste@orion.com",
+  "senha": "Senha@123"
+}
+
+###

@@ -1,0 +1,87 @@
+/* Lista de requisitos da senha (cadastro da conta e da loja) */
+
+.requisitos-titulo {
+  font-size: clamp(0.84rem, 2vh, 0.92rem);
+  font-weight: 600;
+  color: var(--cinza-escuro);
+}
+
+.requisitos-lista {
+  list-style: none;
+  margin-top: clamp(0.25rem, 0.8vh, 0.5rem);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(0.25rem, 0.9vh, 0.5rem) 1.5rem;
+}
+
+.requisito {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: clamp(0.84rem, 2vh, 0.92rem);
+  line-height: 1.35;
+  color: var(--texto-suave);
+  transition: color 0.25s ease;
+}
+
+.requisito-icone {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  background: var(--cinza-claro);
+  color: var(--cinza);
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
+}
+
+.requisito-texto-curto {
+  display: none;
+}
+
+.requisito.atendido {
+  color: var(--texto);
+}
+
+.requisito.atendido .requisito-icone {
+  background: var(--azul);
+  color: #fff;
+}
+
+@media (max-width: 600px) {
+  .requisitos-titulo {
+    display: none;
+  }
+
+  .requisitos-lista {
+    margin-top: 0;
+    gap: 0.3rem 0.75rem;
+  }
+
+  .requisito {
+    gap: 0.45rem;
+    font-size: 0.82rem;
+  }
+
+  /* Texto completo continua disponível para leitores de tela; na tela aparece o curto */
+  .requisito-texto {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .requisito-texto-curto {
+    display: inline;
+  }
+
+  .requisito-icone {
+    width: 20px;
+    height: 20px;
+  }
+}

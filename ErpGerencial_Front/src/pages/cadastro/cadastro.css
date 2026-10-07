@@ -1,0 +1,108 @@
+/*
+  Tela de cadastro — usa a estrutura de src/styles/tela-dividida.css.
+  Aqui ficam só o formulário (duas colunas) e a opção de cadastro com o Google.
+  Os requisitos da senha ficam em components/formulario/requisitos-senha.css.
+*/
+
+/* Formulário centralizado na altura do espaço abaixo da faixa cinza
+   (margens automáticas; o padding garante um respiro mínimo) */
+.cadastro-form {
+  width: min(760px, calc(100% - var(--area-esquerda) - var(--area-direita)));
+  margin: auto var(--area-direita) auto var(--area-esquerda);
+  padding-block: clamp(0.6rem, 3vh, 2.5rem) var(--tela-base);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: clamp(1rem, 2.5vw, 1.75rem);
+  row-gap: var(--linha-gap);
+  align-items: start;
+}
+
+.cadastro-form .largo {
+  grid-column: 1 / -1;
+}
+
+/* ---------- Cadastro com o Google (no painel preto) ---------- */
+
+.tela-painel-extra {
+  width: 100%;
+  /* Permite calcular o tamanho da letra pela largura disponível (unidade cqi) */
+  container-type: inline-size;
+  margin-top: clamp(1.5rem, 7vh, 3.5rem);
+  padding-top: clamp(1rem, 3vh, 1.5rem);
+  border-top: 1px solid rgba(248, 248, 248, 0.14);
+}
+
+/* Texto do Google sempre em uma linha: a letra diminui conforme a largura do painel */
+.tela-painel-extra .botao-google {
+  gap: 0.6rem;
+  padding: 0.7rem 0.8rem;
+  font-size: clamp(0.7rem, calc((100cqi - 3.6rem) / 18.5), 1rem);
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.tela-painel-extra .botao-google svg {
+  flex-shrink: 0;
+}
+
+/* Botão "Criar minha conta" + Google compacto (este só aparece no celular/tablet) */
+.cadastro-acoes {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.cadastro-acoes .botao-acao {
+  flex: 1;
+}
+
+.cadastro-acoes .botao-google {
+  display: none;
+  width: 3.4rem;
+}
+
+/* "Já tem uma conta? Entrar" centralizado na área branca */
+.cadastro-rodape {
+  justify-content: center;
+  text-align: center;
+}
+
+/* ---------- Tablets e celulares ---------- */
+
+/*
+  Abaixo de 1200px o painel fica estreito demais para o texto do Google caber em
+  uma linha com letra legível: ele sai do painel e vira o botão compacto "G"
+  ao lado de "Criar minha conta".
+*/
+@media (max-width: 1199px) {
+  .tela-painel-extra {
+    display: none;
+  }
+
+  .cadastro-acoes .botao-google {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 600px) {
+  .cadastro-form {
+    grid-template-columns: 1fr;
+    padding-top: 0.6rem;
+  }
+}
+
+@media (max-width: 600px) and (max-height: 700px) {
+  .cadastro-form {
+    padding-top: 0.45rem;
+  }
+}
+
+/* Celulares estreitos: "Criar minha conta" sem o ícone, para caber em uma linha ao lado do Google */
+@media (max-width: 400px) {
+  .cadastro-acoes .botao-acao {
+    white-space: nowrap;
+  }
+
+  .cadastro-acoes .botao-acao svg {
+    display: none;
+  }
+}
