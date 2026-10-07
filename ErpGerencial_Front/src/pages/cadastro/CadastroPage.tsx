@@ -1,12 +1,11 @@
 import { useState, type SubmitEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import BotaoGoogle from '../../components/formulario/BotaoGoogle'
 import CampoSenha from '../../components/formulario/CampoSenha'
 import CampoTexto from '../../components/formulario/CampoTexto'
 import FaixaAviso, { type Aviso } from '../../components/formulario/FaixaAviso'
 import RequisitosSenha from '../../components/formulario/RequisitosSenha'
+import { IlustracaoCadastro } from '../../components/icones/Ilustracoes'
 import { IconeCadastro, IconeVoltar } from '../../components/icones/Icones'
-import { useGoogle } from '../../hooks/useGoogle'
 import { cadastrar, ErroApi, mensagemDe, salvarSessao } from '../../services/api'
 import {
   emailValido,
@@ -18,13 +17,14 @@ import '../../styles/acesso.css'
 import '../../styles/tela-dividida.css'
 import './cadastro.css'
 
-type Campo = 'nome' | 'email' | 'telefone' | 'senha' | 'confirmacao'
+type Campo = 'nome' | 'nomeEmpresa' | 'email' | 'telefone' | 'senha' | 'confirmacao'
 type Valores = Record<Campo, string>
 type Erros = Partial<Record<Campo, string>>
-const ORDEM_CAMPOS: Campo[] = ['nome', 'email', 'telefone', 'senha', 'confirmacao']
+const ORDEM_CAMPOS: Campo[] = ['nome', 'nomeEmpresa', 'email', 'telefone', 'senha', 'confirmacao']
 
 const VALORES_INICIAIS: Valores = {
   nome: '',
+  nomeEmpresa: '',
   email: '',
   telefone: '',
   senha: '',
@@ -38,6 +38,12 @@ function validar(valores: Valores): Erros {
     erros.nome = 'Digite seu nome'
   } else if (valores.nome.trim().length < 3) {
     erros.nome = 'Mínimo de 3 letras'
+  }
+
+  if (!valores.nomeEmpresa.trim()) {
+    erros.nomeEmpresa = 'Digite o nome'
+  } else if (valores.nomeEmpresa.trim().length < 2) {
+    erros.nomeEmpresa = 'Mínimo de 2 letras'
   }
 
   if (!valores.email.trim()) {
@@ -111,15 +117,12 @@ export default function CadastroPage() {
         nome: valores.nome,
         email: valores.email,
         telefone: valores.telefone,
+        nomeEmpresa: valores.nomeEmpresa,
         senha: valores.senha,
       })
       salvarSessao(sessao)
-      // Próximo passo: cadastrar a primeira loja.
-      navigate('/lojas/nova', {
-        state: {
-          aviso: { tipo: 'ok', texto: `Conta criada, ${sessao.nome.split(' ')[0]}! Agora cadastre sua loja.` },
-        },
-      })
+      // Como no Bling: conta e empresa criadas juntas, e a pessoa já entra no ERP.
+      navigate('/app')
     } catch (erro) {
       if (erro instanceof ErroApi && erro.campo === 'email') {
         setErrosServidor({ email: 'Já cadastrado' })
@@ -133,10 +136,6 @@ export default function CadastroPage() {
     }
   }
 
-  // Cria a conta (ou entra, se ela já existir) com o Google.
-  const google = useGoogle(setAviso)
-  const textoGoogle = google.enviando ? 'Entrando com o Google...' : 'Cadastre-se com uma conta Google'
-
   return (
     <main className="tela-dividida cadastro">
       <aside className="tela-painel">
@@ -146,9 +145,9 @@ export default function CadastroPage() {
         <h1 className="tela-titulo">Crie sua conta</h1>
         <p className="tela-texto">Comece hoje a organizar seus produtos e clientes em um só lugar.</p>
 
-        {/* Em telas largas o Google fica aqui, usando o espaço do painel */}
-        <div className="tela-painel-extra">
-          <BotaoGoogle texto={textoGoogle} onClick={google.entrar} />
+        {/* Ilustração do painel (some no celular, onde o painel vira uma faixa) */}
+        <div className="tela-painel-arte" aria-hidden="true">
+          <IlustracaoCadastro tamanho={200} />
         </div>
 
         {/* Voltar no canto inferior esquerdo do painel (no celular, só a seta, no canto esquerdo da faixa) */}
@@ -170,13 +169,23 @@ export default function CadastroPage() {
           <CampoTexto
             id="nome"
             rotulo="Nome"
-            className="largo"
             autoComplete="name"
             placeholder="Seu nome completo"
             valor={valores.nome}
             onChange={alterar('nome')}
             onBlur={tocar('nome')}
             erro={erroVisivel('nome')}
+          />
+
+          <CampoTexto
+            id="nomeEmpresa"
+            rotulo="Nome da empresa"
+            autoComplete="organization"
+            placeholder="Como seus clientes conhecem"
+            valor={valores.nomeEmpresa}
+            onChange={alterar('nomeEmpresa')}
+            onBlur={tocar('nomeEmpresa')}
+            erro={erroVisivel('nomeEmpresa')}
           />
 
           <CampoTexto
@@ -206,6 +215,7 @@ export default function CadastroPage() {
 
           <CampoSenha
             id="senha"
+            className="par"
             rotulo="Crie uma senha"
             autoComplete="new-password"
             descricaoId="requisitos-senha"
@@ -217,6 +227,7 @@ export default function CadastroPage() {
 
           <CampoSenha
             id="confirmacao"
+            className="par"
             rotulo="Confirme a senha"
             autoComplete="new-password"
             valor={valores.confirmacao}
@@ -232,7 +243,6 @@ export default function CadastroPage() {
               <IconeCadastro tamanho={22} />
               {enviando ? 'Criando conta...' : 'Criar minha conta'}
             </button>
-            <BotaoGoogle texto={textoGoogle} onClick={google.entrar} compacto />
           </div>
 
           <div className="tela-rodape cadastro-rodape largo">

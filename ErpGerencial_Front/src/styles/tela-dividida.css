@@ -74,6 +74,22 @@
   color: #c3cad0;
 }
 
+/* Ilustração do painel, sobre um fundo creme (cor da fita da caixa do logo) */
+.tela-painel-arte {
+  margin-top: clamp(1.25rem, 5vh, 3rem);
+  width: clamp(150px, min(18vw, 28vh), 240px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: var(--creme-claro);
+}
+
+.tela-painel-arte svg {
+  width: 82%;
+  height: 82%;
+}
+
 /* Voltar no canto inferior esquerdo do painel preto
    (seletor com .tela-painel para vencer o .ghost-button do CSS global) */
 .tela-painel .botao-voltar-painel {
@@ -161,8 +177,7 @@
 }
 
 .tela-rodape {
-  padding-top: clamp(0.5rem, 1.8vh, 1.25rem);
-  border-top: 1px solid var(--cinza-claro);
+  padding-top: clamp(0.25rem, 1vh, 0.75rem);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -223,7 +238,8 @@
 
   .tela-titulo::after,
   .tela-texto,
-  .tela-painel-extra {
+  .tela-painel-extra,
+  .tela-painel-arte {
     display: none;
   }
 }

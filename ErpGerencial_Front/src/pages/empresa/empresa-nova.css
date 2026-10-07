@@ -1,0 +1,10 @@
+/*
+  Criação da empresa (depois do cadastro pelo Google): mesma estrutura do login
+  (tela-dividida.css + a coluna de login.css), com dois campos.
+*/
+@import '../login/login.css';
+
+/* Sem as alternativas do login, a coluna começa no topo da área branca */
+.empresa-nova .login-conteudo {
+  justify-content: flex-start;
+}

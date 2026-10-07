@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Aviso } from '../components/formulario/FaixaAviso'
-import { configGoogle, entrarComGoogle, mensagemDe, salvarSessao } from '../services/api'
+import { configGoogle, destinoDepoisDeEntrar, entrarComGoogle, mensagemDe, salvarSessao } from '../services/api'
 import { carregarGoogle, criarClienteGoogle, type ClienteCodigo } from '../services/google'
 
 type Estado = 'carregando' | 'pronto' | 'nao-configurado' | 'sem-conexao'
@@ -10,7 +10,7 @@ type Estado = 'carregando' | 'pronto' | 'nao-configurado' | 'sem-conexao'
  * Botão "Continuar com o Google" das telas de login e cadastro.
  * Prepara o Google assim que a tela abre, para a janela do Google abrir
  * direto no clique (navegadores bloqueiam popups que demoram para abrir).
- * Conta nova → cadastro da loja; conta existente → lista de lojas.
+ * Sem empresa (conta nova pelo Google) → criar a empresa; com empresa → ERP.
  */
 export function useGoogle(mostrarAviso: (aviso: Aviso) => void) {
   const navigate = useNavigate()
@@ -31,14 +31,11 @@ export function useGoogle(mostrarAviso: (aviso: Aviso) => void) {
       try {
         const { contaNova, ...sessao } = await entrarComGoogle(codigo)
         salvarSessao(sessao)
-        const primeiroNome = sessao.nome.split(' ')[0]
-        if (contaNova) {
-          navigate('/lojas/nova', {
-            state: { aviso: { tipo: 'ok', texto: `Conta criada com o Google, ${primeiroNome}! Agora cadastre sua loja.` } },
-          })
-        } else {
-          navigate('/lojas', { state: { aviso: { tipo: 'ok', texto: `Olá, ${primeiroNome}!` } } })
-        }
+        const primeiroNome = sessao.usuario.nome.split(' ')[0]
+        const texto = contaNova
+          ? `Conta criada com o Google, ${primeiroNome}! Falta só o nome da sua empresa.`
+          : `Olá, ${primeiroNome}! Falta só o nome da sua empresa.`
+        navigate(destinoDepoisDeEntrar(sessao), sessao.empresa ? undefined : { state: { aviso: { tipo: 'ok', texto } } })
       } catch (erro) {
         if (ativo) {
           avisar.current({ tipo: 'erro', texto: mensagemDe(erro) })

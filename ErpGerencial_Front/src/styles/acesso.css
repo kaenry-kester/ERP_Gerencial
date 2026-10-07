@@ -26,7 +26,8 @@
   display: flex;
 }
 
-.campo input {
+.campo input,
+.campo textarea {
   width: 100%;
   min-height: 56px;
   padding: 0.8rem 1rem;
@@ -37,13 +38,24 @@
   border-radius: 6px;
 }
 
+/* Observação: altura de algumas linhas, pode crescer na vertical */
+.campo textarea {
+  min-height: 110px;
+  resize: vertical;
+  font: inherit;
+  line-height: 1.5;
+}
+
 /* Ao clicar no campo, nada muda: mesma borda, sem sombra nem contorno */
+.campo textarea:focus,
+.campo textarea:focus-visible,
 .campo input:focus,
 .campo input:focus-visible {
   outline: none;
   box-shadow: none;
 }
 
+.campo textarea[aria-invalid='true'],
 .campo input[aria-invalid='true'] {
   border-color: var(--erro);
 }

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import ImagemIcone from '../../components/icones/ImagemIcone'
-import { IconeCadastro, IconeLogin, IconeSeta } from '../../components/icones/Icones'
+import { IconeSeta } from '../../components/icones/Icones'
+import { IlustracaoCadastro, IlustracaoEntrar } from '../../components/icones/Ilustracoes'
 import './inicio.css'
 
 export default function InicioPage() {
@@ -24,12 +25,12 @@ export default function InicioPage() {
             <Link to="/login" className="botao-grande principal">
               <ImagemIcone
                 src="/imgs/login.png"
-                reserva={<IconeLogin tamanho={34} />}
+                reserva={<IlustracaoEntrar tamanho={84} />}
                 className="botao-grande-imagem"
               />
               <span className="botao-grande-textos">
-                <span className="botao-grande-titulo">Login</span>
-                <span className="botao-grande-descricao">Já sou cliente</span>
+                <span className="botao-grande-titulo">Entrar</span>
+                <span className="botao-grande-descricao">Já tenho conta</span>
               </span>
               <span className="botao-grande-seta">
                 <IconeSeta tamanho={26} />
@@ -39,11 +40,11 @@ export default function InicioPage() {
             <Link to="/cadastro" className="botao-grande secundario">
               <ImagemIcone
                 src="/imgs/cadastro.png"
-                reserva={<IconeCadastro tamanho={28} />}
+                reserva={<IlustracaoCadastro tamanho={72} />}
                 className="botao-grande-imagem"
               />
               <span className="botao-grande-textos">
-                <span className="botao-grande-titulo">Cadastre-se</span>
+                <span className="botao-grande-titulo">Criar conta</span>
                 <span className="botao-grande-descricao">Quero organizar meu negócio</span>
               </span>
               <span className="botao-grande-seta">

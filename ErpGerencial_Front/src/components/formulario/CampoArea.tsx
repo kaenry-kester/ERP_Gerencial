@@ -1,39 +1,17 @@
-import type { HTMLAttributes } from 'react'
-
 type Props = {
   id: string
   rotulo: string
   valor: string
   onChange: (valor: string) => void
-  onBlur?: () => void
   erro?: string
-  type?: 'text' | 'email' | 'tel'
   placeholder?: string
-  autoComplete?: string
-  inputMode?: HTMLAttributes<HTMLInputElement>['inputMode']
-  className?: string
-  /** Id de um <datalist> com sugestões (a pessoa pode escolher ou digitar outra coisa). */
-  lista?: string
   maxLength?: number
+  className?: string
 }
 
-export default function CampoTexto({
-  id,
-  rotulo,
-  valor,
-  onChange,
-  onBlur,
-  erro,
-  type = 'text',
-  placeholder,
-  autoComplete,
-  inputMode,
-  className,
-  lista,
-  maxLength,
-}: Props) {
+// Campo de texto com várias linhas (ex.: observação), no mesmo estilo do CampoTexto.
+export default function CampoArea({ id, rotulo, valor, onChange, erro, placeholder, maxLength, className }: Props) {
   const idErro = `${id}-erro`
-
   return (
     <div className={className ? `campo ${className}` : 'campo'}>
       <div className="campo-cabecalho">
@@ -46,17 +24,13 @@ export default function CampoTexto({
           </p>
         )}
       </div>
-      <input
+      <textarea
         id={id}
-        type={type}
         value={valor}
         placeholder={placeholder}
-        autoComplete={autoComplete}
-        inputMode={inputMode}
-        list={lista}
         maxLength={maxLength}
+        rows={4}
         onChange={(e) => onChange(e.target.value)}
-        onBlur={onBlur}
         aria-invalid={!!erro}
         aria-describedby={erro ? idErro : undefined}
       />

@@ -26,10 +26,22 @@
   --azul-escuro: #0f4255;
   --azul-claro: #e3eef2;
   --azul-vivo: #1f7a99; /* azul mais claro, para detalhes sobre o preto */
-  /* Marrom da caixa de papelão do logo — usado apenas nos ícones */
+  /* Marrom da caixa de papelão e creme da fita, do logo */
   --icone-inicio: #8a663b;
   --icone-fim: #7a5a33;
+  --marrom: #8a663b;
+  --marrom-escuro: #5f4527;
+  --creme: #e6d89a;
+  --creme-claro: #f5efd9;
   --branco: #f8f8f8;
+
+  /* Cor de cada módulo (o botão de cadastro usa a mesma cor do módulo) */
+  --modulo-produtos: var(--marrom);
+  --modulo-produtos-fundo: var(--creme-claro);
+  --modulo-clientes: var(--azul);
+  --modulo-clientes-fundo: var(--azul-claro);
+  --modulo-financeiro: var(--preto);
+  --modulo-financeiro-fundo: #e4e9ec;
 
   /* Estrutura (neutros frios, combinando com preto e azul) */
   --cinza-escuro: #1c2329;
@@ -200,4 +212,24 @@ a {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+/* Tema de cada módulo: cor forte (botões, títulos) e fundo claro (área da ilustração).
+   O texto colorido usa o tom escuro, para manter bom contraste (acessibilidade). */
+.tema-produtos {
+  --tema: var(--modulo-produtos);
+  --tema-texto: var(--marrom-escuro);
+  --tema-fundo: var(--modulo-produtos-fundo);
+}
+
+.tema-clientes {
+  --tema: var(--modulo-clientes);
+  --tema-texto: var(--azul-escuro);
+  --tema-fundo: var(--modulo-clientes-fundo);
+}
+
+.tema-financeiro {
+  --tema: var(--modulo-financeiro);
+  --tema-texto: var(--preto);
+  --tema-fundo: var(--modulo-financeiro-fundo);
 }

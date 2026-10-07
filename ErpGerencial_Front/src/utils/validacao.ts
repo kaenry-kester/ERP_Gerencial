@@ -116,3 +116,55 @@ export function cnpjValido(cnpj: string) {
 
 /** Celular com DDD: 11 dígitos, começando com 9 depois do DDD. */
 export const celularValido = (celular: string) => /^[1-9]\d9\d{8}$/.test(apenasDigitos(celular))
+
+// ---------- CNPJ ou CPF no mesmo campo (dados da empresa) ----------
+
+/** Máscara de CPF até 11 dígitos; passou disso (ou tem letra), máscara de CNPJ. */
+export function formatarDocumento(valor: string) {
+  const c = normalizarCnpj(valor)
+  return c.length <= 11 && /^\d*$/.test(c) ? formatarCpf(c) : formatarCnpj(c)
+}
+
+/** Mensagem de erro do campo "CNPJ ou CPF" (vazio é aceito: o campo é opcional). */
+export function erroDocumento(valor: string): string | undefined {
+  const c = normalizarCnpj(valor)
+  if (!c) return undefined
+  if (c.length === 11 && /^\d+$/.test(c)) return cpfValido(c) ? undefined : 'CPF inválido'
+  if (c.length === 14) return cnpjValido(c) ? undefined : 'CNPJ inválido'
+  return 'Incompleto'
+}
+
+// ---------- Dinheiro e quantidade (cadastro de produto) ----------
+
+const moeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
+const numeroBr = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 3 })
+
+/** 1234.5 → "R$ 1.234,50" */
+export const formatarMoeda = (valor: number) => moeda.format(valor)
+
+/** Máscara de dinheiro enquanto digita: só números, os 2 últimos são os centavos. "123456" → "R$ 1.234,56" */
+export function mascaraMoeda(valor: string) {
+  const digitos = apenasDigitos(valor).replace(/^0+/, '').slice(0, 13)
+  return digitos ? moeda.format(Number(digitos) / 100) : ''
+}
+
+/** "R$ 1.234,56" → 1234.56 ("" → null) */
+export function moedaParaNumero(valor: string): number | null {
+  const digitos = apenasDigitos(valor)
+  return digitos ? Number(digitos) / 100 : null
+}
+
+/** 12.5 → "12,5" */
+export const formatarQuantidade = (valor: number) => numeroBr.format(valor)
+
+/** Quantidade enquanto digita: números e uma vírgula, até 3 casas decimais. */
+export function mascaraQuantidade(valor: string) {
+  const limpo = valor.replace(/\./g, ',').replace(/[^\d,]/g, '')
+  const [inteiro, ...resto] = limpo.split(',')
+  const decimais = resto.join('').slice(0, 3)
+  return resto.length > 0 ? `${inteiro.slice(0, 10)},${decimais}` : inteiro.slice(0, 10)
+}
+
+/** "1,5" → 1.5 ("" → null) */
+export const quantidadeParaNumero = (valor: string): number | null =>
+  valor.trim() ? Number(valor.replace(',', '.')) || 0 : null

@@ -302,3 +302,32 @@ export function IconeChevron({ tamanho = 24 }: IconeProps) {
     </svg>
   )
 }
+
+export function IconeUsuario({ tamanho = 24 }: IconeProps) {
+  return (
+    <svg {...base(tamanho)}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
+    </svg>
+  )
+}
+
+export function IconeLixeira({ tamanho = 24 }: IconeProps) {
+  return (
+    <svg {...base(tamanho)}>
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
+  )
+}
+
+export function IconeMais({ tamanho = 24 }: IconeProps) {
+  return (
+    <svg {...base(tamanho)} strokeWidth={2.5}>
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  )
+}
