@@ -1,24 +1,59 @@
-/* Campos de formulário e botões compartilhados pelas telas de acesso (login e cadastro) */
+/* Campos de formulário e botões compartilhados pelo site (acesso, ERP) */
 
-/* ---------- Formulários ---------- */
+/* ---------- Campos (todo o site) ----------
+   O rótulo fica dentro do campo. Vazio: no meio. Ao clicar (ou com texto), ele sobe para perto
+   da borda de cima e diminui, com uma animação curta, e a borda fica azul.
+   A altura vem de --campo-altura (cada tela pode definir a sua; padrão 54px). */
 
 .campo {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
 }
 
-/* Rótulo à esquerda e mensagem de erro à direita, na mesma linha */
+/* Rótulo à esquerda e mensagem de erro à direita, por cima do campo */
 .campo-cabecalho {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 0.9rem;
+  right: 0.9rem;
+  height: var(--campo-altura, 54px);
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+  pointer-events: none;
+  transition:
+    height 0.2s ease,
+    padding 0.2s ease;
+}
+
+/* Senha: o rótulo e o erro não passam por baixo do botão "Mostrar" */
+.campo:has(.com-botao) .campo-cabecalho {
+  right: 6.5rem;
 }
 
 .campo-rotulo {
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--texto-suave);
+  transition:
+    font-size 0.2s ease,
+    color 0.2s ease;
+}
+
+.campo-erro {
+  flex-shrink: 0;
+  font-size: 0.72rem;
   font-weight: 600;
-  color: var(--cinza-escuro);
+  line-height: 1.2;
+  text-align: right;
+  color: var(--erro);
 }
 
 .campo-entrada {
@@ -29,47 +64,74 @@
 .campo input,
 .campo textarea {
   width: 100%;
-  min-height: 56px;
-  padding: 0.8rem 1rem;
-  font-size: 1.05rem;
+  height: var(--campo-altura, 54px);
+  min-height: var(--campo-altura, 54px);
+  /* Em cima, o espaço do rótulo; o texto fica centralizado no que sobra */
+  padding: 1.15rem 0.9rem 0.25rem;
+  font-size: 0.92rem;
+  line-height: 1.3;
   color: var(--texto);
   background: #fff;
   border: 1px solid var(--borda);
-  border-radius: 6px;
+  border-radius: 4px;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-/* Observação: altura de algumas linhas, pode crescer na vertical */
+/* Observação: algumas linhas, pode crescer na vertical */
 .campo textarea {
+  height: auto;
   min-height: 110px;
+  padding-top: 1.35rem;
   resize: vertical;
   font: inherit;
+  font-size: 0.92rem;
   line-height: 1.5;
 }
 
-/* Ao clicar no campo, nada muda: mesma borda, sem sombra nem contorno */
-.campo textarea:focus,
-.campo textarea:focus-visible,
-.campo input:focus,
-.campo input:focus-visible {
-  outline: none;
-  box-shadow: none;
+/* O exemplo (ex.: "(11) 91234-5678") só aparece depois que o rótulo sobe */
+.campo:not(:focus-within) :is(input, textarea)::placeholder {
+  color: transparent;
 }
 
-.campo textarea[aria-invalid='true'],
-.campo input[aria-invalid='true'] {
+/* Rótulo em cima, pequeno: ao clicar ou com texto (data e hora: sempre, porque o campo já mostra dd/mm/aaaa) */
+.campo:is(:focus-within, .preenchido, :has(input[type='datetime-local'])) .campo-cabecalho {
+  height: 1.15rem;
+  padding-top: 0.22rem;
+}
+
+.campo:is(:focus-within, .preenchido, :has(input[type='datetime-local'])) .campo-rotulo {
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: var(--cinza-escuro);
+}
+
+.campo:is(:focus-within, .preenchido) .campo-erro {
+  font-size: 0.64rem;
+}
+
+.campo:focus-within .campo-rotulo {
+  color: var(--azul);
+}
+
+.campo :is(input, textarea):focus,
+.campo :is(input, textarea):focus-visible {
+  outline: none;
+  border-color: var(--azul);
+  box-shadow: 0 0 0 1px var(--azul);
+}
+
+.campo :is(input, textarea)[aria-invalid='true'] {
   border-color: var(--erro);
 }
 
-.campo-erro {
-  font-size: 0.86rem;
-  font-weight: 600;
-  line-height: 1.3;
-  text-align: right;
-  color: var(--erro);
+.campo :is(input, textarea)[aria-invalid='true']:focus {
+  box-shadow: 0 0 0 1px var(--erro);
 }
 
 .campo-entrada input.com-botao {
-  padding-right: 8.5rem;
+  padding-right: 6.5rem;
 }
 
 .botao-mostrar-senha {
@@ -79,13 +141,13 @@
   transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.45rem 0.7rem;
+  gap: 0.35rem;
+  padding: 0.3rem 0.55rem;
   border: none;
   border-radius: 4px;
   background: var(--cinza-claro);
   color: var(--cinza-escuro);
-  font-size: 0.88rem;
+  font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
 }

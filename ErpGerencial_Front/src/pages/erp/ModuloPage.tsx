@@ -1,5 +1,4 @@
-import { Link, Navigate, useParams } from 'react-router-dom'
-import { IconeVoltar } from '../../components/icones/Icones'
+import { Navigate, useParams } from 'react-router-dom'
 import { IlustracaoConstrucao } from '../../components/icones/Ilustracoes'
 import CabecalhoModulo from './CabecalhoModulo'
 import { useErp } from './contexto'
@@ -23,10 +22,6 @@ export default function ModuloPage() {
           <div className="erp-em-breve-textos">
             <p className="erp-em-breve-titulo">Em construção</p>
             <p className="erp-em-breve-texto">Este módulo chega nas próximas etapas.</p>
-            <Link to="/app" className="ghost-button erp-em-breve-botao">
-              <IconeVoltar tamanho={20} />
-              Voltar ao início
-            </Link>
           </div>
         </div>
       ) : (

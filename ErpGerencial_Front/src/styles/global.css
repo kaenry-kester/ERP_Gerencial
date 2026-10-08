@@ -2,11 +2,11 @@
   Tema Órion — paleta do sistema: preto, azul e branco (tirados do logo).
   Preto (fundo do logo), azul petróleo (seta) e branco (nome), com neutros frios de apoio.
   Pensado para leitura confortável (dislexia):
-  fonte Lexend, texto grande, espaçamento generoso,
+  fonte Montserrat, texto grande, espaçamento generoso,
   fundo branco suave (sem branco puro) e texto quase preto (sem preto puro).
 */
 :root {
-  font-family: "Lexend", "Segoe UI", Verdana, sans-serif;
+  font-family: "Montserrat", "Segoe UI", Verdana, sans-serif;
   font-size: 18px;
   line-height: 1.6;
   letter-spacing: 0.02em;
@@ -186,4 +186,28 @@ a {
   --tema: var(--modulo-financeiro);
   --tema-texto: var(--preto);
   --tema-fundo: var(--modulo-financeiro-fundo);
+}
+
+/* Ilustrações em imagem: encaixadas no quadrado do desenho, sem distorcer */
+.ilustracao-imagem {
+  flex-shrink: 0;
+  object-fit: contain;
+  user-select: none;
+}
+
+
+/* Onde a imagem fica dentro de um quadrado colorido, o quadrado some (a imagem já tem o próprio fundo
+   arredondado) e a imagem ocupa o espaço todo, sem moldura dupla */
+:is(.botao-grande-imagem, .tela-painel-arte, .pagina-faixa-arte, .erp-pagina-ilustracao):has(> .ilustracao-imagem) {
+  background: none;
+}
+
+:is(.botao-grande-imagem, .tela-painel-arte, .pagina-faixa-arte, .erp-pagina-ilustracao) > .ilustracao-imagem {
+  width: 100%;
+  height: 100%;
+}
+
+/* O botão "Criar conta" pinta o quadrado com uma regra mais específica: some também */
+.botao-grande.secundario .botao-grande-imagem:has(> .ilustracao-imagem) {
+  background: none;
 }

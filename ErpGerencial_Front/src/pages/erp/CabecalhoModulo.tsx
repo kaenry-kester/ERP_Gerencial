@@ -1,6 +1,4 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { IconeVoltar } from '../../components/icones/Icones'
 import type { Modulo } from './modulos'
 
 type Props = {
@@ -9,15 +7,11 @@ type Props = {
   acao?: ReactNode
 }
 
-// Título das páginas: "← Início", a ilustração no fundo da cor do módulo, o nome e a descrição.
+// Título das páginas: a ilustração no fundo da cor do módulo, o nome e a descrição.
 export default function CabecalhoModulo({ modulo, acao }: Props) {
   const { Icone, Ilustracao } = modulo
   return (
     <>
-      <Link to="/app" className="erp-voltar">
-        <IconeVoltar tamanho={18} />
-        Início
-      </Link>
       <header className={`erp-pagina-cabecalho com-icone tema-${modulo.id}`}>
         <span className="erp-pagina-ilustracao" aria-hidden="true">
           {Ilustracao ? <Ilustracao tamanho={60} /> : <Icone tamanho={30} />}

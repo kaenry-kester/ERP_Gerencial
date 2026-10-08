@@ -1,0 +1,7 @@
+# Senha do banco
+.env
+# Ambiente Python
+.venv/
+__pycache__/
+# Login do WhatsApp Web de cada celular (dá acesso às conversas: nunca compartilhar)
+sessoes/

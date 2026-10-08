@@ -30,7 +30,8 @@ export default function CampoSenha({
   const descricao = [descricaoId, erro ? idErro : undefined].filter(Boolean).join(' ') || undefined
 
   return (
-    <div className={className ? `campo ${className}` : 'campo'}>
+    // "preenchido": usado pelos campos com o rótulo dentro (o rótulo sobe quando há texto)
+    <div className={['campo', valor && 'preenchido', className].filter(Boolean).join(' ')}>
       <div className="campo-cabecalho">
         <label htmlFor={id} className="campo-rotulo">
           {rotulo}

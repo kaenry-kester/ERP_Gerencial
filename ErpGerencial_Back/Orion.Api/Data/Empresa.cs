@@ -23,5 +23,15 @@ public class Empresa
 
     public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
 
+    // ----- Mensagem automática de manutenção (WhatsApp) -----
+
+    /// <summary>Celular (WhatsApp) que envia as mensagens, só dígitos com DDD.</summary>
+    public string? WhatsappRemetente { get; set; }
+
+    /// <summary>Texto enviado ao cliente no dia da manutenção; aceita {nome}, {data} e {empresa}.</summary>
+    public string? MensagemManutencao { get; set; }
+
+    public bool MensagemAutomaticaAtiva { get; set; }
+
     public List<Usuario> Usuarios { get; set; } = [];
 }

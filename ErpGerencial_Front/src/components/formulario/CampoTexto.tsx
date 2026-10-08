@@ -7,7 +7,7 @@ type Props = {
   onChange: (valor: string) => void
   onBlur?: () => void
   erro?: string
-  type?: 'text' | 'email' | 'tel'
+  type?: 'text' | 'email' | 'tel' | 'datetime-local'
   placeholder?: string
   autoComplete?: string
   inputMode?: HTMLAttributes<HTMLInputElement>['inputMode']
@@ -35,7 +35,8 @@ export default function CampoTexto({
   const idErro = `${id}-erro`
 
   return (
-    <div className={className ? `campo ${className}` : 'campo'}>
+    // "preenchido": usado pelos campos com o rótulo dentro (o rótulo sobe quando há texto)
+    <div className={['campo', valor && 'preenchido', className].filter(Boolean).join(' ')}>
       <div className="campo-cabecalho">
         <label htmlFor={id} className="campo-rotulo">
           {rotulo}

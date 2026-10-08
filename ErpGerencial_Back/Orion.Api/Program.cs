@@ -5,11 +5,13 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Orion.Api.Auth;
+using Orion.Api.Clientes;
 using Orion.Api.Conta;
 using Orion.Api.Data;
 using Orion.Api.Empresas;
 using Orion.Api.Produtos;
 using Orion.Api.Usuarios;
+using Orion.Api.WhatsApp;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,5 +79,7 @@ app.MapEmpresaEndpoints();
 app.MapUsuarioEndpoints();
 app.MapContaEndpoints();
 app.MapProdutoEndpoints();
+app.MapClienteEndpoints();
+app.MapWhatsAppEndpoints();
 
 app.Run();

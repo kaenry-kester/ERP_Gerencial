@@ -1,4 +1,4 @@
-// Ícones de reserva: aparecem enquanto as imagens da pasta public/imgs não forem adicionadas.
+// Ícones de linha (SVG, na cor do texto). O IconeCadastro é uma imagem (public/imgs/ilustracoes).
 
 type IconeProps = {
   tamanho?: number
@@ -26,14 +26,18 @@ export function IconeLogin({ tamanho = 24 }: IconeProps) {
   )
 }
 
+/** Pessoa com "+" (Criar conta, Novo usuário): imagem, no mesmo quadrado do ícone. */
 export function IconeCadastro({ tamanho = 24 }: IconeProps) {
   return (
-    <svg {...base(tamanho)}>
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <line x1="19" y1="8" x2="19" y2="14" />
-      <line x1="22" y1="11" x2="16" y2="11" />
-    </svg>
+    <img
+      src="/imgs/ilustracoes/novo-usuario.png"
+      alt=""
+      aria-hidden="true"
+      width={tamanho}
+      height={tamanho}
+      className="ilustracao-imagem"
+      draggable={false}
+    />
   )
 }
 
@@ -111,16 +115,6 @@ export function IconeLoja({ tamanho = 24 }: IconeProps) {
   )
 }
 
-export function IconeSair({ tamanho = 24 }: IconeProps) {
-  return (
-    <svg {...base(tamanho)}>
-      <path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" />
-      <polyline points="15 16 19 12 15 8" />
-      <line x1="19" y1="12" x2="9" y2="12" />
-    </svg>
-  )
-}
-
 export function IconeCaixa({ tamanho = 24 }: IconeProps) {
   return (
     <svg {...base(tamanho)}>
@@ -179,6 +173,33 @@ export function IconeLixeira({ tamanho = 24 }: IconeProps) {
       <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
       <path d="M10 11v6M14 11v6" />
       <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
+  )
+}
+
+export function IconeBusca({ tamanho = 24 }: IconeProps) {
+  return (
+    <svg {...base(tamanho)}>
+      <circle cx="11" cy="11" r="7" />
+      <line x1="16.5" y1="16.5" x2="21" y2="21" />
+    </svg>
+  )
+}
+
+export function IconeLapis({ tamanho = 24 }: IconeProps) {
+  return (
+    <svg {...base(tamanho)}>
+      <path d="M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16v4Z" />
+      <line x1="13.5" y1="6.5" x2="17.5" y2="10.5" />
+    </svg>
+  )
+}
+
+export function IconeMensagem({ tamanho = 24 }: IconeProps) {
+  return (
+    <svg {...base(tamanho)}>
+      <path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.1-5.6A8.4 8.4 0 1 1 21 11.5Z" />
+      <line x1="8.5" y1="11.5" x2="15.5" y2="11.5" />
     </svg>
   )
 }

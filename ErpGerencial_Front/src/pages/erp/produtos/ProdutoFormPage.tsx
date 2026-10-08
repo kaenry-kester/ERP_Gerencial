@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import CampoArea from '../../../components/formulario/CampoArea'
 import CampoTexto from '../../../components/formulario/CampoTexto'
 import type { Aviso } from '../../../components/formulario/FaixaAviso'
-import { IconeCheck, IconeVoltar } from '../../../components/icones/Icones'
+import { IconeCheck } from '../../../components/icones/Icones'
 import { IlustracaoProdutos } from '../../../components/icones/Ilustracoes'
 import { useSessaoExpirada } from '../../../hooks/useSessaoExpirada'
 import {
@@ -27,8 +27,9 @@ import AvisoPagina from '../AvisoPagina'
 import { useErp } from '../contexto'
 import { tem } from '../modulos'
 import SemAcesso from '../SemAcesso'
+import FaixaPagina from '../FaixaPagina'
+import SecaoPagina from '../SecaoPagina'
 import '../../../styles/acesso.css'
-import './produtos.css'
 
 type Campo =
   | 'nome'
@@ -181,50 +182,37 @@ export default function ProdutoFormPage() {
   const voltar = novo ? '/app/produtos' : `/app/produtos/${id}`
 
   return (
-    <div className="erp-pagina erp-pagina-estreita">
-      <Link to={voltar} className="erp-voltar">
-        <IconeVoltar tamanho={18} />
-        {novo ? 'Produtos' : original!.nome}
-      </Link>
-      <header className="erp-pagina-cabecalho com-icone tema-produtos">
-        <span className="erp-pagina-ilustracao" aria-hidden="true">
-          <IlustracaoProdutos tamanho={60} />
-        </span>
-        <div className="erp-pagina-cabecalho-textos">
-          <h1 className="erp-pagina-titulo">{novo ? 'Cadastrar produto' : 'Editar produto'}</h1>
-          <p className="erp-pagina-subtitulo">
-            {novo ? 'O ID é gerado automaticamente.' : `ID ${original!.numero}`}
-          </p>
-        </div>
-      </header>
+    <div className="pagina tema-produtos">
+      <FaixaPagina
+        Ilustracao={IlustracaoProdutos}
+        titulo={novo ? 'Cadastrar produto' : 'Editar produto'}
+        subtitulo={novo ? 'O ID é gerado automaticamente.' : `ID ${original!.numero}`}
+        voltar={{ para: voltar, rotulo: novo ? 'Produtos' : original!.nome }}
+      />
 
-      <form className="produto-form" onSubmit={salvar} noValidate>
-        <section className="produto-grupo" aria-labelledby="g-identificacao">
-          <h2 id="g-identificacao" className="produto-grupo-titulo">Identificação</h2>
+      <form className="pagina-secoes" onSubmit={salvar} noValidate>
+        <SecaoPagina id="identificacao" numero={1} titulo="Identificação">
           <div className="erp-form">
             <CampoTexto {...campo('nome')} rotulo="Nome" maxLength={200} className="largo" autoComplete="off" />
             <CampoTexto {...campo('codigo')} rotulo="Código do produto" maxLength={60} autoComplete="off" />
           </div>
-        </section>
+        </SecaoPagina>
 
-        <section className="produto-grupo" aria-labelledby="g-precos">
-          <h2 id="g-precos" className="produto-grupo-titulo">Preços</h2>
-          <div className="erp-form produto-tres">
+        <SecaoPagina id="precos" numero={2} titulo="Preços">
+          <div className="erp-form tres">
             <CampoTexto {...campo('precoCusto')} rotulo="Custo" inputMode="numeric" placeholder="R$ 0,00" />
             <CampoTexto {...campo('precoVendaPf')} rotulo="Venda pessoa física" inputMode="numeric" placeholder="R$ 0,00" />
             <CampoTexto {...campo('precoVendaPj')} rotulo="Venda pessoa jurídica" inputMode="numeric" placeholder="R$ 0,00" />
           </div>
-        </section>
+        </SecaoPagina>
 
-        <section className="produto-grupo" aria-labelledby="g-estoque">
-          <h2 id="g-estoque" className="produto-grupo-titulo">Estoque</h2>
+        <SecaoPagina id="estoque" numero={3} titulo="Estoque">
           <div className="erp-form">
             <CampoTexto {...campo('quantidade')} rotulo="Quantidade" inputMode="decimal" placeholder="0" />
           </div>
-        </section>
+        </SecaoPagina>
 
-        <section className="produto-grupo" aria-labelledby="g-caracteristicas">
-          <h2 id="g-caracteristicas" className="produto-grupo-titulo">Características</h2>
+        <SecaoPagina id="caracteristicas" numero={4} titulo="Características">
           <div className="erp-form">
             <CampoTexto {...campo('marca')} rotulo="Marca" maxLength={80} autoComplete="off" />
             <CampoTexto {...campo('modelo')} rotulo="Modelo" maxLength={80} autoComplete="off" />
@@ -236,19 +224,18 @@ export default function ProdutoFormPage() {
               ))}
             </datalist>
           </div>
-        </section>
+        </SecaoPagina>
 
-        <section className="produto-grupo" aria-labelledby="g-observacao">
-          <h2 id="g-observacao" className="produto-grupo-titulo">Observação</h2>
+        <SecaoPagina id="observacao" numero={5} titulo="Observação">
           <CampoArea {...campo('observacao')} rotulo="Observação" maxLength={2000} />
-        </section>
+        </SecaoPagina>
 
-        <div className="erp-form-acoes">
-          <button type="submit" className="erp-cadastro-acao tema-produtos" disabled={salvando}>
+        <div className="pagina-barra">
+          <button type="submit" className="pagina-botao" disabled={salvando}>
             <IconeCheck tamanho={20} />
-            {salvando ? 'Salvando...' : novo ? 'Cadastrar produto' : 'Salvar'}
+            {salvando ? 'Salvando...' : novo ? 'Cadastrar produto' : 'Salvar alterações'}
           </button>
-          <Link to={voltar} className="ghost-button erp-botao">
+          <Link to={voltar} className="pagina-botao neutro">
             Cancelar
           </Link>
           {aviso && <AvisoPagina aviso={aviso} />}

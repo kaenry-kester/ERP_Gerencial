@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { IconeSair } from '../../components/icones/Icones'
 import { useSessaoExpirada } from '../../hooks/useSessaoExpirada'
 import { lerSessao, sair, salvarSessao, sessaoAtual, type Sessao } from '../../services/api'
 import type { ContextoErp } from './contexto'
@@ -9,8 +8,8 @@ import './erp.css'
 
 /*
   Estrutura do ERP (depois do login):
-  - header: logo Órion (volta ao início), a empresa, quem está usando,
-    Dados da empresa, Usuários (administrador) e Sair;
+  - header: logo Órion (volta ao início) e os links Minha conta,
+    Empresa, Usuários (administrador) e Sair;
   - conteúdo: a tela inicial com os botões grandes ou a página do módulo aberto.
 */
 export default function ErpLayout() {
@@ -44,7 +43,6 @@ export default function ErpLayout() {
 
   if (!sessao) return <Navigate to="/login" replace />
 
-  const { empresa } = sessao
   const contexto: ContextoErp = { sessao, atualizarSessao }
 
   const sairDaConta = () => {
@@ -56,31 +54,30 @@ export default function ErpLayout() {
     <div className="erp">
       <header className="erp-header">
         <Link to="/app" className="erp-logo-link" aria-label="Órion — início">
-          <img src="/imgs/logo-orion-escuro.png" alt="Órion" className="erp-logo" />
+          <img src="/imgs/logo-orion.png" alt="Órion" className="erp-logo" />
         </Link>
 
         <div className="erp-header-conta">
-          <div className="erp-conta-textos">
-            <span className="erp-empresa-nome">{empresa.nome}</span>
-            <span className="erp-usuario-nome">{sessao.usuario.nome}</span>
-          </div>
-
           <nav className="erp-header-botoes" aria-label="Preferências">
             {PREFERENCIAS.filter((m) => podeAcessar(sessao.usuario, m)).map((m) => (
               <NavLink
                 key={m.id}
                 to={caminhoDo(m)}
-                aria-label={m.rotulo}
                 title={m.rotulo}
                 className={({ isActive }) => (isActive ? 'erp-header-botao ativo' : 'erp-header-botao')}
               >
-                <m.Icone tamanho={20} />
-                <span className="erp-header-botao-texto">{m.rotuloBotao ?? m.rotulo}</span>
+                {m.rotuloCurto ? (
+                  <>
+                    <span className="erp-header-longo">{m.rotuloBotao ?? m.rotulo}</span>
+                    <span className="erp-header-curto">{m.rotuloCurto}</span>
+                  </>
+                ) : (
+                  (m.rotuloBotao ?? m.rotulo)
+                )}
               </NavLink>
             ))}
-            <button type="button" className="erp-header-botao" onClick={sairDaConta} aria-label="Sair">
-              <IconeSair tamanho={20} />
-              <span className="erp-header-botao-texto">Sair</span>
+            <button type="button" className="erp-header-botao" onClick={sairDaConta}>
+              Sair
             </button>
           </nav>
         </div>

@@ -13,7 +13,8 @@ type Props = {
 export default function CampoArea({ id, rotulo, valor, onChange, erro, placeholder, maxLength, className }: Props) {
   const idErro = `${id}-erro`
   return (
-    <div className={className ? `campo ${className}` : 'campo'}>
+    // "preenchido": usado pelos campos com o rótulo dentro (o rótulo sobe quando há texto)
+    <div className={['campo', valor && 'preenchido', className].filter(Boolean).join(' ')}>
       <div className="campo-cabecalho">
         <label htmlFor={id} className="campo-rotulo">
           {rotulo}
