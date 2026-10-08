@@ -13,7 +13,8 @@ import {
   telefoneValido,
 } from '../../utils/validacao'
 import AvisoPagina from './AvisoPagina'
-import CabecalhoModulo from './CabecalhoModulo'
+import FaixaPagina from './FaixaPagina'
+import SecaoPagina from './SecaoPagina'
 import { useErp } from './contexto'
 import { MODULOS } from './modulos'
 import '../../styles/acesso.css'
@@ -22,6 +23,26 @@ type Campo = keyof DadosEmpresa
 const ORDEM: Campo[] = ['nome', 'razaoSocial', 'documento', 'email', 'telefone']
 
 const MODULO = MODULOS.find((m) => m.id === 'empresa')!
+
+const faixa = (
+  <FaixaPagina
+    titulo={MODULO.rotulo}
+    subtitulo={MODULO.descricao}
+    Ilustracao={MODULO.Ilustracao}
+  />
+)
+
+/** Dados em blocos (consulta de quem não é administrador). */
+const Dados = ({ itens }: { itens: [string, string][] }) => (
+  <dl className="erp-dados">
+    {itens.map(([rotulo, valor]) => (
+      <div key={rotulo} className="erp-dado">
+        <dt>{rotulo}</dt>
+        <dd>{valor}</dd>
+      </div>
+    ))}
+  </dl>
+)
 
 const formatarData = (iso: string) =>
   new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
@@ -75,34 +96,40 @@ export default function EmpresaPage() {
 
   if (!empresa || !valores) {
     return (
-      <div className="erp-pagina erp-pagina-estreita">
-        <CabecalhoModulo modulo={MODULO} />
-        {aviso ? <AvisoPagina aviso={aviso} /> : <p className="erp-carregando">Carregando...</p>}
+      <div className="pagina tema-preferencias">
+        {faixa}
+        <div className="pagina-corpo">
+          {aviso ? <AvisoPagina aviso={aviso} /> : <p className="erp-carregando">Carregando...</p>}
+        </div>
       </div>
     )
   }
 
   // Quem não é administrador só consulta
   if (!admin) {
-    const dados: [string, string][] = [
-      ['Nome', empresa.nome],
-      ['Razão social', empresa.razaoSocial ?? '—'],
-      ['CNPJ ou CPF', empresa.documento ? formatarDocumento(empresa.documento) : '—'],
-      ['E-mail', empresa.email ?? '—'],
-      ['Telefone', empresa.telefone ? formatarTelefone(empresa.telefone) : '—'],
-      ['Cadastro', formatarData(empresa.criadoEm)],
-    ]
     return (
-      <div className="erp-pagina erp-pagina-estreita">
-        <CabecalhoModulo modulo={MODULO} />
-        <dl className="erp-dados">
-          {dados.map(([rotulo, valor]) => (
-            <div key={rotulo} className="erp-dado">
-              <dt>{rotulo}</dt>
-              <dd>{valor}</dd>
-            </div>
-          ))}
-        </dl>
+      <div className="pagina tema-preferencias">
+        {faixa}
+        <div className="pagina-secoes">
+          <SecaoPagina id="empresa-identificacao" numero={1} titulo="Identificação">
+            <Dados
+              itens={[
+                ['Nome', empresa.nome],
+                ['Razão social', empresa.razaoSocial ?? '—'],
+                ['CNPJ ou CPF', empresa.documento ? formatarDocumento(empresa.documento) : '—'],
+                ['Cadastro', formatarData(empresa.criadoEm)],
+              ]}
+            />
+          </SecaoPagina>
+          <SecaoPagina id="empresa-contato" numero={2} titulo="Contato">
+            <Dados
+              itens={[
+                ['E-mail', empresa.email ?? '—'],
+                ['Telefone', empresa.telefone ? formatarTelefone(empresa.telefone) : '—'],
+              ]}
+            />
+          </SecaoPagina>
+        </div>
       </div>
     )
   }
@@ -154,37 +181,45 @@ export default function EmpresaPage() {
   }
 
   return (
-    <div className="erp-pagina erp-pagina-estreita">
-      <CabecalhoModulo modulo={MODULO} />
+    <div className="pagina tema-preferencias">
+      {faixa}
 
-      <form className="erp-form" onSubmit={salvar} noValidate>
-        <CampoTexto {...campo('nome')} rotulo="Nome da empresa" autoComplete="organization" />
-        <CampoTexto {...campo('razaoSocial')} rotulo="Razão social" placeholder="Como no CNPJ" autoComplete="off" />
-        <CampoTexto
-          {...campo('documento')}
-          rotulo="CNPJ ou CPF"
-          placeholder="00.000.000/0000-00"
-          autoComplete="off"
-        />
-        <CampoTexto
-          {...campo('telefone')}
-          rotulo="Telefone"
-          type="tel"
-          inputMode="numeric"
-          placeholder="(11) 91234-5678"
-          autoComplete="tel-national"
-        />
-        <CampoTexto
-          {...campo('email')}
-          rotulo="E-mail da empresa"
-          type="email"
-          className="largo"
-          placeholder="contato@suaempresa.com"
-          autoComplete="email"
-        />
+      <form className="pagina-secoes" onSubmit={salvar} noValidate>
+        <SecaoPagina id="empresa-identificacao" numero={1} titulo="Identificação">
+          <div className="erp-form">
+            <CampoTexto {...campo('nome')} rotulo="Nome da empresa" autoComplete="organization" />
+            <CampoTexto {...campo('razaoSocial')} rotulo="Razão social" placeholder="Como no CNPJ" autoComplete="off" />
+            <CampoTexto
+              {...campo('documento')}
+              rotulo="CNPJ ou CPF"
+              placeholder="00.000.000/0000-00"
+              autoComplete="off"
+            />
+          </div>
+        </SecaoPagina>
 
-        <div className="erp-form-acoes largo">
-          <button type="submit" className="primary-button erp-botao" disabled={salvando}>
+        <SecaoPagina id="empresa-contato" numero={2} titulo="Contato">
+          <div className="erp-form">
+            <CampoTexto
+              {...campo('telefone')}
+              rotulo="Telefone"
+              type="tel"
+              inputMode="numeric"
+              placeholder="(11) 91234-5678"
+              autoComplete="tel-national"
+            />
+            <CampoTexto
+              {...campo('email')}
+              rotulo="E-mail da empresa"
+              type="email"
+              placeholder="contato@suaempresa.com"
+              autoComplete="email"
+            />
+          </div>
+        </SecaoPagina>
+
+        <div className="pagina-barra">
+          <button type="submit" className="pagina-botao" disabled={salvando}>
             <IconeCheck tamanho={20} />
             {salvando ? 'Salvando...' : 'Salvar'}
           </button>

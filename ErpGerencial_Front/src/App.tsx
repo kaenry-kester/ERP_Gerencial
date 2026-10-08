@@ -9,10 +9,13 @@ import UsuariosPage from './pages/erp/UsuariosPage'
 import UsuarioFormPage from './pages/erp/UsuarioFormPage'
 import ModuloPage from './pages/erp/ModuloPage'
 import ContaPage from './pages/erp/ContaPage'
-import NovoCadastroPage from './pages/erp/NovoCadastroPage'
 import ProdutosPage from './pages/erp/produtos/ProdutosPage'
 import ProdutoFormPage from './pages/erp/produtos/ProdutoFormPage'
 import ProdutoPage from './pages/erp/produtos/ProdutoPage'
+import ClientesPage from './pages/erp/clientes/ClientesPage'
+import ClienteFormPage from './pages/erp/clientes/ClienteFormPage'
+import ClientePage from './pages/erp/clientes/ClientePage'
+import MensagemAutomaticaPage from './pages/erp/clientes/MensagemAutomaticaPage'
 
 export default function App() {
   return (
@@ -34,7 +37,11 @@ export default function App() {
           <Route path="produtos/novo" element={<ProdutoFormPage />} />
           <Route path="produtos/:id" element={<ProdutoPage />} />
           <Route path="produtos/:id/editar" element={<ProdutoFormPage />} />
-          <Route path="clientes/novo" element={<NovoCadastroPage modulo="clientes" />} />
+          <Route path="clientes" element={<ClientesPage />} />
+          <Route path="clientes/novo" element={<ClienteFormPage />} />
+          <Route path="clientes/mensagem" element={<MensagemAutomaticaPage />} />
+          <Route path="clientes/:id" element={<ClientePage />} />
+          <Route path="clientes/:id/editar" element={<ClienteFormPage />} />
           <Route path=":modulo" element={<ModuloPage />} />
         </Route>
 

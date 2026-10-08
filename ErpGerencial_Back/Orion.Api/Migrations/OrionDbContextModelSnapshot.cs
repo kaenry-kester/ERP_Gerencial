@@ -23,6 +23,97 @@ namespace Orion.Api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Orion.Api.Data.Cliente", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("AtualizadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("atualizado_em");
+
+                    b.Property<string>("Bairro")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("bairro");
+
+                    b.Property<string>("Celular")
+                        .IsRequired()
+                        .HasMaxLength(11)
+                        .HasColumnType("character varying(11)")
+                        .HasColumnName("celular");
+
+                    b.Property<string>("Cep")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("cep");
+
+                    b.Property<string>("Cidade")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("cidade");
+
+                    b.Property<string>("Complemento")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("complemento");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<DateTime?>("EnvioTesteEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("envio_teste_em");
+
+                    b.Property<int>("IntervaloManutencaoMeses")
+                        .HasColumnType("integer")
+                        .HasColumnName("intervalo_manutencao_meses");
+
+                    b.Property<string>("Logradouro")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("logradouro");
+
+                    b.Property<string>("MensagemWhatsapp")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("mensagem_whatsapp");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("nome");
+
+                    b.Property<int>("Numero")
+                        .HasColumnType("integer")
+                        .HasColumnName("numero");
+
+                    b.Property<string>("NumeroEndereco")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("numero_endereco");
+
+                    b.Property<string>("Uf")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasColumnName("uf");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmpresaId", "Numero")
+                        .IsUnique();
+
+                    b.ToTable("clientes", (string)null);
+                });
+
             modelBuilder.Entity("Orion.Api.Data.CodigoLogin", b =>
                 {
                     b.Property<Guid>("Id")
@@ -137,6 +228,15 @@ namespace Orion.Api.Migrations
                         .HasColumnType("character varying(254)")
                         .HasColumnName("email");
 
+                    b.Property<bool>("MensagemAutomaticaAtiva")
+                        .HasColumnType("boolean")
+                        .HasColumnName("mensagem_automatica_ativa");
+
+                    b.Property<string>("MensagemManutencao")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("mensagem_manutencao");
+
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -153,6 +253,11 @@ namespace Orion.Api.Migrations
                         .HasColumnType("character varying(11)")
                         .HasColumnName("telefone");
 
+                    b.Property<string>("WhatsappRemetente")
+                        .HasMaxLength(11)
+                        .HasColumnType("character varying(11)")
+                        .HasColumnName("whatsapp_remetente");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Documento")
@@ -160,6 +265,71 @@ namespace Orion.Api.Migrations
                         .HasFilter("documento IS NOT NULL");
 
                     b.ToTable("empresas", (string)null);
+                });
+
+            modelBuilder.Entity("Orion.Api.Data.EnvioWhatsapp", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ClienteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cliente_id");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<DateOnly>("DataReferencia")
+                        .HasColumnType("date")
+                        .HasColumnName("data_referencia");
+
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<string>("Erro")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("erro");
+
+                    b.Property<string>("Mensagem")
+                        .IsRequired()
+                        .HasMaxLength(1200)
+                        .HasColumnType("character varying(1200)")
+                        .HasColumnName("mensagem");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Telefone")
+                        .IsRequired()
+                        .HasMaxLength(13)
+                        .HasColumnType("character varying(13)")
+                        .HasColumnName("telefone");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)")
+                        .HasDefaultValue("manutencao")
+                        .HasColumnName("tipo");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClienteId", "DataReferencia")
+                        .IsUnique()
+                        .HasFilter("tipo = 'manutencao'");
+
+                    b.HasIndex("EmpresaId", "CriadoEm");
+
+                    b.ToTable("envios_whatsapp", (string)null);
                 });
 
             modelBuilder.Entity("Orion.Api.Data.Produto", b =>
@@ -315,6 +485,17 @@ namespace Orion.Api.Migrations
                     b.ToTable("usuarios", (string)null);
                 });
 
+            modelBuilder.Entity("Orion.Api.Data.Cliente", b =>
+                {
+                    b.HasOne("Orion.Api.Data.Empresa", "Empresa")
+                        .WithMany()
+                        .HasForeignKey("EmpresaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Empresa");
+                });
+
             modelBuilder.Entity("Orion.Api.Data.CodigoLogin", b =>
                 {
                     b.HasOne("Orion.Api.Data.Usuario", "Usuario")
@@ -335,6 +516,23 @@ namespace Orion.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("Orion.Api.Data.EnvioWhatsapp", b =>
+                {
+                    b.HasOne("Orion.Api.Data.Cliente", "Cliente")
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Orion.Api.Data.Empresa", null)
+                        .WithMany()
+                        .HasForeignKey("EmpresaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cliente");
                 });
 
             modelBuilder.Entity("Orion.Api.Data.Produto", b =>

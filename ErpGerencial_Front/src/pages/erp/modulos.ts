@@ -33,6 +33,8 @@ export type Modulo = {
   Ilustracao?: Desenho
   /** Texto curto do botão no topo (Preferências). */
   rotuloBotao?: string
+  /** Versão ainda mais curta, para celulares estreitos. */
+  rotuloCurto?: string
   /** Botão de cadastro mostrado logo acima do botão grande, na tela inicial (para quem tem a permissão). */
   cadastro?: { rotulo: string; para: string; permissao: string }
   acesso: Acesso
@@ -53,8 +55,8 @@ export const MODULOS_PRINCIPAIS: Modulo[] = [
   {
     id: 'clientes',
     rotulo: 'Clientes',
-    resumo: 'Cadastro e histórico de compras',
-    descricao: 'Cadastro e histórico de compras.',
+    resumo: 'Cadastro e próximas manutenções',
+    descricao: 'Cadastro e manutenções.',
     Icone: IconeClientes,
     Ilustracao: IlustracaoClientes,
     cadastro: { rotulo: 'Cadastrar cliente', para: '/app/clientes/novo', permissao: 'clientes-cadastrar' },
@@ -77,6 +79,7 @@ export const PREFERENCIAS: Modulo[] = [
     id: 'conta',
     rotulo: 'Minha conta',
     rotuloBotao: 'Minha conta',
+    rotuloCurto: 'Conta',
     resumo: 'Seus dados, e-mail e senha',
     descricao: 'Dados pessoais e segurança.',
     Icone: IconeUsuario,
@@ -98,7 +101,7 @@ export const PREFERENCIAS: Modulo[] = [
     rotulo: 'Usuários e permissões',
     resumo: 'Quem acessa o sistema',
     descricao: 'Acessos da equipe.',
-    rotuloBotao: 'Usuários',
+    rotuloBotao: 'Equipe',
     Icone: IconeCracha,
     Ilustracao: IlustracaoUsuarios,
     acesso: 'admin',
@@ -124,13 +127,13 @@ export const tem = (usuario: Usuario, permissao: string) =>
  * Permissões que o administrador marca em "Usuários e permissões", por módulo
  * (ids iguais aos de Auth/Permissoes.cs). A primeira de cada grupo é "ver"; as outras a incluem.
  */
-export const PERMISSOES: { modulo: string; itens: { id: string; rotulo: string; dica?: string }[] }[] = [
+export const PERMISSOES: { modulo: string; itens: { id: string; rotulo: string }[] }[] = [
   {
     modulo: 'produtos',
     itens: [
       { id: 'produtos', rotulo: 'Ver produtos' },
       { id: 'produtos-cadastrar', rotulo: 'Cadastrar produto' },
-      { id: 'produtos-editar', rotulo: 'Editar produtos', dica: 'Sem marcar, só visualiza a lista.' },
+      { id: 'produtos-editar', rotulo: 'Editar produtos' },
     ],
   },
   {
@@ -138,6 +141,7 @@ export const PERMISSOES: { modulo: string; itens: { id: string; rotulo: string; 
     itens: [
       { id: 'clientes', rotulo: 'Ver clientes' },
       { id: 'clientes-cadastrar', rotulo: 'Cadastrar cliente' },
+      { id: 'clientes-editar', rotulo: 'Editar clientes' },
     ],
   },
   { modulo: 'financeiro', itens: [{ id: 'financeiro', rotulo: 'Ver financeiro' }] },

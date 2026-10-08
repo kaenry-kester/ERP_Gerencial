@@ -4,7 +4,7 @@ import CampoSenha from '../../components/formulario/CampoSenha'
 import CampoTexto from '../../components/formulario/CampoTexto'
 import type { Aviso } from '../../components/formulario/FaixaAviso'
 import RequisitosSenha from '../../components/formulario/RequisitosSenha'
-import { IconeCheck, IconeVoltar } from '../../components/icones/Icones'
+import { IconeCheck } from '../../components/icones/Icones'
 import { useSessaoExpirada } from '../../hooks/useSessaoExpirada'
 import {
   criarUsuario,
@@ -17,11 +17,15 @@ import {
 import { emailValido, requisitosSenha } from '../../utils/validacao'
 import AvisoPagina from './AvisoPagina'
 import { useErp } from './contexto'
-import { MODULOS_PRINCIPAIS, PERMISSOES } from './modulos'
+import FaixaPagina from './FaixaPagina'
+import { MODULOS, MODULOS_PRINCIPAIS, PERMISSOES } from './modulos'
+import SecaoPagina from './SecaoPagina'
 import SemAcesso from './SemAcesso'
 import '../../styles/acesso.css'
 
 type Campo = 'nome' | 'email' | 'senha'
+
+const MODULO = MODULOS.find((m) => m.id === 'usuarios')!
 
 /**
  * Novo usuário (/app/usuarios/novo) ou edição (/app/usuarios/:id).
@@ -109,7 +113,6 @@ export default function UsuarioFormPage() {
       return [...new Set([...atual, id, modulo])]
     })
 
-
   const salvar = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (salvando) return
@@ -142,133 +145,141 @@ export default function UsuarioFormPage() {
     }
   }
 
+  // As seções aparecem conforme o caso; a numeração acompanha.
+  let numero = 0
+  const proxima = () => ++numero
+
   return (
-    <div className="erp-pagina erp-pagina-estreita">
-      <header className="erp-pagina-cabecalho">
-        <Link to="/app/usuarios" className="erp-voltar">
-          <IconeVoltar tamanho={18} />
-          Usuários e permissões
-        </Link>
-        <h1 className="erp-pagina-titulo">{novo ? 'Novo usuário' : original!.nome}</h1>
-        <p className="erp-pagina-subtitulo">
-          {novo
+    <div className="pagina tema-preferencias">
+      <FaixaPagina
+        titulo={novo ? 'Novo usuário' : original!.nome}
+        subtitulo={
+          novo
             ? 'Login com e-mail e senha.'
-            : `${original!.email} · cadastrado em ${new Date(original!.criadoEm).toLocaleDateString('pt-BR')}`}
-        </p>
-      </header>
+            : `${original!.email} · cadastrado em ${new Date(original!.criadoEm).toLocaleDateString('pt-BR')}`
+        }
+        Ilustracao={MODULO.Ilustracao}
+        voltar={{ para: '/app/usuarios', rotulo: 'Usuários e permissões' }}
+      />
 
-      <form className="erp-form" onSubmit={salvar} noValidate>
-        <CampoTexto
-          id="nome"
-          rotulo="Nome"
-          autoComplete="off"
-          placeholder="Nome e sobrenome"
-          valor={nome}
-          onChange={(v) => {
-            setNome(v)
-            setAviso(null)
-          }}
-          erro={erros.nome}
-          className={novo ? undefined : 'largo'}
-        />
-
-        {novo && (
-          <>
+      <form className="pagina-secoes" onSubmit={salvar} noValidate>
+        <SecaoPagina id="usuario-dados" numero={proxima()} titulo={novo ? 'Dados de acesso' : 'Dados'}>
+          <div className="erp-form">
             <CampoTexto
-              id="email"
-              rotulo="E-mail"
-              type="email"
+              id="nome"
+              rotulo="Nome"
               autoComplete="off"
-              placeholder="nome@empresa.com"
-              valor={email}
+              placeholder="Nome e sobrenome"
+              valor={nome}
               onChange={(v) => {
-                setEmail(v)
-                setErroServidor({})
+                setNome(v)
                 setAviso(null)
               }}
-              erro={erros.email}
+              erro={erros.nome}
+              className={novo ? undefined : 'largo'}
             />
-            <CampoSenha
-              id="senha"
-              rotulo="Senha"
-              autoComplete="new-password"
-              descricaoId="requisitos-senha"
-              valor={senha}
-              onChange={setSenha}
-              erro={erros.senha}
-            />
-            <RequisitosSenha id="requisitos-senha" senha={senha} />
-          </>
-        )}
 
-        {/* Tipo de acesso */}
-        <fieldset className="erp-acesso largo" disabled={euMesmo}>
-          <legend className="erp-secao-titulo">Acesso</legend>
-          {euMesmo && <p className="erp-nota">Seu próprio acesso não pode ser alterado.</p>}
-          <div className="erp-opcoes">
-            <label className={administrador ? 'erp-opcao marcada' : 'erp-opcao'}>
-              <input type="radio" name="tipo" checked={administrador} onChange={() => setAdministrador(true)} />
-              <span>
-                <span className="erp-opcao-titulo">Administrador</span>
-                <span className="erp-opcao-texto">Acesso total.</span>
-              </span>
-            </label>
-            <label className={!administrador ? 'erp-opcao marcada' : 'erp-opcao'}>
-              <input type="radio" name="tipo" checked={!administrador} onChange={() => setAdministrador(false)} />
-              <span>
-                <span className="erp-opcao-titulo">Personalizado</span>
-                <span className="erp-opcao-texto">Escolha os módulos.</span>
-              </span>
-            </label>
+            {novo && (
+              <>
+                <CampoTexto
+                  id="email"
+                  rotulo="E-mail"
+                  type="email"
+                  autoComplete="off"
+                  placeholder="nome@empresa.com"
+                  valor={email}
+                  onChange={(v) => {
+                    setEmail(v)
+                    setErroServidor({})
+                    setAviso(null)
+                  }}
+                  erro={erros.email}
+                />
+                <CampoSenha
+                  id="senha"
+                  rotulo="Senha"
+                  autoComplete="new-password"
+                  descricaoId="requisitos-senha"
+                  valor={senha}
+                  onChange={setSenha}
+                  erro={erros.senha}
+                />
+                <RequisitosSenha id="requisitos-senha" senha={senha} />
+              </>
+            )}
           </div>
-        </fieldset>
+        </SecaoPagina>
 
-        {!administrador && (
-          <fieldset className="erp-permissoes largo">
-            <legend className="erp-secao-titulo">Módulos</legend>
-            <div className="erp-permissoes-modulos">
-              {PERMISSOES.map((grupo) => {
-                const modulo = MODULOS_PRINCIPAIS.find((m) => m.id === grupo.modulo)!
-                const { Ilustracao } = modulo
-                return (
-                  <div key={grupo.modulo} className={`erp-permissoes-modulo tema-${grupo.modulo}`}>
-                    <div className="erp-permissoes-modulo-topo">
-                      {Ilustracao && <Ilustracao tamanho={44} />}
-                      <span className="erp-permissoes-modulo-nome">{modulo.rotulo}</span>
-                    </div>
-                    {grupo.itens.map((item) => (
-                      <label key={item.id} className="erp-permissao">
-                        <input
-                          type="checkbox"
-                          checked={permissoes.includes(item.id)}
-                          onChange={() => alternarPermissao(item.id)}
-                        />
-                        <span>
-                          {item.rotulo}
-                          {item.dica && <span className="erp-permissao-dica">{item.dica}</span>}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                )
-              })}
+        <SecaoPagina id="usuario-acesso" numero={proxima()} titulo="Acesso">
+          <fieldset className="erp-acesso" disabled={euMesmo}>
+            <legend className="sr-only">Tipo de acesso</legend>
+            {euMesmo && <p className="erp-nota">Seu próprio acesso não pode ser alterado.</p>}
+            <div className="erp-opcoes">
+              <label className={administrador ? 'erp-opcao marcada' : 'erp-opcao'}>
+                <input type="radio" name="tipo" checked={administrador} onChange={() => setAdministrador(true)} />
+                <span>
+                  <span className="erp-opcao-titulo">Administrador</span>
+                  <span className="erp-opcao-texto">Acesso total.</span>
+                </span>
+              </label>
+              <label className={!administrador ? 'erp-opcao marcada' : 'erp-opcao'}>
+                <input type="radio" name="tipo" checked={!administrador} onChange={() => setAdministrador(false)} />
+                <span>
+                  <span className="erp-opcao-titulo">Personalizado</span>
+                  <span className="erp-opcao-texto">Escolha os módulos.</span>
+                </span>
+              </label>
             </div>
           </fieldset>
+        </SecaoPagina>
+
+        {!administrador && (
+          <SecaoPagina id="usuario-modulos" numero={proxima()} titulo="Módulos">
+            <fieldset className="erp-permissoes">
+              <legend className="sr-only">Módulos liberados</legend>
+              <div className="erp-permissoes-modulos">
+                {PERMISSOES.map((grupo) => {
+                  const modulo = MODULOS_PRINCIPAIS.find((m) => m.id === grupo.modulo)!
+                  const { Ilustracao } = modulo
+                  return (
+                    <div key={grupo.modulo} className={`erp-permissoes-modulo tema-${grupo.modulo}`}>
+                      <div className="erp-permissoes-modulo-topo">
+                        {Ilustracao && <Ilustracao tamanho={44} />}
+                        <span className="erp-permissoes-modulo-nome">{modulo.rotulo}</span>
+                      </div>
+                      {grupo.itens.map((item) => (
+                        <label key={item.id} className="erp-permissao">
+                          <input
+                            type="checkbox"
+                            checked={permissoes.includes(item.id)}
+                            onChange={() => alternarPermissao(item.id)}
+                          />
+                          <span>{item.rotulo}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )
+                })}
+              </div>
+            </fieldset>
+          </SecaoPagina>
         )}
 
         {!novo && !euMesmo && (
-          <label className="erp-permissao erp-ativo largo">
-            <input type="checkbox" checked={ativo} onChange={(e) => setAtivo(e.target.checked)} />
-            Usuário ativo
-          </label>
+          <SecaoPagina id="usuario-situacao" numero={proxima()} titulo="Situação">
+            <label className="erp-permissao erp-ativo">
+              <input type="checkbox" checked={ativo} onChange={(e) => setAtivo(e.target.checked)} />
+              Usuário ativo
+            </label>
+          </SecaoPagina>
         )}
 
-        <div className="erp-form-acoes largo">
-          <button type="submit" className="primary-button erp-botao" disabled={salvando}>
+        <div className="pagina-barra">
+          <button type="submit" className="pagina-botao" disabled={salvando}>
             <IconeCheck tamanho={20} />
             {salvando ? 'Salvando...' : novo ? 'Criar usuário' : 'Salvar'}
           </button>
-          <Link to="/app/usuarios" className="ghost-button erp-botao">
+          <Link to="/app/usuarios" className="pagina-botao neutro">
             Cancelar
           </Link>
           {aviso && <AvisoPagina aviso={aviso} />}

@@ -75,7 +75,11 @@
 
 /* ---------- 2ª etapa: código enviado por e-mail ---------- */
 
-/* Código grande e espaçado, fácil de conferir com o e-mail */
+/* Código grande e espaçado, fácil de conferir com o e-mail (campo mais alto) */
+.campo-codigo {
+  --campo-altura: clamp(58px, 9vh, 70px);
+}
+
 .campo-codigo input {
   font-size: 1.6rem;
   font-weight: 700;

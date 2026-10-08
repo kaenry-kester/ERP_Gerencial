@@ -1,18 +1,17 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { Aviso } from '../../../components/formulario/FaixaAviso'
-import { IconeMais, IconeSeta } from '../../../components/icones/Icones'
+import { IconeBusca, IconeMais } from '../../../components/icones/Icones'
 import { IlustracaoProdutos } from '../../../components/icones/Ilustracoes'
 import { useSessaoExpirada } from '../../../hooks/useSessaoExpirada'
 import { listarProdutos, mensagemDe, type ListaProdutos } from '../../../services/api'
 import { formatarMoeda, formatarQuantidade } from '../../../utils/validacao'
 import AvisoPagina from '../AvisoPagina'
 import CabecalhoModulo from '../CabecalhoModulo'
+import FaixaPagina from '../FaixaPagina'
 import { useErp } from '../contexto'
 import { MODULOS, podeAcessar, tem } from '../modulos'
 import SemAcesso from '../SemAcesso'
-import '../../../styles/acesso.css'
-import './produtos.css'
 
 const MODULO = MODULOS.find((m) => m.id === 'produtos')!
 
@@ -59,7 +58,7 @@ export default function ProdutosPage() {
   }
 
   const cadastrar = tem(sessao.usuario, 'produtos-cadastrar') && (
-    <Link to="/app/produtos/novo" className="erp-cadastro-acao erp-cabecalho-acao tema-produtos">
+    <Link to="/app/produtos/novo" className="pagina-botao marrom">
       <IconeMais tamanho={20} />
       Cadastrar produto
     </Link>
@@ -71,14 +70,20 @@ export default function ProdutosPage() {
   const paginas = lista ? Math.max(1, Math.ceil(total / lista.tamanhoPagina)) : 1
 
   return (
-    <div className="erp-pagina erp-pagina-larga">
-      <CabecalhoModulo modulo={MODULO} acao={cadastrar || undefined} />
+    <div className="pagina tema-produtos">
+      <FaixaPagina
+        Ilustracao={IlustracaoProdutos}
+        titulo="Produtos"
+        subtitulo={MODULO.descricao}
+        acoes={cadastrar || undefined}
+      />
 
-      <div className="produtos-barra">
-        <div className="campo produtos-busca">
-          <label htmlFor="produtos-busca" className="campo-rotulo">
-            Buscar
+      <div className="lista-ferramentas">
+        <div className="lista-busca">
+          <label htmlFor="produtos-busca" className="sr-only">
+            Buscar produto
           </label>
+          <IconeBusca tamanho={20} />
           <input
             id="produtos-busca"
             type="search"
@@ -88,92 +93,102 @@ export default function ProdutosPage() {
           />
         </div>
         {lista && (
-          <p className="produtos-contagem" role="status">
-            {total === 0 ? 'Nenhum produto' : `${total} ${total === 1 ? 'produto' : 'produtos'}`}
+          <p className="lista-contagem" role="status">
+            <strong>{total}</strong> {total === 1 ? 'produto' : 'produtos'}
           </p>
         )}
       </div>
 
-      {aviso && <AvisoPagina aviso={aviso} />}
-      {!lista && !aviso && <p className="erp-carregando">Carregando...</p>}
+      <div className="lista-corpo">
+        {aviso && <AvisoPagina aviso={aviso} />}
+        {!lista && !aviso && <p className="erp-carregando">Carregando...</p>}
 
-      {lista && lista.itens.length === 0 && (
-        <div className="erp-em-breve">
-          <IlustracaoProdutos tamanho={120} />
-          <div className="erp-em-breve-textos">
-            <p className="erp-em-breve-titulo">{buscaAplicada ? 'Nada encontrado' : 'Nenhum produto ainda'}</p>
-            <p className="erp-em-breve-texto">
-              {buscaAplicada ? 'Tente outro termo de busca.' : 'Os produtos cadastrados aparecem aqui.'}
-            </p>
+        {lista && lista.itens.length === 0 && (
+          <div className="lista-vazio">
+            <IlustracaoProdutos tamanho={96} />
+            <div>
+              <p className="lista-vazio-titulo">{buscaAplicada ? 'Nada encontrado' : 'Nenhum produto ainda'}</p>
+              <p className="lista-vazio-texto">
+                {buscaAplicada ? 'Tente outro termo de busca.' : 'Os produtos cadastrados aparecem aqui.'}
+              </p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {lista && lista.itens.length > 0 && (
-        <>
-          <table className="produtos-tabela">
-            <thead>
-              <tr>
-                <th scope="col">ID</th>
-                <th scope="col">Produto</th>
-                <th scope="col" className="col-codigo">Código</th>
-                <th scope="col" className="col-marca">Marca · Modelo</th>
-                <th scope="col" className="numero">Venda PF</th>
-                <th scope="col" className="numero col-pj">Venda PJ</th>
-                <th scope="col" className="numero">Qtd.</th>
-                <th scope="col">
-                  <span className="sr-only">Abrir</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {lista.itens.map((p) => (
-                // A linha inteira abre o produto; o link no nome é o acesso pelo teclado.
-                <tr key={p.id} onClick={() => navigate(`/app/produtos/${p.id}`)}>
-                  <td className="produtos-id">{p.numero}</td>
-                  <td>
-                    <Link to={`/app/produtos/${p.id}`} className="produtos-nome">
-                      {p.nome}
-                    </Link>
-                  </td>
-                  <td className="col-codigo">{p.codigo ?? '—'}</td>
-                  <td className="col-marca">{[p.marca, p.modelo].filter(Boolean).join(' · ') || '—'}</td>
-                  <td className="numero">{formatarMoeda(p.precoVendaPf)}</td>
-                  <td className="numero col-pj">{formatarMoeda(p.precoVendaPj)}</td>
-                  <td className="numero">{formatarQuantidade(p.quantidade)}</td>
-                  <td className="produtos-seta" aria-hidden="true">
-                    <IconeSeta tamanho={18} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {lista && lista.itens.length > 0 && (
+          <>
+            {/* Cor, voltagem e observação aparecem só nos detalhes; em telas estreitas a tabela rola para o lado */}
+            <div className="lista-tabela-area">
+              <table className="lista-tabela">
+                <thead>
+                  <tr>
+                    <th scope="col" className="lista-id">ID</th>
+                    <th scope="col">Produto</th>
+                    <th scope="col">Código</th>
+                    <th scope="col" className="numero">Custo</th>
+                    <th scope="col" className="numero">Venda PF</th>
+                    <th scope="col" className="numero">Venda PJ</th>
+                    <th scope="col" className="numero">Qtd.</th>
+                    <th scope="col">Marca</th>
+                    <th scope="col">Modelo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lista.itens.map((p) => (
+                    // A linha inteira abre o produto; o link no nome é o acesso pelo teclado.
+                    <tr key={p.id} onClick={() => navigate(`/app/produtos/${p.id}`)}>
+                      <td className="lista-id">{p.numero}</td>
+                      <td>
+                        <Link to={`/app/produtos/${p.id}`} className="lista-nome">
+                          {p.nome}
+                        </Link>
+                      </td>
+                      <td>{p.codigo ?? '—'}</td>
+                      <td className="numero">{formatarMoeda(p.precoCusto)}</td>
+                      <td className="numero lista-destaque">{formatarMoeda(p.precoVendaPf)}</td>
+                      <td className="numero lista-destaque">{formatarMoeda(p.precoVendaPj)}</td>
+                      <td className="numero">
+                        <span
+                          className={p.quantidade > 0 ? 'lista-etiqueta' : 'lista-etiqueta alerta'}
+                          title={p.quantidade > 0 ? undefined : 'Sem estoque'}
+                        >
+                          {formatarQuantidade(p.quantidade)}
+                        </span>
+                      </td>
+                      <td>{p.marca ?? '—'}</td>
+                      <td>{p.modelo ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-          {paginas > 1 && (
-            <nav className="produtos-paginas" aria-label="Páginas">
-              <button
-                type="button"
-                className="ghost-button erp-botao"
-                disabled={pagina <= 1}
-                onClick={() => setPagina((n) => n - 1)}
-              >
-                Anterior
-              </button>
-              <span>
-                {inicio}–{fim} de {total}
-              </span>
-              <button
-                type="button"
-                className="ghost-button erp-botao"
-                disabled={pagina >= paginas}
-                onClick={() => setPagina((n) => n + 1)}
-              >
-                Próxima
-              </button>
-            </nav>
-          )}
-        </>
-      )}
+            {paginas > 1 && (
+              <nav className="lista-paginas" aria-label="Páginas">
+                <span>
+                  {inicio}–{fim} de {total}
+                </span>
+                <button
+                  type="button"
+                  className="pagina-botao neutro"
+                  disabled={pagina <= 1}
+                  onClick={() => setPagina((n) => n - 1)}
+                >
+                  Anterior
+                </button>
+                <button
+                  type="button"
+                  className="pagina-botao neutro"
+                  disabled={pagina >= paginas}
+                  onClick={() => setPagina((n) => n + 1)}
+                >
+                  Próxima
+                </button>
+              </nav>
+            )}
+          </>
+        )}
+      </div>
     </div>
   )
 }

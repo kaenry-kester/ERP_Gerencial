@@ -7,6 +7,8 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<Empresa> Empresas => Set<Empresa>();
     public DbSet<Produto> Produtos => Set<Produto>();
+    public DbSet<Cliente> Clientes => Set<Cliente>();
+    public DbSet<EnvioWhatsapp> EnviosWhatsapp => Set<EnvioWhatsapp>();
     public DbSet<CodigoLogin> CodigosLogin => Set<CodigoLogin>();
     public DbSet<DispositivoConfiavel> DispositivosConfiaveis => Set<DispositivoConfiavel>();
 
@@ -42,6 +44,9 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
             e.Property(emp => emp.Email).HasColumnName("email").HasMaxLength(254);
             e.Property(emp => emp.Telefone).HasColumnName("telefone").HasMaxLength(11);
             e.Property(emp => emp.CriadoEm).HasColumnName("criado_em");
+            e.Property(emp => emp.WhatsappRemetente).HasColumnName("whatsapp_remetente").HasMaxLength(11);
+            e.Property(emp => emp.MensagemManutencao).HasColumnName("mensagem_manutencao").HasMaxLength(1000);
+            e.Property(emp => emp.MensagemAutomaticaAtiva).HasColumnName("mensagem_automatica_ativa");
             // Como no Bling, um CNPJ/CPF tem uma conta só (quando informado).
             e.HasIndex(emp => emp.Documento).IsUnique().HasFilter("documento IS NOT NULL");
         });
@@ -69,6 +74,51 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
             e.HasIndex(p => new { p.EmpresaId, p.Numero }).IsUnique();
             e.HasIndex(p => new { p.EmpresaId, p.Codigo }).IsUnique().HasFilter("codigo IS NOT NULL");
             e.HasOne(p => p.Empresa).WithMany().HasForeignKey(p => p.EmpresaId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Cliente>(e =>
+        {
+            e.ToTable("clientes");
+            e.Property(c => c.Id).HasColumnName("id");
+            e.Property(c => c.EmpresaId).HasColumnName("empresa_id");
+            e.Property(c => c.Numero).HasColumnName("numero");
+            e.Property(c => c.Nome).HasColumnName("nome").HasMaxLength(200);
+            e.Property(c => c.Celular).HasColumnName("celular").HasMaxLength(11);
+            e.Property(c => c.Cep).HasColumnName("cep").HasMaxLength(8);
+            e.Property(c => c.Logradouro).HasColumnName("logradouro").HasMaxLength(150);
+            e.Property(c => c.NumeroEndereco).HasColumnName("numero_endereco").HasMaxLength(20);
+            e.Property(c => c.Complemento).HasColumnName("complemento").HasMaxLength(100);
+            e.Property(c => c.Bairro).HasColumnName("bairro").HasMaxLength(100);
+            e.Property(c => c.Cidade).HasColumnName("cidade").HasMaxLength(100);
+            e.Property(c => c.Uf).HasColumnName("uf").HasMaxLength(2);
+            e.Property(c => c.IntervaloManutencaoMeses).HasColumnName("intervalo_manutencao_meses");
+            e.Property(c => c.MensagemWhatsapp).HasColumnName("mensagem_whatsapp").HasMaxLength(1000);
+            e.Property(c => c.EnvioTesteEm).HasColumnName("envio_teste_em");
+            e.Property(c => c.CriadoEm).HasColumnName("criado_em");
+            e.Property(c => c.AtualizadoEm).HasColumnName("atualizado_em");
+            // ID sequencial não se repete dentro da mesma empresa.
+            e.HasIndex(c => new { c.EmpresaId, c.Numero }).IsUnique();
+            e.HasOne(c => c.Empresa).WithMany().HasForeignKey(c => c.EmpresaId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EnvioWhatsapp>(e =>
+        {
+            e.ToTable("envios_whatsapp");
+            e.Property(w => w.Id).HasColumnName("id");
+            e.Property(w => w.EmpresaId).HasColumnName("empresa_id");
+            e.Property(w => w.ClienteId).HasColumnName("cliente_id");
+            e.Property(w => w.DataReferencia).HasColumnName("data_referencia");
+            e.Property(w => w.Tipo).HasColumnName("tipo").HasMaxLength(12).HasDefaultValue("manutencao");
+            e.Property(w => w.Telefone).HasColumnName("telefone").HasMaxLength(13);
+            e.Property(w => w.Mensagem).HasColumnName("mensagem").HasMaxLength(1200);
+            e.Property(w => w.Status).HasColumnName("status").HasMaxLength(10);
+            e.Property(w => w.Erro).HasColumnName("erro").HasMaxLength(500);
+            e.Property(w => w.CriadoEm).HasColumnName("criado_em");
+            // Nunca duas mensagens de manutenção para o mesmo cliente na mesma data (testes agendados podem repetir).
+            e.HasIndex(w => new { w.ClienteId, w.DataReferencia }).IsUnique().HasFilter("tipo = 'manutencao'");
+            e.HasIndex(w => new { w.EmpresaId, w.CriadoEm });
+            e.HasOne(w => w.Cliente).WithMany().HasForeignKey(w => w.ClienteId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Empresa>().WithMany().HasForeignKey(w => w.EmpresaId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<CodigoLogin>(e =>

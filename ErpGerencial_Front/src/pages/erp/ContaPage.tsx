@@ -28,7 +28,8 @@ import {
 } from '../../services/api'
 import { emailValido, formatarTelefone, requisitosSenha, telefoneValido } from '../../utils/validacao'
 import AvisoPagina from './AvisoPagina'
-import CabecalhoModulo from './CabecalhoModulo'
+import FaixaPagina from './FaixaPagina'
+import SecaoPagina from './SecaoPagina'
 import { useErp } from './contexto'
 import { MODULOS } from './modulos'
 import '../../styles/acesso.css'
@@ -51,17 +52,13 @@ function descreverDispositivo(ua: string | null) {
   return sistema ? `${navegador} · ${sistema}` : navegador
 }
 
-function Secao({ titulo, perigo, children }: { titulo: string; perigo?: boolean; children: ReactNode }) {
-  const id = 'secao-' + titulo.toLowerCase().replace(/\W+/g, '-')
-  return (
-    <section className={perigo ? 'erp-secao perigo' : 'erp-secao'} aria-labelledby={id}>
-      <h2 id={id} className="erp-secao-titulo">
-        {titulo}
-      </h2>
-      <div className="erp-secao-conteudo">{children}</div>
-    </section>
-  )
-}
+type PropsSecaoConta = { numero: number; titulo: string; perigo?: boolean; children: ReactNode }
+
+const Secao = ({ numero, titulo, perigo, children }: PropsSecaoConta) => (
+  <SecaoPagina id={`conta-${numero}`} numero={numero} titulo={titulo} perigo={perigo}>
+    {children}
+  </SecaoPagina>
+)
 
 // Minha conta: dados, e-mail, senha, dispositivos lembrados e exclusão.
 export default function ContaPage() {
@@ -90,12 +87,18 @@ export default function ContaPage() {
   }
 
   return (
-    <div className="erp-pagina erp-pagina-estreita">
-      <CabecalhoModulo modulo={MODULO} />
+    <div className="pagina tema-preferencias">
+      <FaixaPagina
+        titulo={MODULO.rotulo}
+        subtitulo={MODULO.descricao}
+        Ilustracao={MODULO.Ilustracao}
+      />
       {!conta ? (
-        erro ? <AvisoPagina aviso={erro} /> : <p className="erp-carregando">Carregando...</p>
+        <div className="pagina-corpo">
+          {erro ? <AvisoPagina aviso={erro} /> : <p className="erp-carregando">Carregando...</p>}
+        </div>
       ) : (
-        <>
+        <div className="pagina-secoes">
           <SecaoDados conta={conta} aoAtualizar={aoAtualizar} />
           <SecaoEmail conta={conta} aoAtualizar={aoAtualizar} />
           <SecaoSenha
@@ -106,7 +109,7 @@ export default function ContaPage() {
           />
           <SecaoDispositivos versao={versaoDispositivos} />
           <SecaoExcluir conta={conta} />
-        </>
+        </div>
       )}
     </div>
   )
@@ -154,7 +157,7 @@ function SecaoDados({ conta, aoAtualizar }: PropsSecao) {
   }
 
   return (
-    <Secao titulo="Dados">
+    <Secao numero={1} titulo="Dados">
       <form className="erp-form" onSubmit={salvar} noValidate>
         <CampoTexto id="conta-nome" rotulo="Nome" autoComplete="name" valor={nome} onChange={mudou(setNome)} erro={erros.nome} />
         <CampoTexto
@@ -169,7 +172,7 @@ function SecaoDados({ conta, aoAtualizar }: PropsSecao) {
           erro={erros.telefone}
         />
         <div className="erp-form-acoes largo">
-          <button type="submit" className="primary-button erp-botao" disabled={salvando}>
+          <button type="submit" className="pagina-botao" disabled={salvando}>
             <IconeCheck tamanho={20} />
             {salvando ? 'Salvando...' : 'Salvar'}
           </button>
@@ -276,13 +279,13 @@ function SecaoEmail({ conta, aoAtualizar }: PropsSecao) {
   }
 
   return (
-    <Secao titulo="E-mail">
+    <Secao numero={2} titulo="E-mail">
       {!aberto ? (
         <div className="erp-linha-valor">
           <span className="erp-valor">{conta.email}</span>
           <button
             type="button"
-            className="ghost-button erp-botao"
+            className="pagina-botao neutro"
             onClick={() => {
               setAberto(true)
               setAviso(null)
@@ -321,10 +324,10 @@ function SecaoEmail({ conta, aoAtualizar }: PropsSecao) {
             erro={erros.senha}
           />
           <div className="erp-form-acoes largo">
-            <button type="submit" className="primary-button erp-botao" disabled={enviando}>
+            <button type="submit" className="pagina-botao" disabled={enviando}>
               {enviando ? 'Enviando...' : 'Enviar código'}
             </button>
-            <button type="button" className="ghost-button erp-botao" onClick={fechar}>
+            <button type="button" className="pagina-botao neutro" onClick={fechar}>
               Cancelar
             </button>
             {aviso && <AvisoPagina aviso={aviso} />}
@@ -348,14 +351,14 @@ function SecaoEmail({ conta, aoAtualizar }: PropsSecao) {
             className="largo campo-codigo-conta"
           />
           <div className="erp-form-acoes largo">
-            <button type="submit" className="primary-button erp-botao" disabled={enviando}>
+            <button type="submit" className="pagina-botao" disabled={enviando}>
               <IconeCheck tamanho={20} />
               {enviando ? 'Confirmando...' : 'Confirmar'}
             </button>
-            <button type="button" className="ghost-button erp-botao" onClick={reenviar} disabled={espera > 0}>
+            <button type="button" className="pagina-botao neutro" onClick={reenviar} disabled={espera > 0}>
               {espera > 0 ? `Reenviar (${espera}s)` : 'Reenviar'}
             </button>
-            <button type="button" className="ghost-button erp-botao" onClick={fechar}>
+            <button type="button" className="pagina-botao neutro" onClick={fechar}>
               Cancelar
             </button>
             {aviso && <AvisoPagina aviso={aviso} />}
@@ -418,7 +421,7 @@ function SecaoSenha({ aoAtualizar }: Pick<PropsSecao, 'aoAtualizar'>) {
   }
 
   return (
-    <Secao titulo="Senha">
+    <Secao numero={3} titulo="Senha">
       <form className="erp-form" onSubmit={salvar} noValidate>
         <CampoSenha
           id="conta-senha-atual"
@@ -457,7 +460,7 @@ function SecaoSenha({ aoAtualizar }: Pick<PropsSecao, 'aoAtualizar'>) {
         />
         {nova && <RequisitosSenha id="conta-requisitos" senha={nova} className="largo" />}
         <div className="erp-form-acoes largo">
-          <button type="submit" className="primary-button erp-botao" disabled={salvando}>
+          <button type="submit" className="pagina-botao" disabled={salvando}>
             <IconeCheck tamanho={20} />
             {salvando ? 'Salvando...' : 'Alterar senha'}
           </button>
@@ -500,7 +503,7 @@ function SecaoDispositivos({ versao }: { versao: number }) {
   }
 
   return (
-    <Secao titulo="Dispositivos lembrados">
+    <Secao numero={4} titulo="Dispositivos lembrados">
       {!dispositivos ? (
         !aviso && <p className="erp-carregando">Carregando...</p>
       ) : dispositivos.length === 0 ? (
@@ -526,7 +529,7 @@ function SecaoDispositivos({ versao }: { versao: number }) {
       {((dispositivos && dispositivos.length > 1) || aviso) && (
         <div className="erp-form-acoes">
           {dispositivos && dispositivos.length > 1 && (
-            <button type="button" className="ghost-button erp-botao" onClick={() => esquecer('todos')}>
+            <button type="button" className="pagina-botao neutro" onClick={() => esquecer('todos')}>
               Remover todos
             </button>
           )}
@@ -577,13 +580,15 @@ function SecaoExcluir({ conta }: { conta: Conta }) {
   }
 
   return (
-    <Secao titulo="Excluir conta" perigo>
+    <Secao numero={5} titulo="Excluir conta" perigo>
       <p className="erp-nota">{nota}</p>
       {!aberto ? (
-        <button type="button" className="erp-botao-perigo forte" onClick={() => setAberto(true)}>
-          <IconeLixeira tamanho={20} />
-          Excluir conta
-        </button>
+        <div className="erp-form-acoes">
+          <button type="button" className="erp-botao-perigo forte" onClick={() => setAberto(true)}>
+            <IconeLixeira tamanho={18} />
+            Excluir conta
+          </button>
+        </div>
       ) : (
         <form className="erp-form" onSubmit={excluir} noValidate>
           <CampoSenha
@@ -599,12 +604,12 @@ function SecaoExcluir({ conta }: { conta: Conta }) {
           />
           <div className="erp-form-acoes largo">
             <button type="submit" className="erp-botao-perigo forte" disabled={excluindo}>
-              <IconeLixeira tamanho={20} />
+              <IconeLixeira tamanho={18} />
               {excluindo ? 'Excluindo...' : 'Confirmar exclusão'}
             </button>
             <button
               type="button"
-              className="ghost-button erp-botao"
+              className="pagina-botao neutro"
               onClick={() => {
                 setAberto(false)
                 setSenha('')

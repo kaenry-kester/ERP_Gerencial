@@ -70,14 +70,24 @@
     grid-column: auto;
   }
 
-  /* Na meia coluna, o erro vai para baixo do rótulo */
-  .cadastro-form > .par .campo-cabecalho {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0;
+  /* Na meia coluna não cabem rótulo e erro juntos: com erro, a mensagem fica no lugar do rótulo
+     (o rótulo continua para leitores de tela) */
+  .cadastro-form > .par:has(.campo-erro) .campo-rotulo {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .cadastro-form > .par:has(.campo-erro) .campo-cabecalho {
+    right: 2.6rem;
+    justify-content: flex-start;
   }
 
   .cadastro-form > .par .campo-erro {
+    flex-shrink: 1;
+    font-size: 0.66rem;
     text-align: left;
   }
 }
@@ -85,7 +95,7 @@
 /* Celulares baixos (ex.: 360×640): campos e espaços um pouco menores para tudo caber */
 @media (max-width: 600px) and (max-height: 700px) {
   .cadastro {
-    --campo-altura: 32px;
+    --campo-altura: 44px;
     --linha-gap: 0.3rem;
   }
 
@@ -105,10 +115,5 @@
 
   .cadastro .tela-faixa {
     padding-block: 0.35rem;
-  }
-
-  /* A altura real do campo vem do texto + espaço interno */
-  .cadastro .campo input {
-    padding-block: 0.2rem;
   }
 }

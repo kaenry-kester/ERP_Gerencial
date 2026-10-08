@@ -2,7 +2,7 @@
   ERP (depois do login): fundo claro, header com o logo e, abaixo, a tela inicial
   com botões grandes (um por módulo) ou a página do módulo aberto.
   ┌──────────────────────────────────────────────┐
-  │ logo Órion            empresa · Empresa Sair  │
+  │ logo Órion        Minha conta  Empresa  Sair │
   ├──────────────────────────────────────────────┤
   │  [ Produtos ]  [ Clientes ]  [ Financeiro ]   │
   └──────────────────────────────────────────────┘
@@ -28,9 +28,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: clamp(0.55rem, 1.6vh, 0.9rem) var(--erp-lado);
-  background: var(--branco);
-  box-shadow: 0 2px 10px rgba(11, 10, 9, 0.05);
+  padding: clamp(0.5rem, 1.4vh, 0.75rem) var(--erp-lado);
+  /* Azul petróleo da seta do logo (degradê sutil para o tom escuro) */
+  background: linear-gradient(100deg, var(--azul) 0%, var(--azul-escuro) 100%);
 }
 
 .erp-logo-link {
@@ -47,66 +47,53 @@
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: clamp(0.75rem, 2vw, 1.25rem);
-}
-
-/* Empresa em cima, quem está usando embaixo */
-.erp-conta-textos {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  line-height: 1.25;
-}
-
-.erp-empresa-nome,
-.erp-usuario-nome {
-  max-width: 24ch;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.erp-empresa-nome {
-  font-weight: 700;
-  color: var(--cinza-escuro);
-}
-
-.erp-usuario-nome {
-  font-size: 0.82rem;
-  color: var(--texto-suave);
+  gap: clamp(0.75rem, 2vw, 1.5rem);
 }
 
 .erp-header-botoes {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.45rem;
 }
 
-/* Empresa, Usuários e Sair: botões cinza com ícone */
+/* Minha conta, Empresa, Usuários e Sair: só o texto, como links (sublinhado ao passar o mouse) */
+.erp-header-botoes {
+  gap: clamp(0.9rem, 2vw, 1.6rem);
+}
+
 .erp-header-botao {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
   min-height: 42px;
-  padding: 0.4rem 0.8rem;
+  padding: 0;
   border: none;
-  border-radius: 6px;
-  background: var(--cinza-claro);
-  font-size: 0.92rem;
+  background: none;
+  font-size: 0.95rem;
   font-weight: 600;
-  color: var(--cinza-escuro);
+  white-space: nowrap;
+  color: #fff;
   cursor: pointer;
-  transition: background-color 0.25s ease;
+  text-decoration: underline transparent;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+  transition:
+    color 0.25s ease,
+    text-decoration-color 0.25s ease;
 }
 
 .erp-header-botao:hover {
-  background: var(--cinza-claro-hover);
+  text-decoration-color: currentColor;
 }
 
+/* "Minha conta" vira "Conta" nos celulares estreitos (ver o fim do arquivo) */
+.erp-header-curto {
+  display: none;
+}
+
+/* Página aberta: texto creme (fita do logo), sublinhado */
 .erp-header-botao.ativo {
-  background: var(--azul-claro);
-  color: var(--azul-escuro);
+  color: var(--creme);
+  text-decoration-color: var(--creme);
 }
 
 /* Conteúdo (rola só ele, se precisar). position: relative prende aqui dentro os textos
@@ -121,10 +108,32 @@
 /* ---------- Tela inicial: botões grandes ---------- */
 
 .erp-inicio {
-  padding: clamp(1.25rem, 5vh, 3rem) var(--erp-lado) clamp(1rem, 3vh, 2rem);
+  padding: clamp(0.9rem, 3vh, 1.75rem) var(--erp-lado) clamp(1rem, 3vh, 2rem);
   display: flex;
   flex-direction: column;
   gap: clamp(1rem, 3.5vh, 2rem);
+}
+
+/* Na faixa marrom do topo: quem está usando (em negrito) e o papel dela, numa etiqueta creme */
+.erp-inicio-usuario {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.6rem;
+  font-size: 0.95rem;
+}
+
+.erp-inicio-usuario strong {
+  color: #fff;
+}
+
+.erp-inicio-papel {
+  padding: 0.05rem 0.5rem;
+  border-radius: 3px;
+  background: var(--creme);
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--marrom-escuro);
 }
 
 .erp-inicio-texto {
@@ -210,7 +219,7 @@
   background: var(--tema-fundo);
 }
 
-/* Ilustração (ou a imagem de public/imgs/modulos/<id>.png, quando existir) */
+/* Ilustração do módulo */
 .erp-bloco-imagem {
   width: clamp(104px, min(11vw, 19vh), 176px);
   height: clamp(104px, min(11vw, 19vh), 176px);
@@ -219,7 +228,7 @@
   place-items: center;
 }
 
-.erp-bloco-imagem svg {
+.erp-bloco-imagem :is(svg, img) {
   width: 100%;
   height: 100%;
 }
@@ -246,29 +255,14 @@
 }
 
 /* "Abrir →": deixa claro que o bloco inteiro é clicável */
-.erp-bloco-abrir {
-  margin-top: auto;
-  padding-top: 0.6rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-weight: 700;
-  color: var(--tema-texto);
-}
 
-.erp-bloco-abrir svg {
-  transition: transform 0.25s ease;
-}
 
-.erp-bloco:hover .erp-bloco-abrir svg {
-  transform: translateX(3px);
-}
 
 /* ---------- Páginas dos módulos ---------- */
 
 .erp-pagina {
   width: min(1120px, 100%);
-  padding: clamp(0.9rem, 3vh, 1.75rem) var(--erp-lado) clamp(1rem, 3vh, 2rem);
+  padding: clamp(0.7rem, 2vh, 1.25rem) var(--erp-lado) clamp(1rem, 3vh, 2rem);
   display: flex;
   flex-direction: column;
   gap: clamp(1rem, 3vh, 1.75rem);
@@ -284,23 +278,28 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem 0.9rem;
 }
 
 /* Ilustração do módulo, no fundo da cor dele (configurações: creme) */
 .erp-pagina-ilustracao {
   flex-shrink: 0;
-  width: 76px;
-  height: 76px;
+  width: 52px;
+  height: 52px;
   display: grid;
   place-items: center;
-  border-radius: 14px;
+  border-radius: 4px;
   background: var(--tema-fundo, var(--creme-claro));
   color: var(--marrom-escuro);
 }
 
+.erp-pagina-ilustracao :is(svg, img) {
+  width: 40px;
+  height: 40px;
+}
+
 .erp-pagina-titulo {
-  font-size: clamp(1.35rem, min(2.2vw, 3.6vh), 1.75rem);
+  font-size: clamp(1.15rem, min(1.8vw, 3vh), 1.4rem);
   font-weight: 700;
   line-height: 1.25;
   color: var(--cinza-escuro);
@@ -308,7 +307,8 @@
 }
 
 .erp-pagina-subtitulo {
-  margin-top: 0.2rem;
+  margin-top: 0.1rem;
+  font-size: 0.9rem;
   color: var(--texto-suave);
   overflow-wrap: anywhere;
 }
@@ -373,11 +373,6 @@
   color: var(--texto-suave);
 }
 
-.erp-em-breve-botao {
-  margin-top: 0.75rem;
-  min-height: 46px;
-}
-
 /* ---------- Formulários, listas e avisos das páginas ---------- */
 
 .erp-carregando {
@@ -394,6 +389,12 @@
 /* Ação principal ao lado do título (ex.: "Novo usuário") */
 .erp-cabecalho-acao {
   flex-shrink: 0;
+}
+
+/* Botão mais baixo no cabeçalho (seletor composto para vencer o .primary-button do CSS global) */
+.erp-pagina-cabecalho .erp-cabecalho-acao {
+  min-height: 42px;
+  padding-block: 0.4rem;
 }
 
 .erp-botao {
@@ -445,12 +446,6 @@
 
 .erp-form .largo {
   grid-column: 1 / -1;
-}
-
-.erp-form .campo input {
-  min-height: 46px;
-  padding-block: 0.4rem;
-  font-size: 1rem;
 }
 
 /* Requisitos da senha na coluna ao lado do campo de senha */
@@ -703,7 +698,7 @@
   margin-bottom: 0.3rem;
 }
 
-.erp-permissoes-modulo-topo svg {
+.erp-permissoes-modulo-topo :is(svg, img) {
   flex-shrink: 0;
   padding: 3px;
   border-radius: 8px;
@@ -718,13 +713,6 @@
 
 .erp-permissoes-modulo .erp-permissao input {
   accent-color: var(--tema);
-}
-
-.erp-permissao-dica {
-  display: block;
-  font-size: 0.82rem;
-  font-weight: 400;
-  color: var(--texto-suave);
 }
 
 /* Botão de ação principal na cor do módulo (ex.: Cadastrar produto, Editar) */
@@ -816,8 +804,12 @@
   overflow-wrap: anywhere;
 }
 
-.campo-codigo-conta input {
+.campo-codigo-conta {
+  --campo-altura: 60px;
   max-width: 260px;
+}
+
+.campo-codigo-conta input {
   font-size: 1.35rem;
   font-weight: 700;
   letter-spacing: 0.4em;
@@ -883,14 +875,6 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  /* Botões do topo só com o ícone */
-  .erp-header-botao-texto {
-    display: none;
-  }
-
-  .erp-header-botao {
-    padding-inline: 0.6rem;
-  }
 }
 
 /* ---------- Celulares ---------- */
@@ -900,12 +884,21 @@
     padding-inline: 0.75rem;
   }
 
-  .erp-conta-textos {
-    display: none;
+  .erp-header {
+    gap: 0.5rem;
   }
 
   .erp-logo {
-    height: 30px;
+    height: 22px;
+  }
+
+  .erp-header-botoes {
+    gap: 0.6rem;
+  }
+
+  .erp-header-botao {
+    font-size: 0.74rem;
+    letter-spacing: 0;
   }
 
   .erp-inicio {
@@ -953,26 +946,23 @@
     font-size: 1.25rem;
   }
 
-  .erp-bloco-abrir {
-    display: none;
-  }
 
   .erp-pagina {
     padding-inline: 1rem;
   }
 
   .erp-pagina-ilustracao {
-    width: 60px;
-    height: 60px;
+    width: 44px;
+    height: 44px;
   }
 
-  .erp-pagina-ilustracao svg {
-    width: 48px;
-    height: 48px;
+  .erp-pagina-ilustracao :is(svg, img) {
+    width: 34px;
+    height: 34px;
   }
 
   .erp-pagina-subtitulo {
-    font-size: 0.88rem;
+    font-size: 0.84rem;
     line-height: 1.45;
   }
 
@@ -997,10 +987,6 @@
 
   .erp-form {
     row-gap: 0.7rem;
-  }
-
-  .erp-form .campo input {
-    min-height: 42px;
   }
 
   .erp-pagina-cabecalho.com-icone {
@@ -1033,5 +1019,16 @@
   .erp-inicio {
     padding-top: 0.9rem;
     gap: 0.75rem;
+  }
+}
+
+/* Celulares estreitos (360px): links do topo mais curtos, para caberem numa linha */
+@media (max-width: 400px) {
+  .erp-header-longo {
+    display: none;
+  }
+
+  .erp-header-curto {
+    display: inline;
   }
 }

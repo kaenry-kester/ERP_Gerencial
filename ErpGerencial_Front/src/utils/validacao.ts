@@ -12,6 +12,12 @@ export function formatarTelefone(valor: string) {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
 }
 
+/** CEP com a máscara 00000-000. */
+export function formatarCep(valor: string) {
+  const d = valor.replace(/\D/g, '').slice(0, 8)
+  return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d
+}
+
 /** Telefone fixo (10 dígitos) ou celular (11 dígitos), com DDD. */
 export const telefoneValido = (telefone: string) => {
   const digitos = telefone.replace(/\D/g, '').length

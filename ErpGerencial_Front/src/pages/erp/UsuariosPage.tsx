@@ -6,6 +6,7 @@ import { useSessaoExpirada } from '../../hooks/useSessaoExpirada'
 import { listarUsuarios, mensagemDe, type Usuario } from '../../services/api'
 import AvisoPagina from './AvisoPagina'
 import CabecalhoModulo from './CabecalhoModulo'
+import FaixaPagina from './FaixaPagina'
 import { useErp } from './contexto'
 import { MODULOS, MODULOS_PRINCIPAIS } from './modulos'
 import SemAcesso from './SemAcesso'
@@ -63,44 +64,51 @@ export default function UsuariosPage() {
   }
 
   const novoUsuario = (
-    <Link to="/app/usuarios/novo" className="primary-button erp-botao erp-cabecalho-acao">
+    <Link to="/app/usuarios/novo" className="pagina-botao marrom">
       <IconeCadastro tamanho={20} />
       Novo usuário
     </Link>
   )
 
   return (
-    <div className="erp-pagina erp-pagina-larga">
-      <CabecalhoModulo modulo={MODULO} acao={novoUsuario} />
+    <div className="pagina tema-preferencias">
+      <FaixaPagina
+        titulo={MODULO.rotulo}
+        subtitulo={MODULO.descricao}
+        Ilustracao={MODULO.Ilustracao}
+        acoes={novoUsuario}
+      />
 
-      {aviso && <AvisoPagina aviso={aviso} />}
-      {!usuarios && !aviso && <p className="erp-carregando">Carregando...</p>}
+      <div className="pagina-corpo pagina-lista">
+        {aviso && <AvisoPagina aviso={aviso} />}
+        {!usuarios && !aviso && <p className="erp-carregando">Carregando...</p>}
 
-      {usuarios && (
-        <ul className="erp-lista" aria-label="Usuários da empresa">
-          {usuarios.map((u) => (
-            <li key={u.id}>
-              <Link to={`/app/usuarios/${u.id}`} className={u.ativo ? 'erp-linha' : 'erp-linha inativo'}>
-                <span className="erp-avatar" aria-hidden="true">
-                  {iniciais(u.nome)}
-                </span>
-                <span className="erp-linha-textos">
-                  <span className="erp-linha-titulo">
-                    {u.nome}
-                    {u.id === sessao.usuario.id && <span className="erp-etiqueta">Você</span>}
-                    {!u.ativo && <span className="erp-etiqueta desativado">Desativado</span>}
+        {usuarios && (
+          <ul className="erp-lista" aria-label="Usuários da empresa">
+            {usuarios.map((u) => (
+              <li key={u.id}>
+                <Link to={`/app/usuarios/${u.id}`} className={u.ativo ? 'erp-linha' : 'erp-linha inativo'}>
+                  <span className="erp-avatar" aria-hidden="true">
+                    {iniciais(u.nome)}
                   </span>
-                  <span className="erp-linha-texto">{u.email}</span>
-                </span>
-                <span className="erp-linha-acesso">{resumoAcesso(u)}</span>
-                <span className="erp-linha-seta">
-                  <IconeSeta tamanho={20} />
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+                  <span className="erp-linha-textos">
+                    <span className="erp-linha-titulo">
+                      {u.nome}
+                      {u.id === sessao.usuario.id && <span className="erp-etiqueta">Você</span>}
+                      {!u.ativo && <span className="erp-etiqueta desativado">Desativado</span>}
+                    </span>
+                    <span className="erp-linha-texto">{u.email}</span>
+                  </span>
+                  <span className="erp-linha-acesso">{resumoAcesso(u)}</span>
+                  <span className="erp-linha-seta">
+                    <IconeSeta tamanho={20} />
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   )
 }

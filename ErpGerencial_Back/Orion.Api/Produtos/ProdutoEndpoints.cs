@@ -60,7 +60,7 @@ public static class ProdutoEndpoints
     /// <summary>Lista paginada (50 por página), mais novos primeiro; busca por nome, código, marca ou modelo.</summary>
     private static async Task<IResult> Listar(ClaimsPrincipal user, OrionDbContext db, string? busca, int? pagina)
     {
-        var (usuario, negado) = await Permitido(user, db, Permissoes.Produtos);
+        var (usuario, negado) = await Permissoes.Exigir(user, db, Permissoes.Produtos);
         if (usuario is null) return negado!;
 
         var consulta = db.Produtos.Where(p => p.EmpresaId == usuario.EmpresaId);
@@ -86,7 +86,7 @@ public static class ProdutoEndpoints
 
     private static async Task<IResult> Obter(Guid id, ClaimsPrincipal user, OrionDbContext db)
     {
-        var (usuario, negado) = await Permitido(user, db, Permissoes.Produtos);
+        var (usuario, negado) = await Permissoes.Exigir(user, db, Permissoes.Produtos);
         if (usuario is null) return negado!;
         var produto = await db.Produtos.SingleOrDefaultAsync(p => p.Id == id && p.EmpresaId == usuario.EmpresaId);
         return produto is null ? Results.NotFound() : Results.Ok(Dto(produto));
@@ -94,7 +94,7 @@ public static class ProdutoEndpoints
 
     private static async Task<IResult> Criar(ProdutoRequest req, ClaimsPrincipal user, OrionDbContext db)
     {
-        var (usuario, negado) = await Permitido(user, db, Permissoes.ProdutosCadastrar);
+        var (usuario, negado) = await Permissoes.Exigir(user, db, Permissoes.ProdutosCadastrar);
         if (usuario is null) return negado!;
 
         var erros = Validar(req);
@@ -127,7 +127,7 @@ public static class ProdutoEndpoints
 
     private static async Task<IResult> Editar(Guid id, ProdutoRequest req, ClaimsPrincipal user, OrionDbContext db)
     {
-        var (usuario, negado) = await Permitido(user, db, Permissoes.ProdutosEditar);
+        var (usuario, negado) = await Permissoes.Exigir(user, db, Permissoes.ProdutosEditar);
         if (usuario is null) return negado!;
 
         var produto = await db.Produtos.SingleOrDefaultAsync(p => p.Id == id && p.EmpresaId == usuario.EmpresaId);
@@ -151,7 +151,7 @@ public static class ProdutoEndpoints
 
     private static async Task<IResult> Excluir(Guid id, ClaimsPrincipal user, OrionDbContext db)
     {
-        var (usuario, negado) = await Permitido(user, db, Permissoes.ProdutosEditar);
+        var (usuario, negado) = await Permissoes.Exigir(user, db, Permissoes.ProdutosEditar);
         if (usuario is null) return negado!;
         var apagados = await db.Produtos.Where(p => p.Id == id && p.EmpresaId == usuario.EmpresaId).ExecuteDeleteAsync();
         return apagados == 0 ? Results.NotFound() : Results.NoContent();
@@ -201,18 +201,6 @@ public static class ProdutoEndpoints
         p.Cor = Opcional(req.Cor);
         p.Voltagem = Opcional(req.Voltagem);
         p.Observacao = Opcional(req.Observacao);
-    }
-
-    /// <summary>Quem chamou, se tiver a permissão; senão, a resposta de erro.</summary>
-    private static async Task<(Usuario? Usuario, IResult? Negado)> Permitido(
-        ClaimsPrincipal user, OrionDbContext db, string permissao)
-    {
-        var usuario = await UsuarioAtual.Carregar(user, db);
-        if (usuario is null) return (null, Results.Unauthorized());
-        if (!Permissoes.Tem(usuario, permissao))
-            return (null, Results.Json(new { erro = "Você não tem permissão para isso" },
-                statusCode: StatusCodes.Status403Forbidden));
-        return (usuario, null);
     }
 
     private static ProdutoDto Dto(Produto p) =>

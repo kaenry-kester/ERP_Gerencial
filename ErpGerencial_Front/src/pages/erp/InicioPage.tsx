@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom'
-import ImagemIcone from '../../components/icones/ImagemIcone'
-import { IconeMais, IconeSeta } from '../../components/icones/Icones'
+import { IconeMais } from '../../components/icones/Icones'
+import { IlustracaoEmpresa } from '../../components/icones/Ilustracoes'
 import { useErp } from './contexto'
+import FaixaPagina from './FaixaPagina'
 import { caminhoDo, MODULOS_PRINCIPAIS, podeAcessar, tem } from './modulos'
 
 /*
-  Tela inicial do ERP: um botão grande para cada módulo, com ilustração, nome, descrição e "Abrir".
+  Tela inicial do ERP: um botão grande para cada módulo, com ilustração, nome e descrição.
   Cada módulo tem a sua cor (Produtos marrom, Clientes azul, Financeiro preto), e o botão de
   cadastro fica logo acima do módulo, na mesma cor — fácil de associar, inclusive para quem tem dislexia.
 */
@@ -21,45 +22,51 @@ export default function InicioPage() {
   const algumCadastro = modulos.some((m) => m.cadastro)
 
   return (
-    <div className="erp-inicio">
-      {/* Título para leitores de tela (o nome da empresa já aparece no topo) */}
-      <h1 className="sr-only">{empresa.nome}</h1>
-      {modulos.length === 0 && (
-        <p className="erp-inicio-texto">Nenhum módulo liberado. Fale com o administrador.</p>
-      )}
+    <div className="pagina tema-produtos">
+      {/* Empresa e quem está usando, em destaque numa faixa marrom acima dos botões de cadastro */}
+      <FaixaPagina
+        Ilustracao={IlustracaoEmpresa}
+        titulo={empresa.nome}
+        subtitulo={
+          <span className="erp-inicio-usuario">
+            <strong>{usuario.nome}</strong>
+            <span className="erp-inicio-papel">{usuario.administrador ? 'Administrador' : 'Usuário'}</span>
+          </span>
+        }
+      />
 
-      <nav className="erp-blocos" aria-label="Módulos">
-        {modulos.map(({ Ilustracao, cadastro, ...m }) => (
-          <div key={m.id} className={`erp-modulo tema-${m.id}`}>
-            {cadastro ? (
-              <Link to={cadastro.para} className="erp-cadastro">
-                <IconeMais tamanho={20} />
-                {cadastro.rotulo}
-              </Link>
-            ) : (
-              algumCadastro && <span className="erp-cadastro-vazio" aria-hidden="true" />
-            )}
+      <div className="erp-inicio">
+        {modulos.length === 0 && (
+          <p className="erp-inicio-texto">Nenhum módulo liberado. Fale com o administrador.</p>
+        )}
 
-            <Link to={caminhoDo(m)} className="erp-bloco">
-              <span className="erp-bloco-arte">
-                <ImagemIcone
-                  src={`/imgs/modulos/${m.id}.png`}
-                  reserva={Ilustracao ? <Ilustracao tamanho={160} /> : <m.Icone tamanho={64} />}
-                  className="erp-bloco-imagem"
-                />
-              </span>
-              <span className="erp-bloco-corpo">
-                <span className="erp-bloco-titulo">{m.rotulo}</span>
-                <span className="erp-bloco-texto">{m.resumo}</span>
-                <span className="erp-bloco-abrir" aria-hidden="true">
-                  Abrir
-                  <IconeSeta tamanho={18} />
+        <nav className="erp-blocos" aria-label="Módulos">
+          {modulos.map(({ Ilustracao, cadastro, ...m }) => (
+            <div key={m.id} className={`erp-modulo tema-${m.id}`}>
+              {cadastro ? (
+                <Link to={cadastro.para} className="erp-cadastro">
+                  <IconeMais tamanho={20} />
+                  {cadastro.rotulo}
+                </Link>
+              ) : (
+                algumCadastro && <span className="erp-cadastro-vazio" aria-hidden="true" />
+              )}
+
+              <Link to={caminhoDo(m)} className="erp-bloco">
+                <span className="erp-bloco-arte">
+                  <span className="erp-bloco-imagem" aria-hidden="true">
+                    {Ilustracao ? <Ilustracao tamanho={160} /> : <m.Icone tamanho={64} />}
+                  </span>
                 </span>
-              </span>
-            </Link>
-          </div>
-        ))}
-      </nav>
+                <span className="erp-bloco-corpo">
+                  <span className="erp-bloco-titulo">{m.rotulo}</span>
+                  <span className="erp-bloco-texto">{m.resumo}</span>
+                </span>
+              </Link>
+            </div>
+          ))}
+        </nav>
+      </div>
     </div>
   )
 }

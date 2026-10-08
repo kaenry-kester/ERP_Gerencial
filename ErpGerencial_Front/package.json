@@ -9,7 +9,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "api": "dotnet run --project ../ErpGerencial_Back/Orion.Api --launch-profile http",
-    "dev:tudo": "concurrently -k -n API,FRONT -c blue,cyan \"npm:api\" \"npm:dev\""
+    "robo": "cd ..\\ErpGerencial_Automacao && .venv\\Scripts\\python.exe lembretes.py",
+    "dev:tudo": "concurrently -k -n API,FRONT,ROBO -c blue,cyan,magenta \"npm:api\" \"npm:dev\" \"npm:robo\""
   },
   "dependencies": {
     "react": "^19.2.8",

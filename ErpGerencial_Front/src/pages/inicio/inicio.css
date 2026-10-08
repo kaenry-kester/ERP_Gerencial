@@ -262,7 +262,7 @@
     height: 72px;
   }
 
-  .botao-grande-imagem svg {
+  .botao-grande-imagem :is(svg, img) {
     width: 64px;
     height: 64px;
   }

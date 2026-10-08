@@ -229,6 +229,120 @@ export const editarProduto = (token: string, id: string, dados: DadosProduto) =>
 export const excluirProduto = (token: string, id: string) =>
   requisicao<void>('DELETE', `/api/produtos/${id}`, { token })
 
+// ---------- Clientes ----------
+
+export type Cliente = {
+  id: string
+  /** ID mostrado na tela (1, 2, 3...), gerado automaticamente. */
+  numero: number
+  nome: string
+  /** Só os dígitos (DDD + número). */
+  celular: string
+  /** Só os 8 dígitos. */
+  cep: string | null
+  logradouro: string | null
+  numeroEndereco: string | null
+  complemento: string | null
+  bairro: string | null
+  cidade: string | null
+  uf: string | null
+  /** De quantos em quantos meses o cliente precisa de manutenção. */
+  intervaloManutencaoMeses: number
+  /** Dia do cadastro + o intervalo ("2027-04-08"). */
+  proximaManutencao: string
+  /** Mensagem de WhatsApp só deste cliente (null: usa a mensagem automática da empresa). */
+  mensagemWhatsapp: string | null
+  /** TEMPORÁRIO (testes): quando o robô envia a mensagem (ISO, UTC); some depois do envio. */
+  envioTesteEm: string | null
+  criadoEm: string
+  atualizadoEm: string
+}
+
+export type DadosCliente = {
+  nome: string
+  celular: string
+  cep: string
+  logradouro: string
+  numeroEndereco: string
+  complemento: string
+  bairro: string
+  cidade: string
+  uf: string
+  intervaloManutencaoMeses: number | null
+  envioTesteEm: string | null
+}
+
+export type ListaClientes = { itens: Cliente[]; total: number; pagina: number; tamanhoPagina: number }
+
+export const listarClientes = (token: string, busca = '', pagina = 1) =>
+  requisicao<ListaClientes>(
+    'GET',
+    `/api/clientes?pagina=${pagina}${busca.trim() ? `&busca=${encodeURIComponent(busca.trim())}` : ''}`,
+    { token },
+  )
+
+export const obterCliente = (token: string, id: string) => requisicao<Cliente>('GET', `/api/clientes/${id}`, { token })
+
+export const criarCliente = (token: string, dados: DadosCliente) =>
+  requisicao<Cliente>('POST', '/api/clientes', { corpo: dados, token })
+
+export const editarCliente = (token: string, id: string, dados: DadosCliente) =>
+  requisicao<Cliente>('PUT', `/api/clientes/${id}`, { corpo: dados, token })
+
+/** Mensagem personalizada do cliente (vazia: volta a usar a mensagem padrão da empresa). */
+export const salvarMensagemCliente = (token: string, id: string, mensagem: string) =>
+  requisicao<Cliente>('PUT', `/api/clientes/${id}/mensagem`, { corpo: { mensagem }, token })
+
+export const excluirCliente = (token: string, id: string) =>
+  requisicao<void>('DELETE', `/api/clientes/${id}`, { token })
+
+/** Endereço de um CEP (ViaCEP, serviço público e gratuito). */
+export type EnderecoCep = { logradouro: string; bairro: string; cidade: string; uf: string }
+
+/** Busca o endereço do CEP (8 dígitos). null: CEP não encontrado. Lança erro se não houver conexão. */
+export async function buscarCep(cep: string): Promise<EnderecoCep | null> {
+  const resposta = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+  if (!resposta.ok) return null
+  const dados = (await resposta.json()) as { erro?: boolean | string; logradouro?: string; bairro?: string; localidade?: string; uf?: string }
+  if (dados.erro) return null
+  return { logradouro: dados.logradouro ?? '', bairro: dados.bairro ?? '', cidade: dados.localidade ?? '', uf: dados.uf ?? '' }
+}
+
+// ---------- Mensagem automática (WhatsApp) ----------
+
+export type EnvioWhatsapp = {
+  id: string
+  clienteId: string
+  clienteNome: string
+  telefone: string
+  /** Data de manutenção que motivou o envio ("2027-04-08"). */
+  dataReferencia: string
+  /** "manutencao" (no dia da manutenção) ou "agendado" (teste com data e hora escolhidas). */
+  tipo: 'manutencao' | 'agendado'
+  mensagem: string
+  /** "enviado", "teste" (modo teste: não saiu de verdade) ou "erro". */
+  status: 'enviado' | 'teste' | 'erro'
+  erro: string | null
+  criadoEm: string
+}
+
+export type ConfiguracaoWhatsapp = {
+  /** Celular que envia, só dígitos com DDD. */
+  remetente: string | null
+  mensagem: string | null
+  ativa: boolean
+  /** Sem serviço de WhatsApp configurado: as mensagens só ficam no histórico. */
+  modoTeste: boolean
+  envios: EnvioWhatsapp[]
+}
+
+export type DadosWhatsapp = { remetente: string; mensagem: string; ativa: boolean }
+
+export const obterWhatsapp = (token: string) => requisicao<ConfiguracaoWhatsapp>('GET', '/api/whatsapp', { token })
+
+export const salvarWhatsapp = (token: string, dados: DadosWhatsapp) =>
+  requisicao<ConfiguracaoWhatsapp>('PUT', '/api/whatsapp', { corpo: dados, token })
+
 // ---------- Minha conta ----------
 
 /** O que acontece ao excluir: só a conta, ou a conta e a empresa inteira (única administradora). */

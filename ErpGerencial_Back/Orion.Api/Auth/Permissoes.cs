@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Orion.Api.Data;
 
 namespace Orion.Api.Auth;
@@ -14,12 +15,13 @@ public static class Permissoes
     public const string ProdutosEditar = "produtos-editar";
     public const string Clientes = "clientes";
     public const string ClientesCadastrar = "clientes-cadastrar";
+    public const string ClientesEditar = "clientes-editar";
     public const string Financeiro = "financeiro";
 
     public static readonly IReadOnlySet<string> Modulos = new HashSet<string>
     {
         Produtos, ProdutosCadastrar, ProdutosEditar,
-        Clientes, ClientesCadastrar,
+        Clientes, ClientesCadastrar, ClientesEditar,
         Financeiro,
     };
 
@@ -37,4 +39,16 @@ public static class Permissoes
 
     public static bool Tem(Usuario usuario, string permissao) =>
         usuario.Administrador || usuario.Permissoes.Contains(permissao);
+
+    /// <summary>Quem chamou, se tiver a permissão; senão, a resposta de erro (401 ou 403).</summary>
+    public static async Task<(Usuario? Usuario, IResult? Negado)> Exigir(
+        ClaimsPrincipal user, OrionDbContext db, string permissao)
+    {
+        var usuario = await UsuarioAtual.Carregar(user, db);
+        if (usuario is null) return (null, Results.Unauthorized());
+        if (!Tem(usuario, permissao))
+            return (null, Results.Json(new { erro = "Você não tem permissão para isso" },
+                statusCode: StatusCodes.Status403Forbidden));
+        return (usuario, null);
+    }
 }

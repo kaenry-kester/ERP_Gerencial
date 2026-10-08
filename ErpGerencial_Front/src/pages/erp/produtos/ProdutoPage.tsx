@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import type { Aviso } from '../../../components/formulario/FaixaAviso'
-import { IconeLixeira, IconeVoltar } from '../../../components/icones/Icones'
+import { IconeLapis, IconeLixeira, IconeVoltar } from '../../../components/icones/Icones'
 import { IlustracaoProdutos } from '../../../components/icones/Ilustracoes'
 import { useSessaoExpirada } from '../../../hooks/useSessaoExpirada'
 import { excluirProduto, mensagemDe, obterProduto, type Produto } from '../../../services/api'
@@ -10,7 +10,7 @@ import AvisoPagina from '../AvisoPagina'
 import { useErp } from '../contexto'
 import { tem } from '../modulos'
 import SemAcesso from '../SemAcesso'
-import './produtos.css'
+import FaixaPagina from '../FaixaPagina'
 
 const data = (iso: string) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
 
@@ -91,69 +91,67 @@ export default function ProdutoPage() {
     },
   ]
 
-  return (
-    <div className="erp-pagina erp-pagina-estreita">
-      {voltar}
-      <header className="erp-pagina-cabecalho com-icone tema-produtos">
-        <span className="erp-pagina-ilustracao" aria-hidden="true">
-          <IlustracaoProdutos tamanho={60} />
-        </span>
-        <div className="erp-pagina-cabecalho-textos">
-          <h1 className="erp-pagina-titulo">{produto.nome}</h1>
-          <p className="erp-pagina-subtitulo">
-            ID {produto.numero}
-            {produto.codigo && ` · Código ${produto.codigo}`}
-          </p>
-        </div>
-      </header>
-
-      {podeEditar && (
-        <div className="erp-form-acoes">
-          <Link to={`/app/produtos/${produto.id}/editar`} className="erp-cadastro-acao tema-produtos">
-            Editar
-          </Link>
-          {!confirmando ? (
-            <button type="button" className="erp-botao-perigo" onClick={() => setConfirmando(true)}>
-              <IconeLixeira tamanho={20} />
-              Excluir
-            </button>
-          ) : (
-            <>
-              <button type="button" className="erp-botao-perigo forte" onClick={excluir} disabled={excluindo}>
-                <IconeLixeira tamanho={20} />
-                {excluindo ? 'Excluindo...' : 'Confirmar exclusão'}
-              </button>
-              <button type="button" className="ghost-button erp-botao" onClick={() => setConfirmando(false)}>
-                Cancelar
-              </button>
-            </>
-          )}
-        </div>
+  const acoes = podeEditar && (
+    <>
+      <Link to={`/app/produtos/${produto.id}/editar`} className="pagina-botao claro">
+        <IconeLapis tamanho={20} />
+        Editar
+      </Link>
+      {!confirmando ? (
+        <button type="button" className="pagina-botao escuro" onClick={() => setConfirmando(true)}>
+          <IconeLixeira tamanho={20} />
+          Excluir
+        </button>
+      ) : (
+        <>
+          <button type="button" className="pagina-botao perigo" onClick={excluir} disabled={excluindo}>
+            <IconeLixeira tamanho={20} />
+            {excluindo ? 'Excluindo...' : 'Confirmar exclusão'}
+          </button>
+          <button type="button" className="pagina-botao escuro" onClick={() => setConfirmando(false)}>
+            Cancelar
+          </button>
+        </>
       )}
-      {aviso && <AvisoPagina aviso={aviso} />}
+    </>
+  )
 
-      {grupos.map((g) => (
-        <section key={g.titulo} className="produto-grupo" aria-label={g.titulo}>
-          <h2 className="produto-grupo-titulo">{g.titulo}</h2>
-          <dl className="produto-dados">
-            {g.itens.map(([rotulo, valor]) => (
-              <div key={rotulo} className="produto-dado">
-                <dt>{rotulo}</dt>
-                <dd>{valor}</dd>
-              </div>
-            ))}
-          </dl>
+  return (
+    <div className="pagina tema-produtos">
+      <FaixaPagina
+        Ilustracao={IlustracaoProdutos}
+        titulo={produto.nome}
+        subtitulo={`ID ${produto.numero}${produto.codigo ? ` · Código ${produto.codigo}` : ''}`}
+        voltar={{ para: '/app/produtos', rotulo: 'Produtos' }}
+        acoes={acoes || undefined}
+      />
+
+      <div className="pagina-corpo">
+        {aviso && <AvisoPagina aviso={aviso} />}
+
+        {grupos.map((g) => (
+          <section key={g.titulo} className="detalhe-grupo" aria-label={g.titulo}>
+            <h2 className="detalhe-titulo">{g.titulo}</h2>
+            <dl className="detalhe-dados">
+              {g.itens.map(([rotulo, valor]) => (
+                <div key={rotulo} className="detalhe-dado">
+                  <dt>{rotulo}</dt>
+                  <dd title={valor}>{valor}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        ))}
+
+        <section className="detalhe-grupo" aria-label="Observação">
+          <h2 className="detalhe-titulo">Observação</h2>
+          <p className="detalhe-texto">{produto.observacao ?? '—'}</p>
         </section>
-      ))}
 
-      <section className="produto-grupo" aria-label="Observação">
-        <h2 className="produto-grupo-titulo">Observação</h2>
-        <p className="produto-observacao">{produto.observacao ?? '—'}</p>
-      </section>
-
-      <p className="erp-nota">
-        Cadastrado em {data(produto.criadoEm)} · Atualizado em {data(produto.atualizadoEm)}
-      </p>
+        <p className="erp-nota">
+          Cadastrado em {data(produto.criadoEm)} · Atualizado em {data(produto.atualizadoEm)}
+        </p>
+      </div>
     </div>
   )
 }
