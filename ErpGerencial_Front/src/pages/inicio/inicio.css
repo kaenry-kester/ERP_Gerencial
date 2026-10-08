@@ -48,16 +48,6 @@
   color: var(--branco);
 }
 
-/* Linha azul (cor da seta do logo) marcando o slogan */
-.inicio-slogan::after {
-  content: '';
-  display: block;
-  width: 72px;
-  height: 4px;
-  margin-top: clamp(1rem, 3vh, 1.5rem);
-  background: var(--azul-vivo);
-}
-
 /* ---------- Área de ações ---------- */
 
 .inicio-acoes {
@@ -232,10 +222,6 @@
     margin-top: clamp(0.75rem, 2.5vh, 1.25rem);
     max-width: none;
     font-size: clamp(1rem, 4vw, 1.4rem);
-  }
-
-  .inicio-slogan::after {
-    display: none;
   }
 
   /* No celular, chamada e botões seguem em sequência, logo abaixo do painel */
