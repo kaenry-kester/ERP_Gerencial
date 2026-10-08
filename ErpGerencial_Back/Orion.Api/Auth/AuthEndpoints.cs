@@ -11,11 +11,6 @@ public record CadastroRequest(string Nome, string Email, string Telefone, string
 public record LoginRequest(string Email, string Senha, string? Dispositivo);
 public record VerificarCodigoRequest(Guid DesafioId, string Codigo, bool Lembrar);
 public record ReenviarCodigoRequest(Guid DesafioId);
-public record GoogleRequest(string Codigo);
-public record GoogleConfigResponse(string? ClientId);
-
-/// <summary>ContaNova: a conta foi criada agora pelo Google (o próximo passo é criar a empresa).</summary>
-public record GoogleSessaoResponse(string Token, UsuarioDto Usuario, EmpresaResumo? Empresa, bool ContaNova);
 
 public static class AuthEndpoints
 {
@@ -29,11 +24,6 @@ public static class AuthEndpoints
         grupo.MapPost("/login/verificar", VerificarCodigo).RequireRateLimiting(Politicas.Codigo);
         grupo.MapPost("/login/reenviar", ReenviarCodigo).RequireRateLimiting(Politicas.Codigo);
         grupo.MapGet("/eu", Eu).RequireAuthorization();
-
-        // Client ID é público (vai para o navegador); null = Google ainda não configurado.
-        grupo.MapGet("/google/config", (GoogleService google) =>
-            Results.Ok(new GoogleConfigResponse(google.Configurado ? google.ClientId : null)));
-        grupo.MapPost("/google", EntrarComGoogle).RequireRateLimiting(Politicas.Login);
     }
 
     /// <summary>
@@ -85,8 +75,8 @@ public static class AuthEndpoints
         var email = req.Email?.Trim().ToLowerInvariant() ?? "";
         var usuario = await db.Usuarios.Include(u => u.Empresa).SingleOrDefaultAsync(u => u.Email == email);
 
-        // Mesma resposta para e-mail inexistente, senha errada e conta que só entra pelo Google.
-        if (usuario?.SenhaHash is null
+        // Mesma resposta para e-mail inexistente e senha errada.
+        if (usuario is null
             || hasher.VerifyHashedPassword(usuario, usuario.SenhaHash, req.Senha ?? "")
                 == PasswordVerificationResult.Failed)
             return Results.Unauthorized();
@@ -174,65 +164,6 @@ public static class AuthEndpoints
     {
         var usuario = await UsuarioAtual.Carregar(user, db);
         return usuario is null ? Results.Unauthorized() : Results.Ok(UsuarioAtual.Sessao(usuario, tokens));
-    }
-
-    /// <summary>
-    /// Entra ou cria a conta com o Google. Se já existe conta com o mesmo e-mail
-    /// (verificado pelo Google), a conta Google é ligada a ela.
-    /// </summary>
-    private static async Task<IResult> EntrarComGoogle(
-        GoogleRequest req, GoogleService google, OrionDbContext db, TokenService tokens, CancellationToken ct)
-    {
-        if (!google.Configurado)
-            return Results.Problem("O acesso com o Google ainda não foi configurado.", statusCode: 503);
-        if (string.IsNullOrWhiteSpace(req.Codigo)) return Results.Unauthorized();
-
-        var conta = await google.ValidarCodigo(req.Codigo, ct);
-        if (conta is null) return Results.Unauthorized();
-        if (!conta.EmailVerified || string.IsNullOrEmpty(conta.Email))
-            return Results.BadRequest(new { erro = "Seu e-mail do Google ainda não foi verificado" });
-
-        var email = conta.Email.Trim().ToLowerInvariant();
-        var usuario = await db.Usuarios.Include(u => u.Empresa).SingleOrDefaultAsync(u => u.GoogleId == conta.Subject, ct)
-            ?? await db.Usuarios.Include(u => u.Empresa).SingleOrDefaultAsync(u => u.Email == email, ct);
-
-        var contaNova = false;
-        if (usuario is null)
-        {
-            // Sem empresa ainda: o front pede o nome da empresa logo em seguida.
-            var nome = (conta.Name ?? conta.GivenName ?? email.Split('@')[0]).Trim();
-            usuario = new Usuario
-            {
-                Nome = nome.Length > 120 ? nome[..120] : nome,
-                Email = email,
-                GoogleId = conta.Subject,
-            };
-            db.Usuarios.Add(usuario);
-            contaNova = true;
-        }
-        else if (usuario.GoogleId is null)
-        {
-            usuario.GoogleId = conta.Subject;
-        }
-        else if (usuario.GoogleId != conta.Subject)
-        {
-            return Results.Conflict(new { erro = "Este e-mail já está ligado a outra conta Google" });
-        }
-
-        if (!usuario.Ativo) return UsuarioDesativado();
-
-        try
-        {
-            await db.SaveChangesAsync(ct);
-        }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
-        {
-            // Dois cliques ao mesmo tempo criando a mesma conta.
-            return Results.Conflict(new { erro = "Tente entrar com o Google de novo" });
-        }
-
-        var sessao = UsuarioAtual.Sessao(usuario, tokens);
-        return Results.Ok(new GoogleSessaoResponse(sessao.Token, sessao.Usuario, sessao.Empresa, contaNova));
     }
 
     private static IResult UsuarioDesativado() =>

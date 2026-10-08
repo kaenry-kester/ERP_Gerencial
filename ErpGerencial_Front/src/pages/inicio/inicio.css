@@ -75,8 +75,9 @@
   width: min(500px, 100%);
   display: flex;
   flex-direction: column;
-  justify-content: space-evenly;
-  gap: clamp(1.5rem, 4.5vh, 2.25rem);
+  /* Chamada e botões juntos, no topo (sem vão entre eles) */
+  justify-content: flex-start;
+  gap: clamp(1.5rem, 5vh, 2.75rem);
 }
 
 .inicio-chamada {
@@ -126,11 +127,11 @@
 /* Ícones na cor da caixa de papelão do logo */
 .botao-grande-imagem {
   flex-shrink: 0;
-  width: 64px;
-  height: 64px;
-  border-radius: 7px;
-  background: linear-gradient(160deg, var(--icone-inicio) 0%, var(--icone-fim) 100%);
-  color: var(--branco);
+  width: 92px;
+  height: 92px;
+  border-radius: 12px;
+  background: var(--branco);
+  color: var(--azul);
   display: grid;
   place-items: center;
   object-fit: contain;
@@ -197,8 +198,9 @@
 }
 
 .botao-grande.secundario .botao-grande-imagem {
-  width: 54px;
-  height: 54px;
+  width: 80px;
+  height: 80px;
+  background: var(--creme-claro);
 }
 
 .botao-grande.secundario .botao-grande-descricao {
@@ -212,6 +214,7 @@
 /* ---------- Tablets e celulares: empilhado ---------- */
 
 @media (max-width: 900px) {
+
   .inicio {
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr;
@@ -255,12 +258,17 @@
   }
 
   .botao-grande-imagem {
-    width: 54px;
-    height: 54px;
+    width: 72px;
+    height: 72px;
+  }
+
+  .botao-grande-imagem svg {
+    width: 64px;
+    height: 64px;
   }
 
   .botao-grande.secundario .botao-grande-imagem {
-    width: 46px;
-    height: 46px;
+    width: 64px;
+    height: 64px;
   }
 }

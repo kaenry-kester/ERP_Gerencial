@@ -1,0 +1,217 @@
+/* Produtos: lista (tabela), detalhes e formulário. Cores do módulo: marrom e creme (.tema-produtos). */
+
+/* ---------- Lista ---------- */
+
+.produtos-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+}
+
+.produtos-busca {
+  flex: 1;
+  max-width: 520px;
+}
+
+.produtos-busca input {
+  min-height: 48px;
+  padding-block: 0.4rem;
+  font-size: 1rem;
+}
+
+.produtos-contagem {
+  font-weight: 600;
+  color: var(--texto-suave);
+}
+
+/* Tabela sobre fundo branco, sem linhas: as linhas se alternam por cor (zebra) */
+.produtos-tabela {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--branco);
+  box-shadow: 0 2px 10px rgba(11, 10, 9, 0.05);
+}
+
+.produtos-tabela th {
+  padding: 0.75rem 1rem;
+  background: var(--creme-claro);
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-align: left;
+  color: var(--marrom-escuro);
+}
+
+.produtos-tabela td {
+  padding: 0.8rem 1rem;
+  color: var(--cinza-escuro);
+}
+
+.produtos-tabela tbody tr {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.produtos-tabela tbody tr:nth-child(even) {
+  background: #f1f3f5;
+}
+
+.produtos-tabela tbody tr:hover {
+  background: var(--creme-claro);
+}
+
+.produtos-tabela .numero {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.produtos-id {
+  width: 4.5rem;
+  font-weight: 700;
+  color: var(--marrom-escuro) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.produtos-nome {
+  font-weight: 700;
+  color: var(--texto);
+}
+
+.produtos-nome:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.produtos-seta {
+  width: 2.5rem;
+  color: var(--marrom);
+}
+
+.produtos-paginas {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-weight: 600;
+}
+
+/* ---------- Formulário e detalhes ---------- */
+
+.produto-form {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.1rem, 3vh, 1.75rem);
+}
+
+.produto-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Título do grupo com o traço marrom (cor do módulo) */
+.produto-grupo-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--marrom-escuro);
+}
+
+.produto-grupo-titulo::before {
+  content: '';
+  width: 4px;
+  height: 1.1em;
+  border-radius: 2px;
+  background: var(--marrom);
+}
+
+/* Preços lado a lado */
+.erp-form.produto-tres {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Detalhes: valores em bloco branco */
+.produto-dados {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 0.75rem;
+}
+
+.produto-dado {
+  padding: 0.8rem 1rem;
+  border-radius: 10px;
+  background: var(--branco);
+  box-shadow: 0 2px 8px rgba(11, 10, 9, 0.05);
+}
+
+.produto-dado dt {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--texto-suave);
+}
+
+.produto-dado dd {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--texto);
+  overflow-wrap: anywhere;
+}
+
+.produto-observacao {
+  padding: 0.9rem 1rem;
+  border-radius: 10px;
+  background: var(--branco);
+  box-shadow: 0 2px 8px rgba(11, 10, 9, 0.05);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Telas menores ---------- */
+
+@media (max-width: 1100px) {
+  .produtos-tabela .col-pj,
+  .produtos-tabela .col-marca {
+    display: none;
+  }
+}
+
+@media (max-width: 700px) {
+  /* No celular: sem código e sem a seta (a linha inteira continua clicável) */
+  .produtos-tabela .col-codigo,
+  .produtos-tabela .produtos-seta,
+  .produtos-tabela th:last-child {
+    display: none;
+  }
+
+  .produtos-tabela th,
+  .produtos-tabela td {
+    padding-inline: 0.6rem;
+  }
+
+  .erp-form.produto-tres {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Celulares estreitos (360px): letra e espaços menores para a tabela caber na largura */
+@media (max-width: 400px) {
+  .produtos-tabela {
+    font-size: 0.86rem;
+  }
+
+  .produtos-tabela th,
+  .produtos-tabela td {
+    padding-inline: 0.4rem;
+  }
+
+  .produtos-id {
+    width: 2.2rem;
+  }
+}

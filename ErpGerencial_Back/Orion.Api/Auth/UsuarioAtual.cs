@@ -5,7 +5,7 @@ using Orion.Api.Data;
 namespace Orion.Api.Auth;
 
 /// <summary>Resposta comum de login, cadastro e /api/auth/eu.</summary>
-public record SessaoResponse(string Token, UsuarioDto Usuario, EmpresaResumo? Empresa);
+public record SessaoResponse(string Token, UsuarioDto Usuario, EmpresaResumo Empresa);
 
 public record UsuarioDto(
     Guid Id,
@@ -36,5 +36,5 @@ public static class UsuarioAtual
         new(u.Id, u.Nome, u.Email, u.Administrador, u.Permissoes, u.Ativo, u.CriadoEm);
 
     public static SessaoResponse Sessao(Usuario u, TokenService tokens) =>
-        new(tokens.Gerar(u), Dto(u), u.Empresa is null ? null : new EmpresaResumo(u.Empresa.Id, u.Empresa.Nome));
+        new(tokens.Gerar(u), Dto(u), new EmpresaResumo(u.EmpresaId, u.Empresa!.Nome));
 }

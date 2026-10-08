@@ -1,16 +1,23 @@
-import { useState, type SubmitEvent } from 'react'
+import { useEffect, useState, type SubmitEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import BotaoGoogle from '../../components/formulario/BotaoGoogle'
 import CampoSenha from '../../components/formulario/CampoSenha'
 import CampoTexto from '../../components/formulario/CampoTexto'
 import FaixaAviso, { type Aviso } from '../../components/formulario/FaixaAviso'
+import { IconeCadastro, IconeCheck, IconeLogin, IconeVoltar } from '../../components/icones/Icones'
+import { IlustracaoConta, IlustracaoEntrar } from '../../components/icones/Ilustracoes'
 import {
-  IconeCadastro,
-  IconeLogin,
-  IconeVoltar,
-} from '../../components/icones/Icones'
-import { useGoogle } from '../../hooks/useGoogle'
-import { entrar, ErroApi, mensagemDe, salvarSessao } from '../../services/api'
+  entrar,
+  ErroApi,
+  esquecerLembrado,
+  lerLembrado,
+  mensagemDe,
+  precisaDeCodigo,
+  reenviarCodigo,
+  salvarLembrado,
+  salvarSessao,
+  verificarCodigo,
+  type Verificacao,
+} from '../../services/api'
 import { emailValido } from '../../utils/validacao'
 import '../../styles/acesso.css'
 import '../../styles/tela-dividida.css'
@@ -34,15 +41,36 @@ function validar(email: string, senha: string): Erros {
   return erros
 }
 
+/*
+  Login em duas etapas (segurança):
+  1) e-mail e senha → a API envia um código de 6 dígitos para o e-mail;
+  2) a pessoa digita o código. "Lembrar de quem sou" faz este navegador não pedir
+     o código por 30 dias (e já deixa o e-mail preenchido).
+*/
 export default function LoginPage() {
   const navigate = useNavigate()
   // Aviso enviado por outra tela (ex.: sessão expirada)
   const avisoInicial = (useLocation().state as { aviso?: Aviso } | null)?.aviso ?? null
-  const [email, setEmail] = useState('')
+  const [lembrado, setLembrado] = useState(lerLembrado)
+  const [email, setEmail] = useState(() => lembrado?.email ?? '')
   const [senha, setSenha] = useState('')
   const [enviado, setEnviado] = useState(false)
   const [aviso, setAviso] = useState<Aviso>(avisoInicial)
   const [enviando, setEnviando] = useState(false)
+
+  // 2ª etapa
+  const [verificacao, setVerificacao] = useState<Verificacao | null>(null)
+  const [codigo, setCodigo] = useState('')
+  const [erroCodigo, setErroCodigo] = useState<string>()
+  const [lembrar, setLembrar] = useState(false)
+  const [esperaReenvio, setEsperaReenvio] = useState(0)
+
+  // Contagem regressiva do "Reenviar código"
+  useEffect(() => {
+    if (esperaReenvio <= 0) return
+    const id = window.setTimeout(() => setEsperaReenvio((s) => s - 1), 1000)
+    return () => window.clearTimeout(id)
+  }, [esperaReenvio])
 
   // Erros aparecem depois da primeira tentativa e somem assim que o campo é corrigido.
   const erros = enviado ? validar(email, senha) : {}
@@ -52,6 +80,24 @@ export default function LoginPage() {
     setAviso(null)
   }
 
+  const iniciarVerificacao = (v: Verificacao) => {
+    setVerificacao(v)
+    setCodigo('')
+    setErroCodigo(undefined)
+    setEsperaReenvio(v.reenviarEmSegundos)
+    setAviso({ tipo: 'ok', texto: `Enviamos um código de 6 dígitos para ${v.email}.` })
+    requestAnimationFrame(() => document.getElementById('codigo')?.focus())
+  }
+
+  const voltarParaSenha = (novoAviso: Aviso = null) => {
+    setVerificacao(null)
+    setSenha('')
+    setEnviado(false)
+    setAviso(novoAviso)
+    requestAnimationFrame(() => document.getElementById('senha')?.focus())
+  }
+
+  // 1ª etapa: e-mail e senha
   const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (enviando) return
@@ -67,9 +113,15 @@ export default function LoginPage() {
     setEnviando(true)
     setAviso(null)
     try {
-      const sessao = await entrar({ email, senha })
-      salvarSessao(sessao)
-      navigate('/lojas')
+      const resposta = await entrar({ email, senha })
+      if (precisaDeCodigo(resposta)) {
+        iniciarVerificacao(resposta)
+        setEnviando(false)
+        return
+      }
+      // Navegador lembrado: entra direto
+      salvarSessao(resposta)
+      navigate('/app')
     } catch (erro) {
       if (erro instanceof ErroApi && erro.status === 401) document.getElementById('senha')?.focus()
       setAviso({ tipo: 'erro', texto: mensagemDe(erro) })
@@ -77,8 +129,68 @@ export default function LoginPage() {
     }
   }
 
-  // Entra com o Google (se for a primeira vez, a conta é criada).
-  const google = useGoogle(setAviso)
+  // 2ª etapa: código do e-mail
+  const confirmarCodigo = async (valor = codigo) => {
+    if (enviando || !verificacao) return
+    if (valor.length !== 6) {
+      setErroCodigo('Digite os 6 números')
+      document.getElementById('codigo')?.focus()
+      return
+    }
+
+    setEnviando(true)
+    setAviso(null)
+    try {
+      const { dispositivo, ...sessao } = await verificarCodigo({
+        desafioId: verificacao.desafioId,
+        codigo: valor,
+        lembrar,
+      })
+      salvarSessao(sessao)
+      if (dispositivo) salvarLembrado({ email: sessao.usuario.email, token: dispositivo })
+      navigate('/app')
+    } catch (erro) {
+      setEnviando(false)
+      const texto = mensagemDe(erro)
+      // Código vencido ou tentativas esgotadas: precisa da senha de novo para gerar outro.
+      if (texto.includes('Entre de novo')) {
+        voltarParaSenha({ tipo: 'erro', texto })
+        return
+      }
+      setErroCodigo(erro instanceof ErroApi && erro.campo === 'codigo' ? 'Confira o código' : undefined)
+      setAviso({ tipo: 'erro', texto })
+      setCodigo('')
+      document.getElementById('codigo')?.focus()
+    }
+  }
+
+  const alterarCodigo = (valor: string) => {
+    const digitos = valor.replace(/\D/g, '').slice(0, 6)
+    setCodigo(digitos)
+    setErroCodigo(undefined)
+    setAviso(null)
+    // Com os 6 números, confirma sozinho (como em apps de banco)
+    if (digitos.length === 6) confirmarCodigo(digitos)
+  }
+
+  const reenviar = async () => {
+    if (!verificacao || esperaReenvio > 0) return
+    setAviso(null)
+    try {
+      iniciarVerificacao(await reenviarCodigo(verificacao.desafioId))
+    } catch (erro) {
+      const texto = mensagemDe(erro)
+      if (texto.includes('Entre de novo')) voltarParaSenha({ tipo: 'erro', texto })
+      else setAviso({ tipo: 'erro', texto })
+    }
+  }
+
+  const esquecer = () => {
+    esquecerLembrado()
+    setLembrado(null)
+    setEmail('')
+    setAviso({ tipo: 'ok', texto: 'Este computador foi esquecido. O código será pedido no próximo acesso.' })
+  }
 
   return (
     <main className="tela-dividida login">
@@ -86,71 +198,143 @@ export default function LoginPage() {
         <Link to="/" className="tela-logo-link" aria-label="Órion — voltar ao início">
           <img src="/imgs/logo-orion.png" alt="Órion" className="tela-logo" />
         </Link>
-        <h1 className="tela-titulo">Acesse sua conta</h1>
-        <p className="tela-texto">Seus produtos e clientes estão à um clique de distância.</p>
+        <h1 className="tela-titulo">{verificacao ? 'Confirme que é você' : 'Acesse sua conta'}</h1>
+        <p className="tela-texto">
+          {verificacao
+            ? 'Para proteger sua conta, pedimos um código enviado ao seu e-mail.'
+            : 'Seus produtos e clientes estão a um clique de distância.'}
+        </p>
+
+        {/* Ilustração do painel (some no celular, onde o painel vira uma faixa) */}
+        <div className="tela-painel-arte" aria-hidden="true">
+          {verificacao ? <IlustracaoConta tamanho={200} /> : <IlustracaoEntrar tamanho={200} />}
+        </div>
 
         {/* Voltar no canto inferior esquerdo do painel (no celular, só a seta, no canto esquerdo da faixa) */}
-        <Link to="/" className="ghost-button botao-voltar botao-voltar-painel" aria-label="Voltar">
-          <IconeVoltar tamanho={20} />
-          <span className="botao-voltar-texto">Voltar</span>
-        </Link>
+        {verificacao ? (
+          <button
+            type="button"
+            className="ghost-button botao-voltar botao-voltar-painel"
+            onClick={() => voltarParaSenha()}
+            aria-label="Voltar"
+          >
+            <IconeVoltar tamanho={20} />
+            <span className="botao-voltar-texto">Voltar</span>
+          </button>
+        ) : (
+          <Link to="/" className="ghost-button botao-voltar botao-voltar-painel" aria-label="Voltar">
+            <IconeVoltar tamanho={20} />
+            <span className="botao-voltar-texto">Voltar</span>
+          </Link>
+        )}
       </aside>
 
       <section className="tela-area" aria-labelledby="login-titulo">
-        <FaixaAviso id="login-titulo" titulo="Entre com seus dados para acessar o sistema:" aviso={aviso} />
+        <FaixaAviso
+          id="login-titulo"
+          titulo={verificacao ? 'Digite o código enviado para o seu e-mail:' : 'Entre com seus dados para acessar o sistema:'}
+          aviso={aviso}
+        />
 
-        {/* Uma coluna centralizada na área branca: e-mail, senha e Entrar; abaixo, "ou" e as alternativas */}
-        <div className="login-conteudo">
-          <form className="login-form" onSubmit={handleSubmit} noValidate>
-            <CampoTexto
-              id="email"
-              rotulo="E-mail"
-              type="email"
-              autoComplete="email"
-              placeholder="nome@empresa.com"
-              valor={email}
-              onChange={alterar(setEmail)}
-              erro={erros.email}
-            />
-
-            <CampoSenha
-              id="senha"
-              rotulo="Senha"
-              autoComplete="current-password"
-              valor={senha}
-              onChange={alterar(setSenha)}
-              erro={erros.senha}
-            />
-
-            <button type="submit" className="primary-button botao-acao" disabled={enviando}>
-              <IconeLogin tamanho={22} />
-              {enviando ? 'Entrando...' : 'Entrar'}
-            </button>
-          </form>
-
-          <div className="login-divisor" aria-hidden="true">
-            <span>ou</span>
-          </div>
-
-          <div className="login-alternativas">
-            <BotaoGoogle
-              texto={google.enviando ? 'Entrando com o Google...' : 'Continuar com o Google'}
-              textoCurto="Google"
-              onClick={google.entrar}
-            />
-            <Link
-              to="/cadastro"
-              className="ghost-button login-botao-cadastro"
-              aria-label="Criar minha conta"
+        {verificacao ? (
+          <div className="login-conteudo">
+            <form
+              className="login-form"
+              onSubmit={(e) => {
+                e.preventDefault()
+                confirmarCodigo()
+              }}
+              noValidate
             >
-              <IconeCadastro tamanho={20} />
-              <span className="texto-longo">Criar minha conta</span>
-              <span className="texto-curto" aria-hidden="true">
-                Criar conta
-              </span>
-            </Link>
+              <CampoTexto
+                id="codigo"
+                rotulo="Código de 6 números"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder="000000"
+                valor={codigo}
+                onChange={alterarCodigo}
+                erro={erroCodigo}
+                className="campo-codigo"
+              />
+
+              <label className="login-lembrar">
+                <input type="checkbox" checked={lembrar} onChange={(e) => setLembrar(e.target.checked)} />
+                <span>
+                  <span className="login-lembrar-titulo">Lembrar de quem sou</span>
+                  <span className="login-lembrar-texto">
+                    Não pedir o código neste computador por 30 dias. Não marque em computadores públicos.
+                  </span>
+                </span>
+              </label>
+
+              <button type="submit" className="primary-button botao-acao" disabled={enviando}>
+                <IconeCheck tamanho={22} />
+                {enviando ? 'Confirmando...' : 'Confirmar e entrar'}
+              </button>
+            </form>
+
+            <div className="login-codigo-acoes">
+              <button type="button" className="login-link" onClick={reenviar} disabled={esperaReenvio > 0}>
+                {esperaReenvio > 0 ? `Reenviar código em ${esperaReenvio}s` : 'Reenviar código'}
+              </button>
+              <button type="button" className="login-link" onClick={() => voltarParaSenha()}>
+                Usar outra conta
+              </button>
+            </div>
           </div>
-        </div>
+        ) : (
+          /* Uma coluna centralizada na área branca: e-mail, senha e Entrar; abaixo, "ou" e criar conta */
+          <div className="login-conteudo">
+            <form className="login-form" onSubmit={handleSubmit} noValidate>
+              <CampoTexto
+                id="email"
+                rotulo="E-mail"
+                type="email"
+                autoComplete="email"
+                placeholder="nome@empresa.com"
+                valor={email}
+                onChange={alterar(setEmail)}
+                erro={erros.email}
+              />
+
+              <CampoSenha
+                id="senha"
+                rotulo="Senha"
+                autoComplete="current-password"
+                valor={senha}
+                onChange={alterar(setSenha)}
+                erro={erros.senha}
+              />
+
+              <button type="submit" className="primary-button botao-acao" disabled={enviando}>
+                <IconeLogin tamanho={22} />
+                {enviando ? 'Entrando...' : 'Entrar'}
+              </button>
+
+              {lembrado && (
+                <p className="login-lembrado">
+                  Computador lembrado para {lembrado.email}.{' '}
+                  <button type="button" className="login-link" onClick={esquecer}>
+                    Esquecer
+                  </button>
+                </p>
+              )}
+            </form>
+
+            <div className="login-divisor" aria-hidden="true">
+              <span>ou</span>
+            </div>
+
+            {/* Criar conta: centralizado, abaixo do "ou" */}
+            <div className="login-alternativas">
+              <Link to="/cadastro" className="ghost-button login-botao-cadastro">
+                <IconeCadastro tamanho={20} />
+                Criar minha conta
+              </Link>
+            </div>
+          </div>
+        )}
       </section>
     </main>
   )

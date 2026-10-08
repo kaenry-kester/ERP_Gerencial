@@ -1,7 +1,7 @@
 /*
   Tela de login — usa a estrutura de src/styles/tela-dividida.css.
-  Uma coluna: e-mail, senha e Entrar; abaixo, o divisor "ou" e as alternativas
-  (Google e criar conta) lado a lado. A coluna fica centralizada (na largura e na
+  Uma coluna: e-mail, senha e Entrar; abaixo, o divisor "ou" e o botão
+  "Criar minha conta", centralizado. A coluna fica centralizada (na largura e na
   altura) apenas dentro da área branca. O Voltar fica no painel preto.
 */
 
@@ -18,10 +18,11 @@
   font-size: clamp(0.95rem, min(1.6vw, 2.6vh), 1.1rem);
 }
 
+/* Coluna centralizada (na largura e na altura) só na área branca, abaixo da faixa cinza */
 .login-conteudo {
-  flex: 1;
   width: min(620px, calc(100% - var(--area-esquerda) - var(--area-direita)));
-  margin: clamp(1rem, 4vh, 3rem) auto;
+  margin: auto;
+  padding-block: clamp(1rem, 4vh, 2.5rem);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -56,25 +57,104 @@
   background: var(--borda);
 }
 
-/* Google e criar conta lado a lado, mesma altura */
+/* "Criar minha conta" centralizado abaixo do divisor */
 .login-alternativas {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(0.75rem, 2vw, 1.25rem);
+  display: flex;
+  justify-content: center;
 }
 
-.login-alternativas .botao-google,
 .login-botao-cadastro {
   min-height: clamp(46px, 7vh, 56px);
+  padding-inline: clamp(1.5rem, 4vw, 2.5rem);
   white-space: nowrap;
 }
 
-.login-botao-cadastro .texto-curto {
-  display: none;
+.login-botao-cadastro svg {
+  flex-shrink: 0;
 }
 
-.login-alternativas svg {
+/* ---------- 2ª etapa: código enviado por e-mail ---------- */
+
+/* Código grande e espaçado, fácil de conferir com o e-mail */
+.campo-codigo input {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.5em;
+  text-align: center;
+  padding-left: 1.5em;
+}
+
+/* "Lembrar de quem sou": caixa de marcar com explicação */
+.login-lembrar {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 8px;
+  background: var(--cinza-claro);
+  cursor: pointer;
+}
+
+.login-lembrar input {
   flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-top: 0.15rem;
+  accent-color: var(--azul);
+  cursor: pointer;
+}
+
+.login-lembrar > span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.login-lembrar-titulo {
+  font-weight: 700;
+  color: var(--cinza-escuro);
+}
+
+.login-lembrar-texto {
+  font-size: 0.86rem;
+  line-height: 1.4;
+  color: var(--texto-suave);
+}
+
+/* Reenviar código / Usar outra conta */
+.login-codigo-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.login-link {
+  padding: 0.2rem 0;
+  border: none;
+  background: none;
+  font-weight: 700;
+  color: var(--azul);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.login-link:disabled {
+  color: var(--texto-suave);
+  text-decoration: none;
+  cursor: default;
+}
+
+/* "Computador lembrado para ... · Esquecer" */
+.login-lembrado {
+  font-size: 0.88rem;
+  text-align: center;
+  color: var(--texto-suave);
+}
+
+.login-lembrado .login-link {
+  font-size: inherit;
 }
 
 /* ---------- Celulares ---------- */
@@ -92,21 +172,5 @@
   .login .tela-faixa-titulo,
   .login .tela-status {
     font-size: 0.98rem;
-  }
-
-
-  /* Textos curtos para os dois botões caberem lado a lado */
-  .login-botao-cadastro .texto-longo {
-    display: none;
-  }
-
-  .login-botao-cadastro .texto-curto {
-    display: inline;
-  }
-
-  .login-alternativas .botao-google,
-  .login-botao-cadastro {
-    gap: 0.5rem;
-    padding-inline: 0.6rem;
   }
 }
