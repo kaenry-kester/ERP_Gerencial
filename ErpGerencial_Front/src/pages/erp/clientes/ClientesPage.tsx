@@ -12,7 +12,7 @@ import {
   type ConfiguracaoWhatsapp,
   type ListaClientes,
 } from '../../../services/api'
-import { formatarTelefone } from '../../../utils/validacao'
+import { formatarDocumento, formatarTelefone } from '../../../utils/validacao'
 import AvisoPagina from '../AvisoPagina'
 import CabecalhoModulo from '../CabecalhoModulo'
 import { useErp } from '../contexto'
@@ -141,7 +141,7 @@ export default function ClientesPage() {
           <input
             id="clientes-busca"
             type="search"
-            placeholder="Nome, celular ou endereço"
+            placeholder="Nome, CPF/CNPJ, celular ou endereço"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
           />
@@ -197,7 +197,7 @@ export default function ClientesPage() {
 
         {lista && lista.itens.length > 0 && (
           <>
-            {/* Complemento e CEP aparecem só nos detalhes; em telas estreitas a tabela rola para o lado */}
+            {/* Complemento e CEP aparecem só nos detalhes; em telas estreitas cada linha vira um cartão */}
             <div className="lista-tabela-area">
               <table className="lista-tabela">
                 <thead>
@@ -206,6 +206,7 @@ export default function ClientesPage() {
                     <th scope="col">Cliente</th>
                     <th scope="col">Próxima manutenção</th>
                     <th scope="col">Celular</th>
+                    <th scope="col">CPF/CNPJ</th>
                     <th scope="col">Intervalo</th>
                     <th scope="col">Cadastro</th>
                     <th scope="col">Endereço</th>
@@ -217,14 +218,14 @@ export default function ClientesPage() {
                     return (
                       // A linha inteira abre o cliente; o link no nome é o acesso pelo teclado.
                       <tr key={c.id} onClick={() => navigate(`/app/clientes/${c.id}`)}>
-                        <td className="lista-id">{c.numero}</td>
-                        <td>
+                        <td className="lista-id" data-rotulo="ID">{c.numero}</td>
+                        <td className="lista-principal quebra">
                           <Link to={`/app/clientes/${c.id}`} className="lista-nome">
                             {c.nome}
                           </Link>
                         </td>
                         {/* Próxima manutenção = quando a mensagem de WhatsApp sai */}
-                        <td>
+                        <td className="clientes-proxima-celula" data-rotulo="Próxima manutenção">
                           {c.envioEm && situacao ? (
                             <span className="clientes-proxima">
                               {formatarDataHora(c.envioEm)}
@@ -234,10 +235,11 @@ export default function ClientesPage() {
                             '—'
                           )}
                         </td>
-                        <td className="lista-destaque">{formatarTelefone(c.celular)}</td>
-                        <td>{descreverIntervalo(c)}</td>
-                        <td>{formatarCadastro(c.criadoEm)}</td>
-                        <td className="clientes-endereco" title={resumoEndereco(c) || undefined}>
+                        <td className="lista-destaque" data-rotulo="Celular">{formatarTelefone(c.celular)}</td>
+                        <td data-rotulo="CPF/CNPJ">{c.documento ? formatarDocumento(c.documento) : '—'}</td>
+                        <td className="quebra" data-rotulo="Intervalo">{descreverIntervalo(c)}</td>
+                        <td data-rotulo="Cadastro">{formatarCadastro(c.criadoEm)}</td>
+                        <td className="clientes-endereco quebra" data-rotulo="Endereço">
                           {resumoEndereco(c) || '—'}
                         </td>
                       </tr>

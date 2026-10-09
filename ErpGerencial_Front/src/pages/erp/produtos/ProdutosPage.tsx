@@ -58,7 +58,7 @@ export default function ProdutosPage() {
   }
 
   const cadastrar = tem(sessao.usuario, 'produtos-cadastrar') && (
-    <Link to="/app/produtos/novo" className="pagina-botao marrom">
+    <Link to="/app/produtos/novo" className="pagina-botao azul">
       <IconeMais tamanho={20} />
       Cadastrar produto
     </Link>
@@ -117,7 +117,7 @@ export default function ProdutosPage() {
 
         {lista && lista.itens.length > 0 && (
           <>
-            {/* Cor, voltagem e observação aparecem só nos detalhes; em telas estreitas a tabela rola para o lado */}
+            {/* Cor, voltagem e observação aparecem só nos detalhes; em telas estreitas cada linha vira um cartão */}
             <div className="lista-tabela-area">
               <table className="lista-tabela">
                 <thead>
@@ -137,17 +137,17 @@ export default function ProdutosPage() {
                   {lista.itens.map((p) => (
                     // A linha inteira abre o produto; o link no nome é o acesso pelo teclado.
                     <tr key={p.id} onClick={() => navigate(`/app/produtos/${p.id}`)}>
-                      <td className="lista-id">{p.numero}</td>
-                      <td>
+                      <td className="lista-id" data-rotulo="ID">{p.numero}</td>
+                      <td className="lista-principal quebra">
                         <Link to={`/app/produtos/${p.id}`} className="lista-nome">
                           {p.nome}
                         </Link>
                       </td>
-                      <td>{p.codigo ?? '—'}</td>
-                      <td className="numero">{formatarMoeda(p.precoCusto)}</td>
-                      <td className="numero lista-destaque">{formatarMoeda(p.precoVendaPf)}</td>
-                      <td className="numero lista-destaque">{formatarMoeda(p.precoVendaPj)}</td>
-                      <td className="numero">
+                      <td data-rotulo="Código">{p.codigo ?? '—'}</td>
+                      <td className="numero" data-rotulo="Custo">{formatarMoeda(p.precoCusto)}</td>
+                      <td className="numero lista-destaque" data-rotulo="Venda PF">{formatarMoeda(p.precoVendaPf)}</td>
+                      <td className="numero lista-destaque" data-rotulo="Venda PJ">{formatarMoeda(p.precoVendaPj)}</td>
+                      <td className="numero" data-rotulo="Qtd.">
                         <span
                           className={p.quantidade > 0 ? 'lista-etiqueta' : 'lista-etiqueta alerta'}
                           title={p.quantidade > 0 ? undefined : 'Sem estoque'}
@@ -155,8 +155,8 @@ export default function ProdutosPage() {
                           {formatarQuantidade(p.quantidade)}
                         </span>
                       </td>
-                      <td>{p.marca ?? '—'}</td>
-                      <td>{p.modelo ?? '—'}</td>
+                      <td className="quebra" data-rotulo="Marca">{p.marca ?? '—'}</td>
+                      <td className="quebra" data-rotulo="Modelo">{p.modelo ?? '—'}</td>
                     </tr>
                   ))}
                 </tbody>
