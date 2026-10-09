@@ -1,10 +1,18 @@
 # Robô de mensagens automáticas (WhatsApp)
 
-Na **data e horário do envio** marcados no cadastro de cada cliente, envia pelo WhatsApp a **mensagem
-personalizada** do cliente (na página dele) ou, se ele não tiver, a **mensagem padrão** (na lista de
-clientes, campo "Mensagem padrão (para todos)"). Verifica o banco a cada minuto e envia a qualquer hora;
-depois do envio, o horário marcado no cliente é apagado. Cada envio aparece no histórico da página
+Envia pelo WhatsApp, no horário marcado no cadastro de cada cliente ("Intervalo de manutenção"):
+- **Mensalmente:** a cada N meses, **às 6h**, no mesmo dia do mês em que o intervalo foi salvo (salvo em
+  08/10 com 2 meses → 08/12 às 06:00). Depois de enviar, o robô já marca o próximo (08/02 às 06:00...).
+- **Data específica:** na data e hora escolhidas, uma vez só (depois do envio, fica sem horário).
+
+A mensagem é a **personalizada** do cliente (na página dele) ou, se ele não tiver, a **mensagem padrão**
+(na lista de clientes). Verifica o banco a cada minuto. Cada envio aparece no histórico da página
 "Mensagem automática" ("Enviada", "Teste" ou "Não enviada", com o motivo).
+
+**Proteção contra bloqueio do número:** cada celular manda **uma mensagem por vez, com um intervalo
+sorteado de 2 a 5 minutos** entre elas (se muitas vencerem juntas, às 6h, elas saem espalhadas pela manhã)
+e **no máximo 40 por dia**; o que passar fica para o dia seguinte, sem se perder. Ajuste no `.env`:
+`LIMITE_DIARIO`, `ESPACO_MIN_SEGUNDOS` e `ESPACO_MAX_SEGUNDOS`.
 
 O envio é feito pelo **WhatsApp Web**, no Google Chrome, com o celular da empresa.
 
@@ -36,7 +44,7 @@ O envio é feito pelo **WhatsApp Web**, no Google Chrome, com o celular da empre
    ```
 
 4. No site: em **Clientes → Inserir mensagem automática**, informe o celular que envia; na lista de
-   clientes, escreva a **Mensagem padrão**; no cadastro de cada cliente, marque a **Data e horário do envio**.
+   clientes, escreva a **Mensagem padrão**; no cadastro de cada cliente, escolha o **Intervalo de manutenção** (mensalmente ou data específica).
 
 ## Uso no dia a dia
 

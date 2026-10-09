@@ -90,6 +90,7 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
             e.Property(c => c.Bairro).HasColumnName("bairro").HasMaxLength(100);
             e.Property(c => c.Cidade).HasColumnName("cidade").HasMaxLength(100);
             e.Property(c => c.Uf).HasColumnName("uf").HasMaxLength(2);
+            e.Property(c => c.TipoIntervalo).HasColumnName("tipo_intervalo").HasMaxLength(10).HasDefaultValue("meses");
             e.Property(c => c.IntervaloManutencaoMeses).HasColumnName("intervalo_manutencao_meses");
             e.Property(c => c.MensagemWhatsapp).HasColumnName("mensagem_whatsapp").HasMaxLength(1000);
             e.Property(c => c.EnvioEm).HasColumnName("envio_em");

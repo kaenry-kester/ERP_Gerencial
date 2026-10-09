@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type SubmitEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import CampoSelecao from '../../../components/formulario/CampoSelecao'
 import CampoTexto from '../../../components/formulario/CampoTexto'
 import type { Aviso } from '../../../components/formulario/FaixaAviso'
 import { IconeCheck } from '../../../components/icones/Icones'
@@ -14,6 +15,7 @@ import {
   obterCliente,
   type Cliente,
   type DadosCliente,
+  type TipoIntervalo,
 } from '../../../services/api'
 import { apenasDigitos, formatarCep, formatarTelefone, telefoneValido } from '../../../utils/validacao'
 import AvisoPagina from '../AvisoPagina'
@@ -22,7 +24,7 @@ import FaixaPagina from '../FaixaPagina'
 import { tem } from '../modulos'
 import SecaoPagina from '../SecaoPagina'
 import SemAcesso from '../SemAcesso'
-import { formatarCadastro, formatarDia, INTERVALO_MAXIMO, somarMeses } from './formatos'
+import { envioMensalAPartirDeHoje, formatarCadastro, formatarDataHora, INTERVALO_MAXIMO } from './formatos'
 import '../../../styles/acesso.css'
 import './clientes.css'
 
@@ -39,9 +41,16 @@ const VAZIO: Valores = {
   bairro: '',
   cidade: '',
   uf: '',
+  tipoIntervalo: 'meses',
   intervalo: '',
   envio: '',
 }
+
+/** Como a manutenção é marcada (o robô envia a mensagem na data resultante). */
+const TIPOS: { valor: TipoIntervalo; rotulo: string }[] = [
+  { valor: 'meses', rotulo: 'Mensalmente' },
+  { valor: 'data', rotulo: 'Data específica' },
+]
 
 /** ISO (UTC) → valor do campo de data e hora ("2026-10-08T14:30", no horário do computador). */
 function paraCampoDataHora(iso: string | null) {
@@ -59,7 +68,7 @@ const MASCARAS: Partial<Record<Campo, (v: string) => string>> = {
 }
 
 /** Ordem dos campos, para levar o cursor ao primeiro com erro. */
-const ORDEM: Campo[] = ['nome', 'celular', 'cep', 'uf', 'intervalo']
+const ORDEM: Campo[] = ['nome', 'celular', 'cep', 'uf', 'intervalo', 'envio']
 
 const paraFormulario = (c: Cliente): Valores => ({
   nome: c.nome,
@@ -71,16 +80,19 @@ const paraFormulario = (c: Cliente): Valores => ({
   bairro: c.bairro ?? '',
   cidade: c.cidade ?? '',
   uf: c.uf ?? '',
-  intervalo: String(c.intervaloManutencaoMeses),
-  envio: paraCampoDataHora(c.envioEm),
+  tipoIntervalo: c.tipoIntervalo,
+  intervalo: c.intervaloManutencaoMeses ? String(c.intervaloManutencaoMeses) : '',
+  envio: c.tipoIntervalo === 'data' ? paraCampoDataHora(c.envioEm) : '',
 })
 
-const paraApi = ({ intervalo, envio, ...v }: Valores): DadosCliente => ({
+const paraApi = ({ intervalo, envio, tipoIntervalo, ...v }: Valores): DadosCliente => ({
   ...v,
   celular: apenasDigitos(v.celular),
   cep: apenasDigitos(v.cep),
-  intervaloManutencaoMeses: intervalo ? Number(intervalo) : null,
-  envioEm: envio ? new Date(envio).toISOString() : null,
+  tipoIntervalo: tipoIntervalo as TipoIntervalo,
+  // Mensalmente: o servidor marca o envio (hoje + N meses, às 6h). Data específica: a data escolhida.
+  intervaloManutencaoMeses: tipoIntervalo === 'meses' && intervalo ? Number(intervalo) : null,
+  envioEm: tipoIntervalo === 'data' && envio ? new Date(envio).toISOString() : null,
 })
 
 function validar(v: Valores): Partial<Record<Campo, string>> {
@@ -91,9 +103,11 @@ function validar(v: Valores): Partial<Record<Campo, string>> {
   const cep = apenasDigitos(v.cep)
   if (cep && cep.length !== 8) erros.cep = 'Incompleto'
   if (v.uf && v.uf.length !== 2) erros.uf = 'Ex.: SP'
-  const meses = Number(v.intervalo)
-  if (!v.intervalo) erros.intervalo = 'Obrigatório'
-  else if (meses < 1 || meses > INTERVALO_MAXIMO) erros.intervalo = `De 1 a ${INTERVALO_MAXIMO}`
+  if (v.tipoIntervalo === 'meses') {
+    const meses = Number(v.intervalo)
+    if (!v.intervalo) erros.intervalo = 'Obrigatório'
+    else if (meses < 1 || meses > INTERVALO_MAXIMO) erros.intervalo = `De 1 a ${INTERVALO_MAXIMO}`
+  } else if (!v.envio) erros.envio = 'Obrigatório'
   return erros
 }
 
@@ -225,7 +239,7 @@ export default function ClienteFormPage() {
     } catch (erro) {
       if (sessaoExpirada(erro)) return
       if (erro instanceof ErroApi && erro.campo) {
-        const c = (erro.campo === 'intervaloManutencaoMeses' ? 'intervalo' : erro.campo) as Campo
+        const c = ({ intervaloManutencaoMeses: 'intervalo', envioEm: 'envio' }[erro.campo] ?? erro.campo) as Campo
         setErroServidor({ [c]: erro.message })
         document.getElementById(`cliente-${c}`)?.focus()
       }
@@ -238,11 +252,20 @@ export default function ClienteFormPage() {
   const colunas = (c: Campo, base: string) => (doCep.includes(c) ? `${base} do-cep` : base)
 
   const voltar = novo ? '/app/clientes' : `/app/clientes/${id}`
+  const mensal = valores.tipoIntervalo === 'meses'
   const meses = Number(valores.intervalo)
-  // Próxima manutenção: dia do cadastro (hoje, para um cliente novo) + o intervalo.
-  const previa =
-    meses >= 1 && meses <= INTERVALO_MAXIMO
-      ? formatarDia(somarMeses(original ? new Date(original.criadoEm) : new Date(), meses))
+  // Próximo envio. Mensalmente: o que já está marcado (se o intervalo não mudou) ou hoje + N meses, às 6h.
+  // Data específica: a data e hora escolhidas.
+  const mantem =
+    original?.tipoIntervalo === 'meses' && original.intervaloManutencaoMeses === meses && !!original.envioEm
+  const previa = mensal
+    ? meses >= 1 && meses <= INTERVALO_MAXIMO
+      ? mantem
+        ? formatarDataHora(original!.envioEm!)
+        : envioMensalAPartirDeHoje(meses)
+      : null
+    : valores.envio
+      ? formatarDataHora(new Date(valores.envio).toISOString())
       : null
 
   return (
@@ -300,25 +323,36 @@ export default function ClienteFormPage() {
 
         <SecaoPagina id="cliente-manutencao" numero={3} titulo="Manutenção e envio">
           <div className="erp-form cliente-grade">
-            <CampoTexto
-              {...campo('intervalo')}
-              rotulo="Intervalo para manutenção (meses)"
-              inputMode="numeric"
-              placeholder="Ex.: 6"
-              autoComplete="off"
+            <CampoSelecao
+              {...campo('tipoIntervalo')}
+              rotulo="Intervalo de manutenção"
+              opcoes={TIPOS}
               className="c4"
             />
+            {mensal ? (
+              <CampoTexto
+                {...campo('intervalo')}
+                rotulo="A cada quantos meses"
+                inputMode="numeric"
+                placeholder="Ex.: 6"
+                autoComplete="off"
+                className="c4"
+              />
+            ) : (
+              <CampoTexto {...campo('envio')} rotulo="Data e horário do envio" type="datetime-local" className="c4" />
+            )}
+            {/* O robô envia a mensagem de WhatsApp nesta data */}
             <p className="clientes-previa c4" aria-live="polite">
               {previa ? (
                 <>
-                  Próxima manutenção: <strong>{previa}</strong>
+                  Envio da mensagem: <strong>{previa}</strong>
                 </>
+              ) : mensal ? (
+                'A mensagem sai às 6h, no mesmo dia do mês, a cada N meses.'
               ) : (
-                'De quantos em quantos meses o cliente precisa de manutenção.'
+                'A mensagem sai na data e hora escolhidas.'
               )}
             </p>
-            {/* O robô envia a mensagem de WhatsApp nesta data e hora */}
-            <CampoTexto {...campo('envio')} rotulo="Data e horário do envio" type="datetime-local" className="c4" />
           </div>
         </SecaoPagina>
 

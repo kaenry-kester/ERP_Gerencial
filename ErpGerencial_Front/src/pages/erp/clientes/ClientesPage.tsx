@@ -19,7 +19,7 @@ import { useErp } from '../contexto'
 import FaixaPagina from '../FaixaPagina'
 import { MODULOS, podeAcessar, tem } from '../modulos'
 import SemAcesso from '../SemAcesso'
-import { formatarCadastro, formatarDataHora, formatarDia, formatarIntervalo, resumoEndereco, situacaoManutencao } from './formatos'
+import { descreverIntervalo, formatarCadastro, formatarDataHora, resumoEndereco, situacaoManutencao } from './formatos'
 import MensagemDialogo from './MensagemDialogo'
 import './clientes.css'
 
@@ -205,7 +205,6 @@ export default function ClientesPage() {
                     <th scope="col" className="lista-id">ID</th>
                     <th scope="col">Cliente</th>
                     <th scope="col">Próxima manutenção</th>
-                    <th scope="col">Envio da mensagem</th>
                     <th scope="col">Celular</th>
                     <th scope="col">Intervalo</th>
                     <th scope="col">Cadastro</th>
@@ -214,7 +213,7 @@ export default function ClientesPage() {
                 </thead>
                 <tbody>
                   {lista.itens.map((c) => {
-                    const situacao = situacaoManutencao(c.proximaManutencao)
+                    const situacao = c.proximaManutencao ? situacaoManutencao(c.proximaManutencao) : null
                     return (
                       // A linha inteira abre o cliente; o link no nome é o acesso pelo teclado.
                       <tr key={c.id} onClick={() => navigate(`/app/clientes/${c.id}`)}>
@@ -224,15 +223,19 @@ export default function ClientesPage() {
                             {c.nome}
                           </Link>
                         </td>
+                        {/* Próxima manutenção = quando a mensagem de WhatsApp sai */}
                         <td>
-                          <span className="clientes-proxima">
-                            {formatarDia(c.proximaManutencao)}
-                            <span className={CLASSE_SITUACAO[situacao.tipo]}>{situacao.texto}</span>
-                          </span>
+                          {c.envioEm && situacao ? (
+                            <span className="clientes-proxima">
+                              {formatarDataHora(c.envioEm)}
+                              <span className={CLASSE_SITUACAO[situacao.tipo]}>{situacao.texto}</span>
+                            </span>
+                          ) : (
+                            '—'
+                          )}
                         </td>
-                        <td>{c.envioEm ? formatarDataHora(c.envioEm) : '—'}</td>
                         <td className="lista-destaque">{formatarTelefone(c.celular)}</td>
-                        <td>{formatarIntervalo(c.intervaloManutencaoMeses)}</td>
+                        <td>{descreverIntervalo(c)}</td>
                         <td>{formatarCadastro(c.criadoEm)}</td>
                         <td className="clientes-endereco" title={resumoEndereco(c) || undefined}>
                           {resumoEndereco(c) || '—'}

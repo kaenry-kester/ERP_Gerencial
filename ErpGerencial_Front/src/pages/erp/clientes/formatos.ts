@@ -11,14 +11,28 @@ const paraData = (iso: string) => {
 /** "2027-04-08" → "08/04/2027" */
 export const formatarDia = (iso: string) => paraData(iso).toLocaleDateString('pt-BR')
 
-/** Data e hora (ISO) → "08/10/2026 14:30". */
-export const formatarDataHora = (iso: string) =>
-  new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(',', '')
+/** Data e hora (ISO) → "08/10/2026 às 14:30". */
+export const formatarDataHora = (iso: string) => {
+  const d = new Date(iso)
+  return `${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+}
 
 /** Data e hora de um registro (criado/atualizado em) → "08/10/2026". */
 export const formatarCadastro = (iso: string) => new Date(iso).toLocaleDateString('pt-BR')
 
 export const formatarIntervalo = (meses: number) => (meses === 1 ? '1 mês' : `${meses} meses`)
+
+/** "A cada 2 meses" ou "Data específica". */
+export const descreverIntervalo = (c: Pick<Cliente, 'tipoIntervalo' | 'intervaloManutencaoMeses'>) =>
+  c.tipoIntervalo === 'data' || !c.intervaloManutencaoMeses
+    ? 'Data específica'
+    : `A cada ${formatarIntervalo(c.intervaloManutencaoMeses)}`
+
+/** Hora em que sai a mensagem no intervalo mensal. */
+export const HORA_DO_ENVIO = '06:00'
+
+/** Envio mensal a partir de hoje: mesmo dia, N meses à frente, às 6h ("08/12/2026 às 06:00"). */
+export const envioMensalAPartirDeHoje = (meses: number) => `${formatarDia(somarMeses(new Date(), meses))} às ${HORA_DO_ENVIO}`
 
 /** Quantos meses dá para escolher no intervalo de manutenção. */
 export const INTERVALO_MAXIMO = 120

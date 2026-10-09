@@ -16,7 +16,10 @@ public record ClienteRequest(
     string? Bairro,
     string? Cidade,
     string? Uf,
+    /// <summary>"meses" ou "data".</summary>
+    string? TipoIntervalo,
     int? IntervaloManutencaoMeses,
+    /// <summary>Só no tipo "data": a data e hora escolhidas (no tipo "meses" o servidor calcula).</summary>
     DateTime? EnvioEm);
 
 /// <summary>Mensagem personalizada de um cliente (vazia: volta a usar a mensagem padrão da empresa).</summary>
@@ -34,8 +37,10 @@ public record ClienteDto(
     string? Bairro,
     string? Cidade,
     string? Uf,
-    int IntervaloManutencaoMeses,
-    DateOnly ProximaManutencao,
+    string TipoIntervalo,
+    int? IntervaloManutencaoMeses,
+    /// <summary>Dia do próximo envio (no horário de Brasília); vazio quando não há envio marcado.</summary>
+    DateOnly? ProximaManutencao,
     string? MensagemWhatsapp,
     DateTime? EnvioEm,
     DateTime CriadoEm,
@@ -51,6 +56,10 @@ public static class ClienteEndpoints
 {
     private const int TamanhoPagina = 50;
     private const int IntervaloMaximo = 120;
+    private const string TipoMeses = "meses";
+    private const string TipoData = "data";
+    /// <summary>Hora em que sai a mensagem no intervalo mensal (horário de Brasília).</summary>
+    private static readonly TimeOnly HoraDoEnvio = new(6, 0);
 
     public static void MapClienteEndpoints(this WebApplication app)
     {
@@ -111,7 +120,7 @@ public static class ClienteEndpoints
         if (erros.Count > 0) return Results.ValidationProblem(erros);
 
         var cliente = new Cliente { EmpresaId = usuario.EmpresaId, Nome = "", Celular = "" };
-        Preencher(cliente, req);
+        Preencher(cliente, req, novo: true);
         db.Clientes.Add(cliente);
 
         // O ID sequencial é o maior da empresa + 1; se dois cadastros chegarem juntos, tenta de novo.
@@ -144,7 +153,7 @@ public static class ClienteEndpoints
         var erros = Validar(req);
         if (erros.Count > 0) return Results.ValidationProblem(erros);
 
-        Preencher(cliente, req);
+        Preencher(cliente, req, novo: false);
         cliente.AtualizadoEm = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return Results.Ok(Dto(cliente));
@@ -203,13 +212,25 @@ public static class ClienteEndpoints
         Tamanho("cidade", req.Cidade, 100);
         if ((req.Uf?.Trim().Length ?? 0) is not (0 or 2)) erros["uf"] = ["Use a sigla (ex.: SP)"];
 
-        if (req.IntervaloManutencaoMeses is null) erros["intervaloManutencaoMeses"] = ["Digite o intervalo"];
-        else if (req.IntervaloManutencaoMeses is < 1 or > IntervaloMaximo)
-            erros["intervaloManutencaoMeses"] = [$"De 1 a {IntervaloMaximo} meses"];
+        switch (req.TipoIntervalo)
+        {
+            case TipoMeses:
+                if (req.IntervaloManutencaoMeses is null) erros["intervaloManutencaoMeses"] = ["Digite o intervalo"];
+                else if (req.IntervaloManutencaoMeses is < 1 or > IntervaloMaximo)
+                    erros["intervaloManutencaoMeses"] = [$"De 1 a {IntervaloMaximo} meses"];
+                break;
+            case TipoData:
+                if (req.EnvioEm is null) erros["envioEm"] = ["Escolha a data e a hora"];
+                break;
+            default:
+                erros["tipoIntervalo"] = ["Escolha mensalmente ou data específica"];
+                break;
+        }
         return erros;
     }
 
-    private static void Preencher(Cliente c, ClienteRequest req)
+    /// <param name="novo">Cliente novo: no tipo "meses", o primeiro envio é sempre calculado a partir de hoje.</param>
+    private static void Preencher(Cliente c, ClienteRequest req, bool novo)
     {
         static string? Opcional(string? valor) => string.IsNullOrWhiteSpace(valor) ? null : valor.Trim();
         c.Nome = req.Nome.Trim();
@@ -221,20 +242,49 @@ public static class ClienteEndpoints
         c.Bairro = Opcional(req.Bairro);
         c.Cidade = Opcional(req.Cidade);
         c.Uf = Opcional(req.Uf)?.ToUpperInvariant();
-        c.IntervaloManutencaoMeses = req.IntervaloManutencaoMeses!.Value;
-        c.EnvioEm = req.EnvioEm?.ToUniversalTime();
+        Agendar(c, req, novo);
+    }
+
+    /// <summary>
+    /// Marca o próximo envio. Mensalmente: às 6h, no mesmo dia do mês de hoje, N meses à frente
+    /// (só recalcula quando o intervalo é novo ou mudou; editar outros dados não mexe no envio marcado).
+    /// Data específica: a data e hora escolhidas.
+    /// </summary>
+    private static void Agendar(Cliente c, ClienteRequest req, bool novo)
+    {
+        if (req.TipoIntervalo == TipoData)
+        {
+            c.TipoIntervalo = TipoData;
+            c.IntervaloManutencaoMeses = null;
+            c.EnvioEm = req.EnvioEm!.Value.ToUniversalTime();
+            return;
+        }
+
+        var meses = req.IntervaloManutencaoMeses!.Value;
+        var mudou = novo || c.TipoIntervalo != TipoMeses || c.IntervaloManutencaoMeses != meses || c.EnvioEm is null;
+        c.TipoIntervalo = TipoMeses;
+        c.IntervaloManutencaoMeses = meses;
+        if (mudou) c.EnvioEm = EnvioMensal(DateTime.UtcNow, meses);
+    }
+
+    /// <summary>Hoje (em Brasília) + N meses, às 6h de Brasília, em UTC.</summary>
+    public static DateTime EnvioMensal(DateTime agoraUtc, int meses)
+    {
+        var hoje = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(agoraUtc, Brasilia));
+        var local = hoje.AddMonths(meses).ToDateTime(HoraDoEnvio);
+        return TimeZoneInfo.ConvertTimeToUtc(local, Brasilia);
     }
 
     private static string SoDigitos(string? valor) => new((valor ?? "").Where(char.IsAsciiDigit).ToArray());
 
     private static readonly TimeZoneInfo Brasilia = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
 
-    /// <summary>Próxima manutenção: dia do cadastro (no horário de Brasília) + o intervalo em meses.</summary>
-    private static DateOnly Proxima(Cliente c) =>
-        DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(c.CriadoEm, Brasilia)).AddMonths(c.IntervaloManutencaoMeses);
+    /// <summary>Próxima manutenção: o dia do próximo envio, no horário de Brasília.</summary>
+    private static DateOnly? Proxima(Cliente c) =>
+        c.EnvioEm is { } envio ? DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(envio, Brasilia)) : null;
 
     private static ClienteDto Dto(Cliente c) =>
         new(c.Id, c.Numero, c.Nome, c.Celular, c.Cep, c.Logradouro, c.NumeroEndereco, c.Complemento,
-            c.Bairro, c.Cidade, c.Uf, c.IntervaloManutencaoMeses, Proxima(c), c.MensagemWhatsapp, c.EnvioEm,
+            c.Bairro, c.Cidade, c.Uf, c.TipoIntervalo, c.IntervaloManutencaoMeses, Proxima(c), c.MensagemWhatsapp, c.EnvioEm,
             c.CriadoEm, c.AtualizadoEm);
 }
