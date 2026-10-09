@@ -19,7 +19,7 @@ import { useErp } from '../contexto'
 import FaixaPagina from '../FaixaPagina'
 import { MODULOS, podeAcessar, tem } from '../modulos'
 import SemAcesso from '../SemAcesso'
-import { formatarCadastro, formatarDia, formatarIntervalo, resumoEndereco, situacaoManutencao } from './formatos'
+import { formatarCadastro, formatarDataHora, formatarDia, formatarIntervalo, resumoEndereco, situacaoManutencao } from './formatos'
 import MensagemDialogo from './MensagemDialogo'
 import './clientes.css'
 
@@ -60,7 +60,7 @@ export default function ClientesPage() {
     if (!whatsapp) return
     setSalvandoMensagem(true)
     try {
-      setWhatsapp(await salvarWhatsapp(sessao.token, { remetente: whatsapp.remetente ?? '', mensagem, ativa: whatsapp.ativa }))
+      setWhatsapp(await salvarWhatsapp(sessao.token, { remetente: whatsapp.remetente ?? '', mensagem }))
       setMensagemAberta(false)
       setAviso(null)
     } catch (erro) {
@@ -171,7 +171,7 @@ export default function ClientesPage() {
         <MensagemDialogo
           aberto={mensagemAberta}
           titulo="Mensagem padrão"
-          dica="Enviada pelo WhatsApp a todos os clientes no dia da manutenção (menos quem tem mensagem personalizada)."
+          dica="Enviada pelo WhatsApp a cada cliente na data e horário do envio (menos quem tem mensagem personalizada)."
           valor={whatsapp.mensagem ?? ''}
           salvando={salvandoMensagem}
           onFechar={() => setMensagemAberta(false)}
@@ -205,6 +205,7 @@ export default function ClientesPage() {
                     <th scope="col" className="lista-id">ID</th>
                     <th scope="col">Cliente</th>
                     <th scope="col">Próxima manutenção</th>
+                    <th scope="col">Envio da mensagem</th>
                     <th scope="col">Celular</th>
                     <th scope="col">Intervalo</th>
                     <th scope="col">Cadastro</th>
@@ -229,6 +230,7 @@ export default function ClientesPage() {
                             <span className={CLASSE_SITUACAO[situacao.tipo]}>{situacao.texto}</span>
                           </span>
                         </td>
+                        <td>{c.envioEm ? formatarDataHora(c.envioEm) : '—'}</td>
                         <td className="lista-destaque">{formatarTelefone(c.celular)}</td>
                         <td>{formatarIntervalo(c.intervaloManutencaoMeses)}</td>
                         <td>{formatarCadastro(c.criadoEm)}</td>

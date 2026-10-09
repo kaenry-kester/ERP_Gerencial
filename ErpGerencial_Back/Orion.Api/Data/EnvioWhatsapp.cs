@@ -13,10 +13,10 @@ public class EnvioWhatsapp
     public Guid ClienteId { get; set; }
     public Cliente? Cliente { get; set; }
 
-    /// <summary>A data de manutenção que motivou o envio (no teste agendado: o dia do teste).</summary>
+    /// <summary>O dia do envio agendado (nos envios antigos, a data de manutenção).</summary>
     public DateOnly DataReferencia { get; set; }
 
-    /// <summary>"manutencao" (no dia da manutenção) ou "agendado" (teste com data e hora escolhidas).</summary>
+    /// <summary>"agendado" (na data e hora marcadas no cliente); "manutencao" é dos envios antigos, pelo intervalo.</summary>
     public string Tipo { get; set; } = "manutencao";
 
     /// <summary>Celular do cliente (só dígitos, com DDD) no momento do envio.</summary>

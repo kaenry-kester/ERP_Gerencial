@@ -28,14 +28,14 @@ public class Cliente
     /// <summary>De quantos em quantos meses o cliente precisa de manutenção.</summary>
     public int IntervaloManutencaoMeses { get; set; }
 
-    /// <summary>Mensagem de WhatsApp só deste cliente (vazia: usa a mensagem automática da empresa).</summary>
+    /// <summary>Mensagem de WhatsApp só deste cliente (vazia: usa a mensagem padrão da empresa).</summary>
     public string? MensagemWhatsapp { get; set; }
 
     /// <summary>
-    /// TEMPORÁRIO, para testes: dia e hora em que o robô envia a mensagem (sem esperar a manutenção).
-    /// Depois do envio, volta a ficar vazio.
+    /// Dia e hora em que o robô envia a mensagem de WhatsApp ao cliente.
+    /// Depois do envio, volta a ficar vazio (o envio fica no histórico).
     /// </summary>
-    public DateTime? EnvioTesteEm { get; set; }
+    public DateTime? EnvioEm { get; set; }
 
     /// <summary>Dia do cadastro (também é a base para a próxima manutenção).</summary>
     public DateTime CriadoEm { get; set; } = DateTime.UtcNow;

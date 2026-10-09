@@ -11,6 +11,10 @@ const paraData = (iso: string) => {
 /** "2027-04-08" → "08/04/2027" */
 export const formatarDia = (iso: string) => paraData(iso).toLocaleDateString('pt-BR')
 
+/** Data e hora (ISO) → "08/10/2026 14:30". */
+export const formatarDataHora = (iso: string) =>
+  new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(',', '')
+
 /** Data e hora de um registro (criado/atualizado em) → "08/10/2026". */
 export const formatarCadastro = (iso: string) => new Date(iso).toLocaleDateString('pt-BR')
 
@@ -56,6 +60,6 @@ export const MENSAGEM_MAXIMO = 1000
 /** Trechos que o robô troca pelos dados de cada cliente. */
 export const TRECHOS_MENSAGEM = [
   { trecho: '{nome}', rotulo: 'Nome do cliente' },
-  { trecho: '{data}', rotulo: 'Data da manutenção' },
+  { trecho: '{data}', rotulo: 'Data do envio' },
   { trecho: '{empresa}', rotulo: 'Nome da empresa' },
 ]

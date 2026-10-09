@@ -20,8 +20,26 @@ ENDERECO = "https://web.whatsapp.com/"
 LISTA_DE_CONVERSAS = "#pane-side"
 QR_CODE = "canvas"
 CAIXA_DE_TEXTO = 'footer div[contenteditable="true"]'
+BOTAO_ENVIAR = 'footer button[aria-label="Enviar"], footer button[aria-label="Send"]'
 JANELA_DE_AVISO = 'div[role="dialog"]'
-RELOGIO_PENDENTE = 'span[data-icon="msg-time"]'
+
+# Situação da mensagem enviada, como o WhatsApp Web descreve (aria-label do ícone de tique)
+SITUACAO_OK = ("enviada", "entregue", "lida", "sent", "delivered", "read")
+SITUACAO_PENDENTE = ("pendente", "pending")
+
+# Lê a situação da última mensagem que contém o texto (fora da caixa de digitação):
+# null = ainda não apareceu na conversa; "" = apareceu, sem situação ainda; senão o texto da situação.
+JS_SITUACAO = """(trecho) => {
+    const main = document.querySelector('#main');
+    if (!main) return null;
+    const textos = [...main.querySelectorAll('span')].filter(s => !s.closest('footer') && (s.innerText || '').includes(trecho));
+    const ultimo = textos.pop();
+    if (!ultimo) return null;
+    let bolha = ultimo;
+    for (let i = 0; i < 10 && bolha && !bolha.querySelector('[aria-label]'); i++) bolha = bolha.parentElement;
+    const rotulos = bolha ? [...bolha.querySelectorAll('[aria-label]')].map(e => (e.getAttribute('aria-label') || '').trim().toLowerCase()) : [];
+    return rotulos.join('|');
+}"""
 
 
 class ErroEnvio(Exception):
@@ -97,30 +115,41 @@ class WhatsAppWeb:
         pagina = self.pagina
         pagina.goto(f"{ENDERECO}send?phone=55{destino}&text={quote(mensagem)}")
 
-        # Espera a conversa abrir com o texto já na caixa, ou o aviso de número inválido.
+        # Espera a conversa abrir de vez: texto na caixa e sem a janela "Iniciando conversa".
+        # (Enviar durante essa janela faz a caixa esvaziar sem a mensagem sair.)
         limite = time.monotonic() + 60
         while True:
-            caixa = pagina.locator(CAIXA_DE_TEXTO)
-            if caixa.count() and caixa.first.inner_text().strip():
-                break
             aviso = pagina.locator(JANELA_DE_AVISO)
-            if aviso.count():
-                texto = aviso.first.inner_text().lower()
-                if "inválido" in texto or "invalid" in texto:
-                    raise ErroEnvio("Este celular não tem WhatsApp ou o número está errado")
+            texto_aviso = aviso.first.inner_text().lower() if aviso.count() else ""
+            if "inválido" in texto_aviso or "invalid" in texto_aviso:
+                raise ErroEnvio("Este celular não tem WhatsApp ou o número está errado")
+            caixa = pagina.locator(CAIXA_DE_TEXTO)
+            if not texto_aviso and caixa.count() and caixa.first.inner_text().strip():
+                break
             if time.monotonic() > limite:
                 raise ErroEnvio("A conversa não abriu a tempo no WhatsApp Web")
             pagina.wait_for_timeout(500)
+        pagina.wait_for_timeout(1500)
 
-        caixa.first.click()
-        pagina.keyboard.press("Enter")
+        # Clica em "Enviar" (ou aperta Enter, se o botão não estiver lá)
+        botao = pagina.locator(BOTAO_ENVIAR)
+        if botao.count():
+            botao.first.click()
+        else:
+            caixa.first.click()
+            pagina.keyboard.press("Enter")
 
-        # Enviada: a caixa esvazia e o relógio de "enviando" some.
-        try:
-            pagina.wait_for_function(
-                "s => !document.querySelector(s)?.innerText.trim()", arg=CAIXA_DE_TEXTO, timeout=15_000
-            )
-            pagina.wait_for_timeout(1500)
-            pagina.wait_for_selector(RELOGIO_PENDENTE, state="detached", timeout=30_000)
-        except ErroPlaywright as erro:
-            raise ErroEnvio("O WhatsApp não confirmou o envio") from erro
+        # Só conta como enviada quando a mensagem aparece na conversa e o WhatsApp
+        # confirma (enviada, entregue ou lida). Pendente por muito tempo = erro (o robô tenta de novo).
+        trecho = mensagem.strip().splitlines()[0][:30]
+        limite = time.monotonic() + 45
+        situacao = None
+        while time.monotonic() < limite:
+            situacao = pagina.evaluate(JS_SITUACAO, trecho)
+            if situacao and any(ok in situacao for ok in SITUACAO_OK) and not any(p in situacao for p in SITUACAO_PENDENTE):
+                pagina.wait_for_timeout(2000)
+                return
+            pagina.wait_for_timeout(1000)
+        if situacao is None:
+            raise ErroEnvio("A mensagem não apareceu na conversa do WhatsApp")
+        raise ErroEnvio("O WhatsApp não confirmou o envio (ficou pendente)")

@@ -5,7 +5,7 @@ using Orion.Api.Data;
 
 namespace Orion.Api.WhatsApp;
 
-public record ConfiguracaoWhatsappRequest(string? Remetente, string? Mensagem, bool Ativa);
+public record ConfiguracaoWhatsappRequest(string? Remetente, string? Mensagem);
 
 public record EnvioDto(
     Guid Id,
@@ -19,11 +19,11 @@ public record EnvioDto(
     string? Erro,
     DateTime CriadoEm);
 
-public record ConfiguracaoWhatsappDto(string? Remetente, string? Mensagem, bool Ativa, List<EnvioDto> Envios);
+public record ConfiguracaoWhatsappDto(string? Remetente, string? Mensagem, List<EnvioDto> Envios);
 
 /// <summary>
-/// Mensagem automática de manutenção da empresa (WhatsApp): o texto, o celular que envia,
-/// ligar/desligar e o histórico dos últimos envios. Quem pode editar clientes pode mexer aqui.
+/// Mensagem automática da empresa (WhatsApp): a mensagem padrão, o celular que envia
+/// e o histórico dos últimos envios. Quem pode editar clientes pode mexer aqui.
 /// Quem envia de fato é o robô em Python (ErpGerencial_Automacao/lembretes.py), que lê esta
 /// configuração no banco e grava cada envio em envios_whatsapp.
 /// </summary>
@@ -60,17 +60,11 @@ public static class WhatsAppEndpoints
         var erros = new Dictionary<string, string[]>();
         if (remetente.Length > 0 && remetente.Length is not (10 or 11)) erros["remetente"] = ["Número incompleto"];
         if (mensagem.Length > TamanhoMaximo) erros["mensagem"] = [$"Máximo de {TamanhoMaximo} letras"];
-        if (req.Ativa)
-        {
-            if (remetente.Length == 0) erros.TryAdd("remetente", ["Digite o celular que envia"]);
-            if (mensagem.Length == 0) erros.TryAdd("mensagem", ["Digite a mensagem"]);
-        }
         if (erros.Count > 0) return Results.ValidationProblem(erros);
 
         var empresa = await db.Empresas.SingleAsync(e => e.Id == usuario.EmpresaId);
         empresa.WhatsappRemetente = remetente.Length == 0 ? null : remetente;
         empresa.MensagemManutencao = mensagem.Length == 0 ? null : mensagem;
-        empresa.MensagemAutomaticaAtiva = req.Ativa;
         await db.SaveChangesAsync();
         return Results.Ok(await Dto(empresa, db));
     }
@@ -84,7 +78,6 @@ public static class WhatsAppEndpoints
             .Select(w => new EnvioDto(w.Id, w.ClienteId, w.Cliente!.Nome, w.Telefone, w.DataReferencia,
                 w.Tipo, w.Mensagem, w.Status, w.Erro, w.CriadoEm))
             .ToListAsync();
-        return new ConfiguracaoWhatsappDto(empresa.WhatsappRemetente, empresa.MensagemManutencao,
-            empresa.MensagemAutomaticaAtiva, envios);
+        return new ConfiguracaoWhatsappDto(empresa.WhatsappRemetente, empresa.MensagemManutencao, envios);
     }
 }

@@ -38,7 +38,6 @@ export default function MensagemAutomaticaPage() {
   const [config, setConfig] = useState<ConfiguracaoWhatsapp | null>(null)
   const [remetente, setRemetente] = useState('')
   const [mensagem, setMensagem] = useState('')
-  const [ativa, setAtiva] = useState(false)
   const [enviado, setEnviado] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [erroServidor, setErroServidor] = useState<Partial<Record<Campo, string>>>({})
@@ -49,7 +48,6 @@ export default function MensagemAutomaticaPage() {
     setConfig(c)
     setRemetente(formatarTelefone(c.remetente ?? ''))
     setMensagem(c.mensagem ?? SUGESTAO)
-    setAtiva(c.ativa)
   }
 
   useEffect(() => {
@@ -75,8 +73,6 @@ export default function MensagemAutomaticaPage() {
 
   const validar = (): Partial<Record<Campo, string>> => ({
     ...(remetente && !telefoneValido(remetente) ? { remetente: 'Incompleto' } : {}),
-    ...(ativa && !remetente ? { remetente: 'Obrigatório' } : {}),
-    ...(ativa && !mensagem.trim() ? { mensagem: 'Obrigatório' } : {}),
   })
   const erros = { ...erroServidor, ...(enviado ? validar() : {}) }
 
@@ -97,7 +93,7 @@ export default function MensagemAutomaticaPage() {
     setSalvando(true)
     setAviso(null)
     try {
-      aplicar(await salvarWhatsapp(sessao.token, { remetente, mensagem, ativa }))
+      aplicar(await salvarWhatsapp(sessao.token, { remetente, mensagem }))
       setEnviado(false)
       setAviso({ tipo: 'ok', texto: 'Salvo.' })
     } catch (erro) {
@@ -121,7 +117,7 @@ export default function MensagemAutomaticaPage() {
       <FaixaPagina
         Ilustracao={IlustracaoClientes}
         titulo="Mensagem automática"
-        subtitulo="Enviada pelo WhatsApp no dia da manutenção de cada cliente."
+        subtitulo="Enviada pelo WhatsApp na data e horário do envio marcados em cada cliente."
         voltar={{ para: '/app/clientes', rotulo: 'Clientes' }}
       />
 
@@ -183,21 +179,7 @@ export default function MensagemAutomaticaPage() {
           )}
         </SecaoPagina>
 
-        <SecaoPagina id="whatsapp-envio" numero={3} titulo="Envio automático">
-          <label className="erp-permissao erp-ativo">
-            <input
-              type="checkbox"
-              checked={ativa}
-              onChange={(e) => {
-                setAtiva(e.target.checked)
-                mudou()
-              }}
-            />
-            Enviar automaticamente no dia da manutenção (entre 9h e 20h)
-          </label>
-        </SecaoPagina>
-
-        <SecaoPagina id="whatsapp-historico" numero={4} titulo="Últimos envios">
+        <SecaoPagina id="whatsapp-historico" numero={3} titulo="Últimos envios">
           {config.envios.length === 0 ? (
             <p className="erp-nota">Nenhuma mensagem enviada ainda.</p>
           ) : (
@@ -211,7 +193,7 @@ export default function MensagemAutomaticaPage() {
                     </Link>
                     <span className="mensagem-envio-detalhe">
                       {formatarTelefone(e.telefone)} ·{' '}
-                      {e.tipo === 'agendado' ? 'teste agendado' : `manutenção de ${formatarDia(e.dataReferencia)}`} ·{' '}
+                      {e.tipo === 'agendado' ? `envio de ${formatarDia(e.dataReferencia)}` : `manutenção de ${formatarDia(e.dataReferencia)}`} ·{' '}
                       {new Date(e.criadoEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
                     </span>
                     {e.erro && <span className="mensagem-envio-erro">{e.erro}</span>}

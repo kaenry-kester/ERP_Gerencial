@@ -250,10 +250,10 @@ export type Cliente = {
   intervaloManutencaoMeses: number
   /** Dia do cadastro + o intervalo ("2027-04-08"). */
   proximaManutencao: string
-  /** Mensagem de WhatsApp só deste cliente (null: usa a mensagem automática da empresa). */
+  /** Mensagem de WhatsApp só deste cliente (null: usa a mensagem padrão da empresa). */
   mensagemWhatsapp: string | null
-  /** TEMPORÁRIO (testes): quando o robô envia a mensagem (ISO, UTC); some depois do envio. */
-  envioTesteEm: string | null
+  /** Quando o robô envia a mensagem de WhatsApp (ISO, UTC); some depois do envio. */
+  envioEm: string | null
   criadoEm: string
   atualizadoEm: string
 }
@@ -269,7 +269,7 @@ export type DadosCliente = {
   cidade: string
   uf: string
   intervaloManutencaoMeses: number | null
-  envioTesteEm: string | null
+  envioEm: string | null
 }
 
 export type ListaClientes = { itens: Cliente[]; total: number; pagina: number; tamanhoPagina: number }
@@ -317,7 +317,7 @@ export type EnvioWhatsapp = {
   telefone: string
   /** Data de manutenção que motivou o envio ("2027-04-08"). */
   dataReferencia: string
-  /** "manutencao" (no dia da manutenção) ou "agendado" (teste com data e hora escolhidas). */
+  /** "agendado" (na data e hora marcadas no cliente); "manutencao" é dos envios antigos, pelo intervalo. */
   tipo: 'manutencao' | 'agendado'
   mensagem: string
   /** "enviado", "teste" (modo teste: não saiu de verdade) ou "erro". */
@@ -330,13 +330,10 @@ export type ConfiguracaoWhatsapp = {
   /** Celular que envia, só dígitos com DDD. */
   remetente: string | null
   mensagem: string | null
-  ativa: boolean
-  /** Sem serviço de WhatsApp configurado: as mensagens só ficam no histórico. */
-  modoTeste: boolean
   envios: EnvioWhatsapp[]
 }
 
-export type DadosWhatsapp = { remetente: string; mensagem: string; ativa: boolean }
+export type DadosWhatsapp = { remetente: string; mensagem: string }
 
 export const obterWhatsapp = (token: string) => requisicao<ConfiguracaoWhatsapp>('GET', '/api/whatsapp', { token })
 

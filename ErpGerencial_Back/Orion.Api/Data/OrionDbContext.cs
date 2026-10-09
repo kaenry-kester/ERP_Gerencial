@@ -46,7 +46,6 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
             e.Property(emp => emp.CriadoEm).HasColumnName("criado_em");
             e.Property(emp => emp.WhatsappRemetente).HasColumnName("whatsapp_remetente").HasMaxLength(11);
             e.Property(emp => emp.MensagemManutencao).HasColumnName("mensagem_manutencao").HasMaxLength(1000);
-            e.Property(emp => emp.MensagemAutomaticaAtiva).HasColumnName("mensagem_automatica_ativa");
             // Como no Bling, um CNPJ/CPF tem uma conta só (quando informado).
             e.HasIndex(emp => emp.Documento).IsUnique().HasFilter("documento IS NOT NULL");
         });
@@ -93,7 +92,7 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
             e.Property(c => c.Uf).HasColumnName("uf").HasMaxLength(2);
             e.Property(c => c.IntervaloManutencaoMeses).HasColumnName("intervalo_manutencao_meses");
             e.Property(c => c.MensagemWhatsapp).HasColumnName("mensagem_whatsapp").HasMaxLength(1000);
-            e.Property(c => c.EnvioTesteEm).HasColumnName("envio_teste_em");
+            e.Property(c => c.EnvioEm).HasColumnName("envio_em");
             e.Property(c => c.CriadoEm).HasColumnName("criado_em");
             e.Property(c => c.AtualizadoEm).HasColumnName("atualizado_em");
             // ID sequencial não se repete dentro da mesma empresa.

@@ -26,7 +26,7 @@ import { formatarCadastro, formatarDia, INTERVALO_MAXIMO, somarMeses } from './f
 import '../../../styles/acesso.css'
 import './clientes.css'
 
-type Campo = keyof Omit<DadosCliente, 'intervaloManutencaoMeses' | 'envioTesteEm'> | 'intervalo' | 'envioTeste'
+type Campo = keyof Omit<DadosCliente, 'intervaloManutencaoMeses' | 'envioEm'> | 'intervalo' | 'envio'
 type Valores = Record<Campo, string>
 
 const VAZIO: Valores = {
@@ -40,7 +40,7 @@ const VAZIO: Valores = {
   cidade: '',
   uf: '',
   intervalo: '',
-  envioTeste: '',
+  envio: '',
 }
 
 /** ISO (UTC) → valor do campo de data e hora ("2026-10-08T14:30", no horário do computador). */
@@ -72,15 +72,15 @@ const paraFormulario = (c: Cliente): Valores => ({
   cidade: c.cidade ?? '',
   uf: c.uf ?? '',
   intervalo: String(c.intervaloManutencaoMeses),
-  envioTeste: paraCampoDataHora(c.envioTesteEm),
+  envio: paraCampoDataHora(c.envioEm),
 })
 
-const paraApi = ({ intervalo, envioTeste, ...v }: Valores): DadosCliente => ({
+const paraApi = ({ intervalo, envio, ...v }: Valores): DadosCliente => ({
   ...v,
   celular: apenasDigitos(v.celular),
   cep: apenasDigitos(v.cep),
   intervaloManutencaoMeses: intervalo ? Number(intervalo) : null,
-  envioTesteEm: envioTeste ? new Date(envioTeste).toISOString() : null,
+  envioEm: envio ? new Date(envio).toISOString() : null,
 })
 
 function validar(v: Valores): Partial<Record<Campo, string>> {
@@ -298,7 +298,7 @@ export default function ClienteFormPage() {
           </div>
         </SecaoPagina>
 
-        <SecaoPagina id="cliente-manutencao" numero={3} titulo="Manutenção">
+        <SecaoPagina id="cliente-manutencao" numero={3} titulo="Manutenção e envio">
           <div className="erp-form cliente-grade">
             <CampoTexto
               {...campo('intervalo')}
@@ -317,8 +317,8 @@ export default function ClienteFormPage() {
                 'De quantos em quantos meses o cliente precisa de manutenção.'
               )}
             </p>
-            {/* TEMPORÁRIO, para testes: o robô envia a mensagem nesta data e hora */}
-            <CampoTexto {...campo('envioTeste')} rotulo="Data e horário do envio (teste)" type="datetime-local" className="c4" />
+            {/* O robô envia a mensagem de WhatsApp nesta data e hora */}
+            <CampoTexto {...campo('envio')} rotulo="Data e horário do envio" type="datetime-local" className="c4" />
           </div>
         </SecaoPagina>
 

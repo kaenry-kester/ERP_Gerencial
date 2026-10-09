@@ -90,9 +90,9 @@ export default function ClientePage() {
         ['Intervalo', formatarIntervalo(cliente.intervaloManutencaoMeses)],
         ['Próxima manutenção', formatarDia(cliente.proximaManutencao)],
         [
-          'Envio de teste',
-          cliente.envioTesteEm
-            ? new Date(cliente.envioTesteEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+          'Envio da mensagem',
+          cliente.envioEm
+            ? new Date(cliente.envioEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
             : '—',
         ],
         // Quem pode editar escreve a mensagem no campo logo abaixo; os outros só veem qual vale

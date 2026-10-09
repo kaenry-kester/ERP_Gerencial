@@ -1,14 +1,10 @@
 # Robô de mensagens automáticas (WhatsApp)
 
-No dia da manutenção de cada cliente (dia do cadastro + intervalo em meses), envia pelo WhatsApp
-a **mensagem padrão** (na lista de clientes, campo "Mensagem padrão (para todos)") ou, se o cliente tiver,
-a **mensagem personalizada** dele (na ficha do cliente, botão "Enviar mensagem personalizada").
-Verifica o banco a cada minuto; as manutenções saem só entre 9h e 20h (horário de Brasília), e nunca
-duas vezes para o mesmo cliente na mesma data.
-Cada envio aparece no histórico da página ("Enviada", "Teste" ou "Não enviada", com o motivo).
-
-**Temporário, para testes:** no cadastro do cliente, o campo "Data e horário do envio (teste)" faz o
-robô enviar nesse momento (a qualquer hora, sem esperar a manutenção). Depois do envio, o campo é apagado.
+Na **data e horário do envio** marcados no cadastro de cada cliente, envia pelo WhatsApp a **mensagem
+personalizada** do cliente (na página dele) ou, se ele não tiver, a **mensagem padrão** (na lista de
+clientes, campo "Mensagem padrão (para todos)"). Verifica o banco a cada minuto e envia a qualquer hora;
+depois do envio, o horário marcado no cliente é apagado. Cada envio aparece no histórico da página
+"Mensagem automática" ("Enviada", "Teste" ou "Não enviada", com o motivo).
 
 O envio é feito pelo **WhatsApp Web**, no Google Chrome, com o celular da empresa.
 
@@ -39,8 +35,8 @@ O envio é feito pelo **WhatsApp Web**, no Google Chrome, com o celular da empre
    .venv\Scripts\python.exe lembretes.py testar 16991039268 16991039268 "Teste do robô"
    ```
 
-4. No site, em **Clientes**: digite a **Mensagem padrão**; em **Clientes → Mensagem automática**,
-   informe o celular que envia e marque **Enviar automaticamente**.
+4. No site: em **Clientes → Inserir mensagem automática**, informe o celular que envia; na lista de
+   clientes, escreva a **Mensagem padrão**; no cadastro de cada cliente, marque a **Data e horário do envio**.
 
 ## Uso no dia a dia
 
@@ -49,7 +45,6 @@ O robô já sobe junto com o site no `npm run dev:tudo` (pasta `ErpGerencial_Fro
 ```
 .venv\Scripts\python.exe lembretes.py                  roda sem parar
 .venv\Scripts\python.exe lembretes.py --uma-vez        verifica uma vez
-.venv\Scripts\python.exe lembretes.py --uma-vez --agora   ignora o horário comercial
 ```
 
 O computador precisa estar ligado, com internet, e o Chrome abre sozinho na hora de enviar.

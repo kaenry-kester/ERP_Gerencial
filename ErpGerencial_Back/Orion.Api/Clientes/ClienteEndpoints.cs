@@ -17,7 +17,7 @@ public record ClienteRequest(
     string? Cidade,
     string? Uf,
     int? IntervaloManutencaoMeses,
-    DateTime? EnvioTesteEm);
+    DateTime? EnvioEm);
 
 /// <summary>Mensagem personalizada de um cliente (vazia: volta a usar a mensagem padrão da empresa).</summary>
 public record MensagemClienteRequest(string? Mensagem);
@@ -37,7 +37,7 @@ public record ClienteDto(
     int IntervaloManutencaoMeses,
     DateOnly ProximaManutencao,
     string? MensagemWhatsapp,
-    DateTime? EnvioTesteEm,
+    DateTime? EnvioEm,
     DateTime CriadoEm,
     DateTime AtualizadoEm);
 
@@ -222,7 +222,7 @@ public static class ClienteEndpoints
         c.Cidade = Opcional(req.Cidade);
         c.Uf = Opcional(req.Uf)?.ToUpperInvariant();
         c.IntervaloManutencaoMeses = req.IntervaloManutencaoMeses!.Value;
-        c.EnvioTesteEm = req.EnvioTesteEm?.ToUniversalTime();
+        c.EnvioEm = req.EnvioEm?.ToUniversalTime();
     }
 
     private static string SoDigitos(string? valor) => new((valor ?? "").Where(char.IsAsciiDigit).ToArray());
@@ -235,6 +235,6 @@ public static class ClienteEndpoints
 
     private static ClienteDto Dto(Cliente c) =>
         new(c.Id, c.Numero, c.Nome, c.Celular, c.Cep, c.Logradouro, c.NumeroEndereco, c.Complemento,
-            c.Bairro, c.Cidade, c.Uf, c.IntervaloManutencaoMeses, Proxima(c), c.MensagemWhatsapp, c.EnvioTesteEm,
+            c.Bairro, c.Cidade, c.Uf, c.IntervaloManutencaoMeses, Proxima(c), c.MensagemWhatsapp, c.EnvioEm,
             c.CriadoEm, c.AtualizadoEm);
 }
