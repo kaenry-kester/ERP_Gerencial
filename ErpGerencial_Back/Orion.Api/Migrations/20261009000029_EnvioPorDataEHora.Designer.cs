@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Orion.Api.Data;
@@ -12,9 +13,11 @@ using Orion.Api.Data;
 namespace Orion.Api.Migrations
 {
     [DbContext(typeof(OrionDbContext))]
-    partial class OrionDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261009000029_EnvioPorDataEHora")]
+    partial class EnvioPorDataEHora
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -72,7 +75,7 @@ namespace Orion.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("envio_em");
 
-                    b.Property<int?>("IntervaloManutencaoMeses")
+                    b.Property<int>("IntervaloManutencaoMeses")
                         .HasColumnType("integer")
                         .HasColumnName("intervalo_manutencao_meses");
 
@@ -100,14 +103,6 @@ namespace Orion.Api.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("numero_endereco");
-
-                    b.Property<string>("TipoIntervalo")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)")
-                        .HasDefaultValue("meses")
-                        .HasColumnName("tipo_intervalo");
 
                     b.Property<string>("Uf")
                         .HasMaxLength(2)

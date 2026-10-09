@@ -62,6 +62,7 @@
 }
 
 .campo input,
+.campo select,
 .campo textarea {
   width: 100%;
   height: var(--campo-altura, 54px);
@@ -77,6 +78,18 @@
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease;
+}
+
+/* Lista de opções: mesma altura e borda, com a setinha do navegador */
+.campo select {
+  cursor: pointer;
+}
+
+.campo select:focus,
+.campo select:focus-visible {
+  outline: none;
+  border-color: var(--azul);
+  box-shadow: 0 0 0 1px var(--azul);
 }
 
 /* Observação: algumas linhas, pode crescer na vertical */

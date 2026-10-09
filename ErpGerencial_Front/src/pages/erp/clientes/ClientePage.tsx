@@ -11,7 +11,7 @@ import { useErp } from '../contexto'
 import FaixaPagina from '../FaixaPagina'
 import { tem } from '../modulos'
 import SemAcesso from '../SemAcesso'
-import { formatarCadastro, formatarDia, formatarIntervalo, situacaoManutencao } from './formatos'
+import { descreverIntervalo, formatarCadastro, formatarDataHora, situacaoManutencao } from './formatos'
 import MensagemPersonalizada from './MensagemPersonalizada'
 import './clientes.css'
 
@@ -69,7 +69,7 @@ export default function ClientePage() {
     )
   }
 
-  const situacao = situacaoManutencao(cliente.proximaManutencao)
+  const situacao = cliente.proximaManutencao ? situacaoManutencao(cliente.proximaManutencao) : null
   const grupos: { titulo: string; itens: [string, string][] }[] = [
     { titulo: 'Contato', itens: [['Celular', formatarTelefone(cliente.celular)]] },
     {
@@ -87,14 +87,9 @@ export default function ClientePage() {
       titulo: 'Manutenção',
       itens: [
         ['Cadastrado em', formatarCadastro(cliente.criadoEm)],
-        ['Intervalo', formatarIntervalo(cliente.intervaloManutencaoMeses)],
-        ['Próxima manutenção', formatarDia(cliente.proximaManutencao)],
-        [
-          'Envio de teste',
-          cliente.envioTesteEm
-            ? new Date(cliente.envioTesteEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
-            : '—',
-        ],
+        ['Intervalo', descreverIntervalo(cliente)],
+        // Próxima manutenção = quando a mensagem de WhatsApp sai
+        ['Próxima manutenção', cliente.envioEm ? formatarDataHora(cliente.envioEm) : '—'],
         // Quem pode editar escreve a mensagem no campo logo abaixo; os outros só veem qual vale
         ...(podeEditar
           ? []
@@ -134,10 +129,14 @@ export default function ClientePage() {
         Ilustracao={IlustracaoClientes}
         titulo={cliente.nome}
         subtitulo={
-          <>
-            ID {cliente.numero} · Próxima manutenção {formatarDia(cliente.proximaManutencao)}{' '}
-            <span className={CLASSE_SITUACAO[situacao.tipo]}>{situacao.texto}</span>
-          </>
+          cliente.envioEm && situacao ? (
+            <>
+              ID {cliente.numero} · Próxima manutenção {formatarDataHora(cliente.envioEm)}{' '}
+              <span className={CLASSE_SITUACAO[situacao.tipo]}>{situacao.texto}</span>
+            </>
+          ) : (
+            `ID ${cliente.numero}`
+          )
         }
         voltar={{ para: '/app/clientes', rotulo: 'Clientes' }}
         acoes={acoes || undefined}

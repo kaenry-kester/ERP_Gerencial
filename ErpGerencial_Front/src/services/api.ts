@@ -246,14 +246,16 @@ export type Cliente = {
   bairro: string | null
   cidade: string | null
   uf: string | null
-  /** De quantos em quantos meses o cliente precisa de manutenção. */
-  intervaloManutencaoMeses: number
-  /** Dia do cadastro + o intervalo ("2027-04-08"). */
-  proximaManutencao: string
-  /** Mensagem de WhatsApp só deste cliente (null: usa a mensagem automática da empresa). */
+  /** "meses" (a cada N meses, às 6h, e se repete) ou "data" (data e hora específica, uma vez só). */
+  tipoIntervalo: TipoIntervalo
+  /** No tipo "meses": de quantos em quantos meses o cliente precisa de manutenção. */
+  intervaloManutencaoMeses: number | null
+  /** Dia do próximo envio ("2026-12-08"); null quando não há envio marcado. */
+  proximaManutencao: string | null
+  /** Mensagem de WhatsApp só deste cliente (null: usa a mensagem padrão da empresa). */
   mensagemWhatsapp: string | null
-  /** TEMPORÁRIO (testes): quando o robô envia a mensagem (ISO, UTC); some depois do envio. */
-  envioTesteEm: string | null
+  /** Próximo envio da mensagem de WhatsApp (ISO, UTC). */
+  envioEm: string | null
   criadoEm: string
   atualizadoEm: string
 }
@@ -268,9 +270,13 @@ export type DadosCliente = {
   bairro: string
   cidade: string
   uf: string
+  tipoIntervalo: TipoIntervalo
   intervaloManutencaoMeses: number | null
-  envioTesteEm: string | null
+  /** Só no tipo "data" (no tipo "meses" o servidor calcula: hoje + N meses, às 6h). */
+  envioEm: string | null
 }
+
+export type TipoIntervalo = 'meses' | 'data'
 
 export type ListaClientes = { itens: Cliente[]; total: number; pagina: number; tamanhoPagina: number }
 
@@ -317,7 +323,7 @@ export type EnvioWhatsapp = {
   telefone: string
   /** Data de manutenção que motivou o envio ("2027-04-08"). */
   dataReferencia: string
-  /** "manutencao" (no dia da manutenção) ou "agendado" (teste com data e hora escolhidas). */
+  /** "agendado" (na data e hora marcadas no cliente); "manutencao" é dos envios antigos, pelo intervalo. */
   tipo: 'manutencao' | 'agendado'
   mensagem: string
   /** "enviado", "teste" (modo teste: não saiu de verdade) ou "erro". */
@@ -330,13 +336,10 @@ export type ConfiguracaoWhatsapp = {
   /** Celular que envia, só dígitos com DDD. */
   remetente: string | null
   mensagem: string | null
-  ativa: boolean
-  /** Sem serviço de WhatsApp configurado: as mensagens só ficam no histórico. */
-  modoTeste: boolean
   envios: EnvioWhatsapp[]
 }
 
-export type DadosWhatsapp = { remetente: string; mensagem: string; ativa: boolean }
+export type DadosWhatsapp = { remetente: string; mensagem: string }
 
 export const obterWhatsapp = (token: string) => requisicao<ConfiguracaoWhatsapp>('GET', '/api/whatsapp', { token })
 

@@ -19,7 +19,7 @@ import { useErp } from '../contexto'
 import FaixaPagina from '../FaixaPagina'
 import { MODULOS, podeAcessar, tem } from '../modulos'
 import SemAcesso from '../SemAcesso'
-import { formatarCadastro, formatarDia, formatarIntervalo, resumoEndereco, situacaoManutencao } from './formatos'
+import { descreverIntervalo, formatarCadastro, formatarDataHora, resumoEndereco, situacaoManutencao } from './formatos'
 import MensagemDialogo from './MensagemDialogo'
 import './clientes.css'
 
@@ -60,7 +60,7 @@ export default function ClientesPage() {
     if (!whatsapp) return
     setSalvandoMensagem(true)
     try {
-      setWhatsapp(await salvarWhatsapp(sessao.token, { remetente: whatsapp.remetente ?? '', mensagem, ativa: whatsapp.ativa }))
+      setWhatsapp(await salvarWhatsapp(sessao.token, { remetente: whatsapp.remetente ?? '', mensagem }))
       setMensagemAberta(false)
       setAviso(null)
     } catch (erro) {
@@ -171,7 +171,7 @@ export default function ClientesPage() {
         <MensagemDialogo
           aberto={mensagemAberta}
           titulo="Mensagem padrão"
-          dica="Enviada pelo WhatsApp a todos os clientes no dia da manutenção (menos quem tem mensagem personalizada)."
+          dica="Enviada pelo WhatsApp a cada cliente na data e horário do envio (menos quem tem mensagem personalizada)."
           valor={whatsapp.mensagem ?? ''}
           salvando={salvandoMensagem}
           onFechar={() => setMensagemAberta(false)}
@@ -213,7 +213,7 @@ export default function ClientesPage() {
                 </thead>
                 <tbody>
                   {lista.itens.map((c) => {
-                    const situacao = situacaoManutencao(c.proximaManutencao)
+                    const situacao = c.proximaManutencao ? situacaoManutencao(c.proximaManutencao) : null
                     return (
                       // A linha inteira abre o cliente; o link no nome é o acesso pelo teclado.
                       <tr key={c.id} onClick={() => navigate(`/app/clientes/${c.id}`)}>
@@ -223,14 +223,19 @@ export default function ClientesPage() {
                             {c.nome}
                           </Link>
                         </td>
+                        {/* Próxima manutenção = quando a mensagem de WhatsApp sai */}
                         <td>
-                          <span className="clientes-proxima">
-                            {formatarDia(c.proximaManutencao)}
-                            <span className={CLASSE_SITUACAO[situacao.tipo]}>{situacao.texto}</span>
-                          </span>
+                          {c.envioEm && situacao ? (
+                            <span className="clientes-proxima">
+                              {formatarDataHora(c.envioEm)}
+                              <span className={CLASSE_SITUACAO[situacao.tipo]}>{situacao.texto}</span>
+                            </span>
+                          ) : (
+                            '—'
+                          )}
                         </td>
                         <td className="lista-destaque">{formatarTelefone(c.celular)}</td>
-                        <td>{formatarIntervalo(c.intervaloManutencaoMeses)}</td>
+                        <td>{descreverIntervalo(c)}</td>
                         <td>{formatarCadastro(c.criadoEm)}</td>
                         <td className="clientes-endereco" title={resumoEndereco(c) || undefined}>
                           {resumoEndereco(c) || '—'}

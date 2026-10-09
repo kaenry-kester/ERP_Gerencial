@@ -1,14 +1,18 @@
 # Robô de mensagens automáticas (WhatsApp)
 
-No dia da manutenção de cada cliente (dia do cadastro + intervalo em meses), envia pelo WhatsApp
-a **mensagem padrão** (na lista de clientes, campo "Mensagem padrão (para todos)") ou, se o cliente tiver,
-a **mensagem personalizada** dele (na ficha do cliente, botão "Enviar mensagem personalizada").
-Verifica o banco a cada minuto; as manutenções saem só entre 9h e 20h (horário de Brasília), e nunca
-duas vezes para o mesmo cliente na mesma data.
-Cada envio aparece no histórico da página ("Enviada", "Teste" ou "Não enviada", com o motivo).
+Envia pelo WhatsApp, no horário marcado no cadastro de cada cliente ("Intervalo de manutenção"):
+- **Mensalmente:** a cada N meses, **às 6h**, no mesmo dia do mês em que o intervalo foi salvo (salvo em
+  08/10 com 2 meses → 08/12 às 06:00). Depois de enviar, o robô já marca o próximo (08/02 às 06:00...).
+- **Data específica:** na data e hora escolhidas, uma vez só (depois do envio, fica sem horário).
 
-**Temporário, para testes:** no cadastro do cliente, o campo "Data e horário do envio (teste)" faz o
-robô enviar nesse momento (a qualquer hora, sem esperar a manutenção). Depois do envio, o campo é apagado.
+A mensagem é a **personalizada** do cliente (na página dele) ou, se ele não tiver, a **mensagem padrão**
+(na lista de clientes). Verifica o banco a cada minuto. Cada envio aparece no histórico da página
+"Mensagem automática" ("Enviada", "Teste" ou "Não enviada", com o motivo).
+
+**Proteção contra bloqueio do número:** cada celular manda **uma mensagem por vez, com um intervalo
+sorteado de 2 a 5 minutos** entre elas (se muitas vencerem juntas, às 6h, elas saem espalhadas pela manhã)
+e **no máximo 40 por dia**; o que passar fica para o dia seguinte, sem se perder. Ajuste no `.env`:
+`LIMITE_DIARIO`, `ESPACO_MIN_SEGUNDOS` e `ESPACO_MAX_SEGUNDOS`.
 
 O envio é feito pelo **WhatsApp Web**, no Google Chrome, com o celular da empresa.
 
@@ -39,8 +43,8 @@ O envio é feito pelo **WhatsApp Web**, no Google Chrome, com o celular da empre
    .venv\Scripts\python.exe lembretes.py testar 16991039268 16991039268 "Teste do robô"
    ```
 
-4. No site, em **Clientes**: digite a **Mensagem padrão**; em **Clientes → Mensagem automática**,
-   informe o celular que envia e marque **Enviar automaticamente**.
+4. No site: em **Clientes → Inserir mensagem automática**, informe o celular que envia; na lista de
+   clientes, escreva a **Mensagem padrão**; no cadastro de cada cliente, escolha o **Intervalo de manutenção** (mensalmente ou data específica).
 
 ## Uso no dia a dia
 
@@ -49,7 +53,6 @@ O robô já sobe junto com o site no `npm run dev:tudo` (pasta `ErpGerencial_Fro
 ```
 .venv\Scripts\python.exe lembretes.py                  roda sem parar
 .venv\Scripts\python.exe lembretes.py --uma-vez        verifica uma vez
-.venv\Scripts\python.exe lembretes.py --uma-vez --agora   ignora o horário comercial
 ```
 
 O computador precisa estar ligado, com internet, e o Chrome abre sozinho na hora de enviar.
