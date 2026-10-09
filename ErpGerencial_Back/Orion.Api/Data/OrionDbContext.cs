@@ -83,6 +83,7 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
             e.Property(c => c.Numero).HasColumnName("numero");
             e.Property(c => c.Nome).HasColumnName("nome").HasMaxLength(200);
             e.Property(c => c.Celular).HasColumnName("celular").HasMaxLength(11);
+            e.Property(c => c.Documento).HasColumnName("documento").HasMaxLength(14);
             e.Property(c => c.Cep).HasColumnName("cep").HasMaxLength(8);
             e.Property(c => c.Logradouro).HasColumnName("logradouro").HasMaxLength(150);
             e.Property(c => c.NumeroEndereco).HasColumnName("numero_endereco").HasMaxLength(20);

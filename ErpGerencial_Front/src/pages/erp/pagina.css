@@ -169,6 +169,12 @@
   color: #fff;
 }
 
+/* Azul petróleo da seta do logo */
+.pagina-botao.azul {
+  background: var(--azul);
+  color: #fff;
+}
+
 /* Secundário sobre a faixa */
 .pagina-botao.escuro {
   background: rgba(255, 255, 255, 0.12);
@@ -481,9 +487,9 @@
 }
 
 /* Tabela de ponta a ponta: cabeçalho azul (seta do logo), linhas alternadas em creme bem claro.
-   Em telas estreitas, só a tabela rola para o lado. */
+   Nunca rola para o lado: os textos quebram linha e, em telas estreitas, cada linha vira um cartão. */
 .lista-tabela-area {
-  overflow-x: auto;
+  min-width: 0;
 }
 
 .lista-tabela {
@@ -509,6 +515,12 @@
   padding: 0.65rem 0.8rem;
   white-space: nowrap;
   color: var(--cinza-escuro);
+}
+
+/* Só os textos (nome, endereço, marca...) quebram linha; números, datas e documentos ficam inteiros */
+.lista-tabela td.quebra {
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 /* Primeira e última coluna alinhadas com a margem da página */
@@ -723,6 +735,9 @@
 
   .pagina-faixa-acoes .pagina-botao {
     flex: 1;
+    min-width: 0;
+    white-space: normal;
+    text-align: center;
   }
 
   .pagina-barra {
@@ -760,3 +775,74 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ---------- Listas em telas estreitas: cada linha vira um cartão (sem rolar para o lado) ---------- */
+@media (max-width: 1100px) {
+  .lista-tabela,
+  .lista-tabela tbody {
+    display: block;
+  }
+
+  .lista-tabela thead {
+    display: none;
+  }
+
+  /* Cartão: nome em destaque no topo e os outros dados em colunas, cada um com o seu rótulo */
+  .lista-tabela tbody tr {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.55rem 1.25rem;
+    padding: 0.85rem var(--erp-lado);
+  }
+
+  .lista-tabela tbody tr:hover td:first-child {
+    box-shadow: none;
+  }
+
+  .lista-tabela tbody tr:hover {
+    box-shadow: inset 4px 0 0 var(--pg-cor);
+  }
+
+  .lista-tabela td,
+  .lista-tabela :is(th, td):first-child,
+  .lista-tabela :is(th, td):last-child {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+    min-width: 0;
+    padding: 0;
+    text-align: left;
+  }
+
+  .lista-tabela td[data-rotulo]::before {
+    content: attr(data-rotulo);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--texto-suave);
+  }
+
+  /* Nome (produto ou cliente) ocupa a primeira linha inteira */
+  .lista-tabela td.lista-principal {
+    grid-column: 1 / -1;
+    order: -2;
+    font-size: 1.02rem;
+  }
+
+  /* ID logo depois do nome, como os outros dados */
+  .lista-tabela .lista-id {
+    width: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .lista-tabela tbody tr {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem 1rem;
+  }
+}
+

@@ -17,7 +17,15 @@ import {
   type DadosCliente,
   type TipoIntervalo,
 } from '../../../services/api'
-import { apenasDigitos, formatarCep, formatarTelefone, telefoneValido } from '../../../utils/validacao'
+import {
+  apenasDigitos,
+  erroDocumento,
+  formatarCep,
+  formatarDocumento,
+  formatarTelefone,
+  normalizarCnpj,
+  telefoneValido,
+} from '../../../utils/validacao'
 import AvisoPagina from '../AvisoPagina'
 import { useErp } from '../contexto'
 import FaixaPagina from '../FaixaPagina'
@@ -34,6 +42,7 @@ type Valores = Record<Campo, string>
 const VAZIO: Valores = {
   nome: '',
   celular: '',
+  documento: '',
   cep: '',
   logradouro: '',
   numeroEndereco: '',
@@ -62,17 +71,19 @@ function paraCampoDataHora(iso: string | null) {
 
 const MASCARAS: Partial<Record<Campo, (v: string) => string>> = {
   celular: formatarTelefone,
+  documento: formatarDocumento,
   cep: formatarCep,
   uf: (v) => v.replace(/[^a-z]/gi, '').slice(0, 2).toUpperCase(),
   intervalo: (v) => apenasDigitos(v).slice(0, 3),
 }
 
 /** Ordem dos campos, para levar o cursor ao primeiro com erro. */
-const ORDEM: Campo[] = ['nome', 'celular', 'cep', 'uf', 'intervalo', 'envio']
+const ORDEM: Campo[] = ['nome', 'documento', 'celular', 'cep', 'uf', 'intervalo', 'envio']
 
 const paraFormulario = (c: Cliente): Valores => ({
   nome: c.nome,
   celular: formatarTelefone(c.celular),
+  documento: formatarDocumento(c.documento ?? ''),
   cep: formatarCep(c.cep ?? ''),
   logradouro: c.logradouro ?? '',
   numeroEndereco: c.numeroEndereco ?? '',
@@ -88,6 +99,7 @@ const paraFormulario = (c: Cliente): Valores => ({
 const paraApi = ({ intervalo, envio, tipoIntervalo, ...v }: Valores): DadosCliente => ({
   ...v,
   celular: apenasDigitos(v.celular),
+  documento: normalizarCnpj(v.documento),
   cep: apenasDigitos(v.cep),
   tipoIntervalo: tipoIntervalo as TipoIntervalo,
   // Mensalmente: o servidor marca o envio (hoje + N meses, às 6h). Data específica: a data escolhida.
@@ -100,6 +112,8 @@ function validar(v: Valores): Partial<Record<Campo, string>> {
   if (!v.nome.trim()) erros.nome = 'Obrigatório'
   if (!v.celular) erros.celular = 'Obrigatório'
   else if (!telefoneValido(v.celular)) erros.celular = 'Incompleto'
+  const documento = erroDocumento(v.documento)
+  if (documento) erros.documento = documento
   const cep = apenasDigitos(v.cep)
   if (cep && cep.length !== 8) erros.cep = 'Incompleto'
   if (v.uf && v.uf.length !== 2) erros.uf = 'Ex.: SP'
@@ -281,7 +295,14 @@ export default function ClienteFormPage() {
       <form className="pagina-secoes" onSubmit={salvar} noValidate>
         <SecaoPagina id="cliente-identificacao" numero={1} titulo="Identificação">
           <div className="erp-form cliente-grade">
-            <CampoTexto {...campo('nome')} rotulo="Nome" maxLength={200} autoComplete="off" className="c8" />
+            <CampoTexto {...campo('nome')} rotulo="Nome" maxLength={200} autoComplete="off" className="c5" />
+            <CampoTexto
+              {...campo('documento')}
+              rotulo="CPF/CNPJ"
+              placeholder="000.000.000-00"
+              autoComplete="off"
+              className="c4"
+            />
             <CampoTexto
               {...campo('celular')}
               rotulo="Celular"
@@ -289,7 +310,7 @@ export default function ClienteFormPage() {
               inputMode="numeric"
               placeholder="(11) 91234-5678"
               autoComplete="off"
-              className="c4"
+              className="c3"
             />
           </div>
         </SecaoPagina>

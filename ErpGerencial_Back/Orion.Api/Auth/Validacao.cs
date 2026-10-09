@@ -79,7 +79,8 @@ public static partial class Validacao
     }
 
     /// <summary>CPF (11 dígitos) ou CNPJ (14, pode ter letras), com dígitos verificadores; vazio é aceito.</summary>
-    private static void Documento(Dictionary<string, string[]> erros, string campo, string? valor)
+    /// <summary>CPF ou CNPJ (também o alfanumérico), opcional: vazio é aceito.</summary>
+    public static void Documento(Dictionary<string, string[]> erros, string campo, string? valor)
     {
         var doc = NormalizarDocumento(valor ?? "");
         if (doc.Length == 0) return;

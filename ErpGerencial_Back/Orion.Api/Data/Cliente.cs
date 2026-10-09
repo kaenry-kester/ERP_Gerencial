@@ -16,6 +16,9 @@ public class Cliente
     /// <summary>Celular só com os dígitos (DDD + número).</summary>
     public required string Celular { get; set; }
 
+    /// <summary>CPF (11) ou CNPJ (14, pode ter letras) sem pontuação. Opcional.</summary>
+    public string? Documento { get; set; }
+
     /// <summary>CEP só com os 8 dígitos.</summary>
     public string? Cep { get; set; }
     public string? Logradouro { get; set; }

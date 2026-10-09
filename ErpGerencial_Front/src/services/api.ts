@@ -238,6 +238,8 @@ export type Cliente = {
   nome: string
   /** Só os dígitos (DDD + número). */
   celular: string
+  /** CPF ou CNPJ sem pontuação (o CNPJ pode ter letras). */
+  documento: string | null
   /** Só os 8 dígitos. */
   cep: string | null
   logradouro: string | null
@@ -263,6 +265,8 @@ export type Cliente = {
 export type DadosCliente = {
   nome: string
   celular: string
+  /** CPF ou CNPJ (opcional). */
+  documento: string
   cep: string
   logradouro: string
   numeroEndereco: string

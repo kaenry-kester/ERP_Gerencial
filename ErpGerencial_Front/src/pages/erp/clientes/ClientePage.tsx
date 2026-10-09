@@ -5,7 +5,7 @@ import { IconeLapis, IconeLixeira, IconeVoltar } from '../../../components/icone
 import { IlustracaoClientes } from '../../../components/icones/Ilustracoes'
 import { useSessaoExpirada } from '../../../hooks/useSessaoExpirada'
 import { excluirCliente, mensagemDe, obterCliente, type Cliente } from '../../../services/api'
-import { formatarCep, formatarTelefone } from '../../../utils/validacao'
+import { formatarCep, formatarDocumento, formatarTelefone } from '../../../utils/validacao'
 import AvisoPagina from '../AvisoPagina'
 import { useErp } from '../contexto'
 import FaixaPagina from '../FaixaPagina'
@@ -71,7 +71,13 @@ export default function ClientePage() {
 
   const situacao = cliente.proximaManutencao ? situacaoManutencao(cliente.proximaManutencao) : null
   const grupos: { titulo: string; itens: [string, string][] }[] = [
-    { titulo: 'Contato', itens: [['Celular', formatarTelefone(cliente.celular)]] },
+    {
+      titulo: 'Contato',
+      itens: [
+        ['Celular', formatarTelefone(cliente.celular)],
+        ['CPF/CNPJ', cliente.documento ? formatarDocumento(cliente.documento) : '—'],
+      ],
+    },
     {
       titulo: 'Endereço',
       itens: [

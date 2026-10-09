@@ -9,6 +9,8 @@ namespace Orion.Api.Clientes;
 public record ClienteRequest(
     string Nome,
     string Celular,
+    /// <summary>CPF ou CNPJ (opcional).</summary>
+    string? Documento,
     string? Cep,
     string? Logradouro,
     string? NumeroEndereco,
@@ -30,6 +32,7 @@ public record ClienteDto(
     int Numero,
     string Nome,
     string Celular,
+    string? Documento,
     string? Cep,
     string? Logradouro,
     string? NumeroEndereco,
@@ -87,7 +90,8 @@ public static class ClienteEndpoints
             consulta = consulta.Where(c =>
                 EF.Functions.ILike(c.Nome, termo)
                 || (termoDigitos != null && (EF.Functions.Like(c.Celular, termoDigitos)
-                    || (c.Cep != null && EF.Functions.Like(c.Cep, termoDigitos))))
+                    || (c.Cep != null && EF.Functions.Like(c.Cep, termoDigitos))
+                    || (c.Documento != null && EF.Functions.Like(c.Documento, termoDigitos))))
                 || (c.Logradouro != null && EF.Functions.ILike(c.Logradouro, termo))
                 || (c.Bairro != null && EF.Functions.ILike(c.Bairro, termo))
                 || (c.Cidade != null && EF.Functions.ILike(c.Cidade, termo)));
@@ -198,6 +202,8 @@ public static class ClienteEndpoints
         if (celular.Length == 0) erros["celular"] = ["Digite o celular"];
         else if (celular.Length is not (10 or 11)) erros["celular"] = ["Número incompleto"];
 
+        Validacao.Documento(erros, "documento", req.Documento);
+
         var cep = SoDigitos(req.Cep);
         if (cep.Length > 0 && cep.Length != 8) erros["cep"] = ["CEP incompleto"];
 
@@ -235,6 +241,7 @@ public static class ClienteEndpoints
         static string? Opcional(string? valor) => string.IsNullOrWhiteSpace(valor) ? null : valor.Trim();
         c.Nome = req.Nome.Trim();
         c.Celular = SoDigitos(req.Celular);
+        c.Documento = Opcional(Validacao.NormalizarDocumento(req.Documento ?? ""));
         c.Cep = Opcional(SoDigitos(req.Cep));
         c.Logradouro = Opcional(req.Logradouro);
         c.NumeroEndereco = Opcional(req.NumeroEndereco);
@@ -284,7 +291,7 @@ public static class ClienteEndpoints
         c.EnvioEm is { } envio ? DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(envio, Brasilia)) : null;
 
     private static ClienteDto Dto(Cliente c) =>
-        new(c.Id, c.Numero, c.Nome, c.Celular, c.Cep, c.Logradouro, c.NumeroEndereco, c.Complemento,
+        new(c.Id, c.Numero, c.Nome, c.Celular, c.Documento, c.Cep, c.Logradouro, c.NumeroEndereco, c.Complemento,
             c.Bairro, c.Cidade, c.Uf, c.TipoIntervalo, c.IntervaloManutencaoMeses, Proxima(c), c.MensagemWhatsapp, c.EnvioEm,
             c.CriadoEm, c.AtualizadoEm);
 }
