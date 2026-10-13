@@ -4,9 +4,9 @@ using Orion.Api.Data;
 namespace Orion.Api.Auth;
 
 /// <summary>
-/// Permissões que o administrador marca para cada usuário (ids iguais aos de
-/// ErpGerencial_Front/src/pages/erp/modulos.ts). O administrador tem todas.
-/// Cadastrar/editar incluem automaticamente "ver" do mesmo módulo.
+/// Dois tipos de usuário: o administrador pode tudo; o funcionário só vê produtos, vê clientes e
+/// cadastra clientes (não mexe em produtos, não edita clientes e não acessa o financeiro).
+/// Ids iguais aos de ErpGerencial_Front/src/pages/erp/modulos.ts.
 /// </summary>
 public static class Permissoes
 {
@@ -18,27 +18,14 @@ public static class Permissoes
     public const string ClientesEditar = "clientes-editar";
     public const string Financeiro = "financeiro";
 
-    public static readonly IReadOnlySet<string> Modulos = new HashSet<string>
-    {
-        Produtos, ProdutosCadastrar, ProdutosEditar,
-        Clientes, ClientesCadastrar, ClientesEditar,
-        Financeiro,
-    };
+    /// <summary>Tudo o que um funcionário pode fazer (fixo: não depende do que estiver gravado no usuário).</summary>
+    public static readonly IReadOnlyList<string> Funcionario = [Produtos, Clientes, ClientesCadastrar];
 
-    /// <summary>Mantém só ids conhecidos, sem repetir, e acrescenta o "ver" de quem pode cadastrar/editar.</summary>
-    public static List<string> Limpar(IEnumerable<string>? ids)
-    {
-        var lista = (ids ?? []).Where(Modulos.Contains).Distinct().ToList();
-        foreach (var id in lista.ToList())
-        {
-            var modulo = id.Split('-')[0];
-            if (modulo != id && !lista.Contains(modulo)) lista.Add(modulo);
-        }
-        return lista;
-    }
+    /// <summary>Permissões gravadas no usuário e enviadas ao site: o administrador tem todas, sem lista.</summary>
+    public static List<string> De(bool administrador) => administrador ? [] : [.. Funcionario];
 
     public static bool Tem(Usuario usuario, string permissao) =>
-        usuario.Administrador || usuario.Permissoes.Contains(permissao);
+        usuario.Administrador || Funcionario.Contains(permissao);
 
     /// <summary>Quem chamou, se tiver a permissão; senão, a resposta de erro (401 ou 403).</summary>
     public static async Task<(Usuario? Usuario, IResult? Negado)> Exigir(

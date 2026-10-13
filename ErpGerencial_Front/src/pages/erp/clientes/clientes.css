@@ -15,84 +15,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- Cadastro: tudo numa tela só ---------- */
-
-/* Grade de 12 colunas: c2 = 2 colunas, c3 = 3... (soma 12 em cada linha) */
-.erp-form.cliente-grade {
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 0.75rem 1rem;
-}
-
-.cliente-grade > .c2 { grid-column: span 2; }
-.cliente-grade > .c3 { grid-column: span 3; }
-.cliente-grade > .c4 { grid-column: span 4; }
-.cliente-grade > .c5 { grid-column: span 5; }
-.cliente-grade > .c6 { grid-column: span 6; }
-.cliente-grade > .c7 { grid-column: span 7; }
-.cliente-grade > .c8 { grid-column: span 8; }
-.cliente-grade > .c12 { grid-column: span 12; }
-
-/* Seções mais baixas nesta tela */
-.cliente-cadastro .pagina-secao-lado {
-  padding-block: 0.85rem;
-}
-
-.cliente-cadastro .pagina-secao-campos {
-  padding-block: 0.85rem;
-}
-
-/* Aviso da busca do CEP, embaixo do título "Endereço" */
-.clientes-cep-status {
-  font-size: 0.8rem;
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--texto-suave);
-}
-
-.clientes-cep-status.erro {
-  color: var(--erro);
-}
-
-/* Prévia da próxima manutenção, ao lado do intervalo */
-.clientes-previa {
-  align-self: center;
-  color: var(--texto-suave);
-}
-
-.clientes-previa strong {
-  color: var(--azul-escuro);
-}
-
-/* Tablets: títulos das seções mais baixos (os campos continuam lado a lado) */
-@media (max-width: 900px) {
-  .cliente-cadastro .pagina-secao-lado {
-    padding-block: 0.5rem;
-  }
-}
-
-/* Telas estreitas: duas colunas (a rua ocupa a linha toda) */
-@media (max-width: 700px) {
-  .erp-form.cliente-grade {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .cliente-grade > :is(.c2, .c3, .c4, .c5, .c6, .c7, .c8, .c12) {
-    grid-column: auto;
-  }
-
-  .cliente-grade > .linha-toda {
-    grid-column: 1 / -1;
-  }
-}
-
-/* Celular: uma coluna */
-@media (max-width: 600px) {
-  .erp-form.cliente-grade {
-    grid-template-columns: minmax(0, 1fr);
-    row-gap: 0.6rem;
-  }
-}
-
 /* Cartões (telas estreitas): a próxima manutenção ocupa a linha inteira, logo abaixo do nome */
 @media (max-width: 1100px) {
   .lista-tabela td.clientes-proxima-celula {
@@ -114,11 +36,6 @@
     align-items: flex-start;
     gap: 0.15rem;
   }
-}
-
-/* Campos preenchidos pelo CEP: fundo um pouco mais escuro, até a pessoa mexer neles */
-.campo.do-cep input {
-  background: #e6edf1;
 }
 
 /* ---------- Mensagem automática (WhatsApp) ---------- */
@@ -218,117 +135,7 @@
   color: var(--erro);
 }
 
-/* ---------- Mensagem do cliente: botão do tamanho de um campo + caixa grande ---------- */
-
-.campo-botao {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.6rem;
-  min-width: 0;
-  height: var(--campo-altura, 54px);
-  padding: 0 0.9rem;
-  border: 1px solid var(--borda);
-  border-radius: 4px;
-  background: #fff;
-  font: inherit;
-  text-align: left;
-  color: var(--azul);
-  cursor: pointer;
-  transition:
-    border-color 0.2s ease,
-    background-color 0.2s ease;
-}
-
-.campo-botao:hover {
-  border-color: var(--azul);
-  background: #f5f8fa;
-}
-
-.campo-botao svg {
-  flex-shrink: 0;
-}
-
-.campo-botao-textos {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.campo-botao-rotulo {
-  font-size: 0.64rem;
-  font-weight: 700;
-  color: var(--cinza-escuro);
-}
-
-.campo-botao-valor {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.92rem;
-  color: var(--texto-suave);
-}
-
-.campo-botao.preenchido .campo-botao-valor {
-  color: var(--texto);
-}
-
-.mensagem-dialogo {
-  width: min(860px, calc(100vw - 2rem));
-  max-height: calc(100dvh - 2rem);
-  margin: auto;
-  padding: 0;
-  border: none;
-  border-radius: 4px;
-  box-shadow: 0 24px 60px rgba(11, 10, 9, 0.35);
-  color: var(--texto);
-}
-
-.mensagem-dialogo::backdrop {
-  background: rgba(11, 10, 9, 0.55);
-}
-
-.mensagem-dialogo-topo {
-  padding: 1rem 1.25rem;
-  background: linear-gradient(160deg, var(--azul-inicio) 0%, var(--azul-escuro) 100%);
-  color: #fff;
-}
-
-.mensagem-dialogo-topo h2 {
-  font-size: 1.2rem;
-  font-weight: 700;
-}
-
-.mensagem-dialogo-topo p {
-  font-size: 0.86rem;
-  color: #cfe4ec;
-}
-
-.mensagem-dialogo-corpo {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding: 1.25rem;
-}
-
-.mensagem-dialogo-corpo textarea {
-  width: 100%;
-  height: min(45vh, 360px);
-  padding: 0.9rem 1rem;
-  border: 1px solid var(--borda);
-  border-radius: 4px;
-  font: inherit;
-  font-size: 1rem;
-  line-height: 1.55;
-  resize: vertical;
-}
-
-.mensagem-dialogo-corpo textarea:focus {
-  outline: none;
-  border-color: var(--azul);
-  box-shadow: 0 0 0 1px var(--azul);
-}
-
+/* Mensagem personalizada do cliente: trechos e contagem de letras na mesma linha */
 .mensagem-dialogo-linha {
   display: flex;
   flex-wrap: wrap;
@@ -343,36 +150,133 @@
   color: var(--texto-suave);
 }
 
-.mensagem-dialogo-acoes {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  padding: 0.9rem 1.25rem;
-  background: #f3f5f7;
-}
-
-/* Na barra da busca: o botão da mensagem padrão, azul e com cantos retos como "Cadastrar cliente" */
-.lista-ferramentas .campo-botao {
-  flex: 0 1 24rem;
-  height: 46px;
-  padding-inline: 1.1rem 1rem;
+/* ---------- Janela de envios (últimos envios / histórico do cliente): por cima da tela, com rolagem ---------- */
+.janela-envios {
+  width: min(760px, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  margin: auto;
+  padding: 0;
   border: none;
   border-radius: 4px;
-  background: var(--azul);
-  color: #fff;
-  transition: filter 0.25s ease;
+  box-shadow: 0 24px 60px rgba(11, 10, 9, 0.35);
+  color: var(--texto);
 }
 
-.lista-ferramentas .campo-botao:hover {
+.janela-envios[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.janela-envios::backdrop {
+  background: rgba(11, 10, 9, 0.55);
+}
+
+.janela-envios-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(160deg, var(--azul-inicio) 0%, var(--azul-escuro) 100%);
+  color: #fff;
+}
+
+.janela-envios-topo h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.janela-envios-topo p {
+  font-size: 0.86rem;
+  color: #cfe4ec;
+}
+
+.janela-envios-fechar {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
   border: none;
-  background: var(--azul);
-  filter: brightness(0.94);
-}
-
-/* Todo o texto em branco (título, mensagem e ícone) */
-.lista-ferramentas .campo-botao .campo-botao-rotulo,
-.lista-ferramentas .campo-botao .campo-botao-valor,
-.lista-ferramentas .campo-botao.preenchido .campo-botao-valor {
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 1.6rem;
+  line-height: 1;
   color: #fff;
+  cursor: pointer;
+  transition: background-color 0.25s ease;
 }
 
+.janela-envios-fechar:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Só a lista rola; o topo com o título fica parado */
+.janela-envios-corpo {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+/* Texto que o cliente recebeu (histórico do cliente) */
+.mensagem-envio-texto {
+  margin-top: 0.25rem;
+  white-space: pre-line;
+  font-size: 0.9rem;
+  color: var(--texto);
+}
+
+/* Mensagem longa: 3 linhas até a pessoa pedir para ver inteira */
+.mensagem-envio-texto.curto {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
+.mensagem-envio-mais {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--azul);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* ---------- Ficha do cliente (o visual da ficha vem de ../ficha.css) ---------- */
+
+/* Preenchido pela busca do CEP (até a pessoa mexer) */
+.ficha-campo.do-cep {
+  background: #eef3f6;
+}
+
+/* Prévia do envio: só leitura, em destaque */
+.ficha-previa {
+  background: #f7fafb;
+}
+
+.ficha-previa-valor {
+  min-height: 1.3rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--azul-escuro);
+}
+
+.ficha-cep {
+  margin-left: 0.75rem;
+  color: var(--texto-suave);
+}
+
+.ficha-cep.erro {
+  color: var(--erro);
+}

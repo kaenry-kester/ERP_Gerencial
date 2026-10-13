@@ -162,7 +162,7 @@ function SecaoDados({ conta, aoAtualizar }: PropsSecao) {
         <CampoTexto id="conta-nome" rotulo="Nome" autoComplete="name" valor={nome} onChange={mudou(setNome)} erro={erros.nome} />
         <CampoTexto
           id="conta-telefone"
-          rotulo="Telefone"
+          rotulo="Celular (WhatsApp)"
           type="tel"
           inputMode="numeric"
           autoComplete="tel-national"
@@ -233,7 +233,7 @@ function SecaoEmail({ conta, aoAtualizar }: PropsSecao) {
       const v = await pedirTrocaDeEmail(sessao.token, { novoEmail, senha })
       setVerificacao(v)
       setEspera(v.reenviarEmSegundos)
-      setAviso({ tipo: 'ok', texto: `Código enviado para ${v.email}.` })
+      setAviso({ tipo: 'ok', texto: `Código enviado para ${v.destino}.` })
       requestAnimationFrame(() => document.getElementById('conta-codigo')?.focus())
     } catch (erro) {
       tratarErro(erro)

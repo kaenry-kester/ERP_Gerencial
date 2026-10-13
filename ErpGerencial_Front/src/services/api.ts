@@ -11,6 +11,8 @@ export type Usuario = {
   id: string
   nome: string
   email: string
+  /** WhatsApp, só dígitos com DDD: o código de acesso pode ir para ele. */
+  telefone: string | null
   administrador: boolean
   /** Ids dos módulos liberados (ver pages/erp/modulos.ts). Administrador acessa tudo. */
   permissoes: string[]
@@ -56,8 +58,10 @@ async function requisicao<T>(
   rota: string,
   { corpo, token, cabecalhos }: { corpo?: unknown; token?: string; cabecalhos?: Record<string, string> } = {},
 ): Promise<T> {
+  // FormData (envio de arquivo): o navegador monta o Content-Type com o separador das partes.
+  const formulario = corpo instanceof FormData
   const headers: Record<string, string> = { ...cabecalhos }
-  if (corpo !== undefined) headers['Content-Type'] = 'application/json'
+  if (corpo !== undefined && !formulario) headers['Content-Type'] = 'application/json'
   if (token) headers.Authorization = `Bearer ${token}`
 
   let resposta: Response
@@ -65,7 +69,7 @@ async function requisicao<T>(
     resposta = await fetch(rota, {
       method: metodo,
       headers,
-      body: corpo === undefined ? undefined : JSON.stringify(corpo),
+      body: corpo === undefined ? undefined : formulario ? corpo : JSON.stringify(corpo),
     })
   } catch {
     throw new ErroApi(0, 'Sem conexão com o servidor. Tente de novo.')
@@ -111,19 +115,28 @@ export const cadastrar = (dados: {
   senha: string
 }) => requisicao<Sessao>('POST', '/api/auth/cadastro', { corpo: dados })
 
-/** Login em duas etapas: depois da senha, a API envia um código por e-mail (a não ser no navegador lembrado). */
+export type CanalCodigo = 'email' | 'whatsapp'
+
+/** Login em duas etapas: depois da senha, o código de 6 dígitos vai por e-mail ou WhatsApp (a não ser no navegador lembrado). */
 export type Verificacao = {
   desafioId: string
-  /** E-mail com parte escondida, ex.: "an•••@gmail.com" */
-  email: string
+  canal: CanalCodigo
+  /** Para onde foi, com parte escondida: "an•••@gmail.com" ou "(16) •••••-9268" */
+  destino: string
   expiraEm: string
   reenviarEmSegundos: number
 }
 
-/** Resposta da 1ª etapa: a sessão (navegador lembrado) ou o pedido do código. */
-export type RespostaLogin = Sessao | Verificacao
+/**
+ * Depois da senha, a pessoa escolhe por onde receber o código (com parte escondida). whatsapp null: o celular não
+ * pode ser usado, e semWhatsapp diz o porquê (a opção aparece desativada).
+ */
+export type EscolhaCanal = { desafioId: string; email: string; whatsapp: string | null; semWhatsapp: string | null }
 
-export const precisaDeCodigo = (r: RespostaLogin): r is Verificacao => 'desafioId' in r
+/** Resposta da 1ª etapa: a sessão (navegador lembrado) ou a escolha do canal do código. */
+export type RespostaLogin = Sessao | EscolhaCanal
+
+export const precisaEscolherCanal = (r: RespostaLogin): r is EscolhaCanal => 'desafioId' in r
 
 export const entrar = (dados: { email: string; senha: string }) =>
   login(
@@ -138,8 +151,9 @@ export const entrar = (dados: { email: string; senha: string }) =>
 export const verificarCodigo = (dados: { desafioId: string; codigo: string; lembrar: boolean }) =>
   requisicao<Sessao & { dispositivo: string | null }>('POST', '/api/auth/login/verificar', { corpo: dados })
 
-export const reenviarCodigo = (desafioId: string) =>
-  requisicao<Verificacao>('POST', '/api/auth/login/reenviar', { corpo: { desafioId } })
+/** Envia o código pelo canal (o primeiro envio, a troca de canal ou o reenvio; sem canal = o mesmo de antes). */
+export const enviarCodigo = (desafioId: string, canal?: CanalCodigo) =>
+  requisicao<Verificacao>('POST', '/api/auth/login/enviar', { corpo: { desafioId, canal: canal ?? null } })
 
 /** Sessão atualizada (permissões, empresa e status podem ter mudado). */
 export const sessaoAtual = (token: string) => requisicao<Sessao>('GET', '/api/auth/eu', { token })
@@ -165,13 +179,13 @@ export const listarUsuarios = (token: string) => requisicao<Usuario[]>('GET', '/
 
 export const criarUsuario = (
   token: string,
-  dados: { nome: string; email: string; senha: string; administrador: boolean; permissoes: string[] },
+  dados: { nome: string; email: string; telefone: string; senha: string; administrador: boolean },
 ) => requisicao<Usuario>('POST', '/api/usuarios', { corpo: dados, token })
 
 export const editarUsuario = (
   token: string,
   id: string,
-  dados: { nome: string; administrador: boolean; permissoes: string[]; ativo: boolean },
+  dados: { nome: string; telefone: string; administrador: boolean; ativo: boolean },
 ) => requisicao<Usuario>('PUT', `/api/usuarios/${id}`, { corpo: dados, token })
 
 // ---------- Produtos ----------
@@ -182,6 +196,7 @@ export type Produto = {
   numero: number
   nome: string
   codigo: string | null
+  codigoBarras: string | null
   precoCusto: number
   precoVendaPf: number
   precoVendaPj: number
@@ -193,11 +208,14 @@ export type Produto = {
   observacao: string | null
   criadoEm: string
   atualizadoEm: string
+  /** Ids das imagens na ordem da galeria; a primeira é a capa (ver urlImagemProduto). */
+  imagens: string[]
 }
 
 export type DadosProduto = {
   nome: string
   codigo: string
+  codigoBarras: string
   precoCusto: number | null
   precoVendaPf: number | null
   precoVendaPj: number | null
@@ -218,7 +236,11 @@ export const listarProdutos = (token: string, busca = '', pagina = 1) =>
     { token },
   )
 
-export const obterProduto = (token: string, id: string) => requisicao<Produto>('GET', `/api/produtos/${id}`, { token })
+export const obterProduto = async (token: string, id: string) => {
+  const produto = await requisicao<Produto>('GET', `/api/produtos/${id}`, { token })
+  // API de versão anterior às imagens (ainda não reiniciada) não manda a lista: trata como sem imagens.
+  return { ...produto, imagens: produto.imagens ?? [] }
+}
 
 export const criarProduto = (token: string, dados: DadosProduto) =>
   requisicao<Produto>('POST', '/api/produtos', { corpo: dados, token })
@@ -228,6 +250,43 @@ export const editarProduto = (token: string, id: string, dados: DadosProduto) =>
 
 export const excluirProduto = (token: string, id: string) =>
   requisicao<void>('DELETE', `/api/produtos/${id}`, { token })
+
+// Imagens do produto: enviadas uma a uma depois de salvar o produto; a primeira da lista é a capa.
+
+/** Endereço da imagem para a tag <img> (aberto: o id é aleatório, não dá para adivinhar). */
+export const urlImagemProduto = (id: string) => `/api/produtos/imagens/${id}`
+
+/**
+ * As rotas de imagem sempre explicam um 404 ("Produto não encontrado"...). 404 sem explicação = a API em
+ * execução é de antes das imagens (não tem essas rotas): o projeto precisa ser reiniciado.
+ */
+async function rotaDeImagem<T>(chamada: Promise<T>): Promise<T> {
+  try {
+    return await chamada
+  } catch (erro) {
+    if (erro instanceof ErroApi && erro.status === 404 && !erro.campo) {
+      throw new ErroApi(
+        404,
+        'A API está desatualizada e ainda não salva imagens. Reinicie o projeto (npm run dev:tudo) e salve de novo.',
+        'imagens',
+      )
+    }
+    throw erro
+  }
+}
+
+export const enviarImagemProduto = (token: string, produtoId: string, arquivo: Blob) => {
+  const corpo = new FormData()
+  corpo.append('arquivo', arquivo, 'imagem')
+  return rotaDeImagem(requisicao<{ id: string }>('POST', `/api/produtos/${produtoId}/imagens`, { corpo, token }))
+}
+
+/** Todos os ids do produto na nova ordem (o primeiro vira a capa). */
+export const ordenarImagensProduto = (token: string, produtoId: string, ids: string[]) =>
+  rotaDeImagem(requisicao<void>('PUT', `/api/produtos/${produtoId}/imagens/ordem`, { corpo: { ids }, token }))
+
+export const excluirImagemProduto = (token: string, produtoId: string, id: string) =>
+  requisicao<void>('DELETE', `/api/produtos/${produtoId}/imagens/${id}`, { token })
 
 // ---------- Clientes ----------
 
@@ -240,6 +299,21 @@ export type Cliente = {
   celular: string
   /** CPF ou CNPJ sem pontuação (o CNPJ pode ter letras). */
   documento: string | null
+  // Campos da ficha "Registro de Cliente" (opcionais)
+  /** Produto que o cliente comprou. */
+  produto: string | null
+  /** RG ou inscrição estadual. */
+  rgInscricao: string | null
+  /** "1980-05-20" */
+  dataNascimento: string | null
+  pontoReferencia: string | null
+  /** Telefones só com os dígitos (DDD + número). */
+  telefoneResidencial: string | null
+  telefoneComercial: string | null
+  celular2: string | null
+  conjuge: string | null
+  /** Dia da compra ("2026-10-13"). */
+  dataCompra: string | null
   /** Só os 8 dígitos. */
   cep: string | null
   logradouro: string | null
@@ -267,6 +341,17 @@ export type DadosCliente = {
   celular: string
   /** CPF ou CNPJ (opcional). */
   documento: string
+  produto: string
+  rgInscricao: string
+  /** "1980-05-20" ou null. */
+  dataNascimento: string | null
+  pontoReferencia: string
+  telefoneResidencial: string
+  telefoneComercial: string
+  celular2: string
+  conjuge: string
+  /** "2026-10-13" ou null. */
+  dataCompra: string | null
   cep: string
   logradouro: string
   numeroEndereco: string
@@ -337,9 +422,10 @@ export type EnvioWhatsapp = {
 }
 
 export type ConfiguracaoWhatsapp = {
-  /** Celular que envia, só dígitos com DDD. */
+  /** Número remetente, só dígitos com DDD. */
   remetente: string | null
   mensagem: string | null
+  /** Últimos envios: os 15 clientes que receberam a mensagem mais recentemente (um envio por cliente). */
   envios: EnvioWhatsapp[]
 }
 
@@ -349,6 +435,10 @@ export const obterWhatsapp = (token: string) => requisicao<ConfiguracaoWhatsapp>
 
 export const salvarWhatsapp = (token: string, dados: DadosWhatsapp) =>
   requisicao<ConfiguracaoWhatsapp>('PUT', '/api/whatsapp', { corpo: dados, token })
+
+/** Todo o histórico de envios da mensagem automática para um cliente (mais novos primeiro). */
+export const listarEnviosCliente = (token: string, clienteId: string) =>
+  requisicao<EnvioWhatsapp[]>('GET', `/api/clientes/${clienteId}/envios`, { token })
 
 // ---------- Minha conta ----------
 

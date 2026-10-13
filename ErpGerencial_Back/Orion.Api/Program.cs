@@ -25,6 +25,7 @@ builder.Services.AddDbContext<OrionDbContext>(o => o.UseNpgsql(conexao));
 builder.Services.AddScoped<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>();
 builder.Services.AddSingleton<TokenService>();
 builder.Services.AddSingleton<EmailService>();
+builder.Services.AddHttpClient<WhatsAppService>(c => c.Timeout = TimeSpan.FromSeconds(20));
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -79,6 +80,7 @@ app.MapEmpresaEndpoints();
 app.MapUsuarioEndpoints();
 app.MapContaEndpoints();
 app.MapProdutoEndpoints();
+app.MapProdutoImagemEndpoints();
 app.MapClienteEndpoints();
 app.MapWhatsAppEndpoints();
 

@@ -566,9 +566,39 @@
 }
 
 /* O nome pode quebrar linha */
-.lista-tabela td:nth-child(2) {
+.lista-tabela td.lista-principal {
   min-width: 9rem;
   white-space: normal;
+}
+
+/* Miniatura da capa (lista de produtos): pequena, cabe na altura normal da linha */
+.lista-tabela .lista-capa {
+  width: 2rem;
+  padding-block: 0.2rem;
+  vertical-align: middle;
+}
+
+.lista-capa-imagem {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  overflow: hidden;
+  border-radius: 2px;
+  background: #fff;
+  color: var(--pg-cor);
+}
+
+.lista-capa-imagem img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Sem imagem: só a caixinha do logo, apagada */
+.lista-capa-imagem.vazia {
+  background: var(--pg-suave);
+  opacity: 0.55;
 }
 
 .lista-nome {
@@ -836,6 +866,26 @@
   /* ID logo depois do nome, como os outros dados */
   .lista-tabela .lista-id {
     width: auto;
+  }
+
+  /* Capa no canto do cartão, ao lado do nome (não ocupa uma linha só para ela) */
+  .lista-tabela tbody tr:has(> td.lista-capa) {
+    position: relative;
+  }
+
+  .lista-tabela td.lista-capa {
+    position: absolute;
+    top: 0.85rem;
+    left: var(--erp-lado);
+  }
+
+  .lista-tabela td.lista-capa .lista-capa-imagem {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .lista-tabela tr:has(> td.lista-capa) td.lista-principal {
+    padding-left: 2.4rem;
   }
 }
 

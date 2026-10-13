@@ -14,23 +14,24 @@ import {
   mensagemDe,
   type Usuario,
 } from '../../services/api'
-import { emailValido, requisitosSenha } from '../../utils/validacao'
+import { emailValido, formatarTelefone, requisitosSenha, telefoneValido } from '../../utils/validacao'
 import AvisoPagina from './AvisoPagina'
 import { useErp } from './contexto'
 import FaixaPagina from './FaixaPagina'
-import { MODULOS, MODULOS_PRINCIPAIS, PERMISSOES } from './modulos'
+import { MODULOS } from './modulos'
 import SecaoPagina from './SecaoPagina'
 import SemAcesso from './SemAcesso'
 import '../../styles/acesso.css'
 
-type Campo = 'nome' | 'email' | 'senha'
+type Campo = 'nome' | 'email' | 'telefone' | 'senha'
 
 const MODULO = MODULOS.find((m) => m.id === 'usuarios')!
 
 /**
  * Novo usuário (/app/usuarios/novo) ou edição (/app/usuarios/:id).
- * Como no Bling: o administrador define o login (e-mail e senha) e marca os módulos
- * que a pessoa pode usar; "Administrador" acessa tudo.
+ * O administrador define o login (e-mail e senha), o WhatsApp (obrigatório: o código de acesso pode ir
+ * para ele) e o tipo de acesso: "Administrador" acessa tudo;
+ * "Funcionário" só vê produtos, vê clientes e cadastra clientes (regra fixa, conferida pela API).
  */
 export default function UsuarioFormPage() {
   const { id } = useParams()
@@ -42,9 +43,9 @@ export default function UsuarioFormPage() {
   const [original, setOriginal] = useState<Usuario | null>(null)
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
+  const [telefone, setTelefone] = useState('')
   const [senha, setSenha] = useState('')
   const [administrador, setAdministrador] = useState(false)
-  const [permissoes, setPermissoes] = useState<string[]>([])
   const [ativo, setAtivo] = useState(true)
   const [enviado, setEnviado] = useState(false)
   const [salvando, setSalvando] = useState(false)
@@ -69,8 +70,8 @@ export default function UsuarioFormPage() {
         setOriginal(u)
         setNome(u.nome)
         setEmail(u.email)
+        setTelefone(formatarTelefone(u.telefone ?? ''))
         setAdministrador(u.administrador)
-        setPermissoes(u.permissoes)
         setAtivo(u.ativo)
       })
       .catch((erro) => ativoEfeito && !sessaoExpirada(erro) && setAviso({ tipo: 'erro', texto: mensagemDe(erro) }))
@@ -93,6 +94,8 @@ export default function UsuarioFormPage() {
     const erros: Partial<Record<Campo, string>> = {}
     if (!nome.trim()) erros.nome = 'Digite o nome'
     else if (nome.trim().length < 3) erros.nome = 'Mínimo de 3 letras'
+    if (!telefone.trim()) erros.telefone = 'Digite o WhatsApp'
+    else if (!telefoneValido(telefone)) erros.telefone = 'Número incompleto'
     if (novo) {
       if (!email.trim()) erros.email = 'Digite o e-mail'
       else if (!emailValido(email)) erros.email = 'E-mail inválido'
@@ -103,22 +106,12 @@ export default function UsuarioFormPage() {
   }
   const erros = { ...erroServidor, ...(enviado ? validar() : {}) }
 
-  // Cadastrar/editar incluem "ver"; tirar "ver" tira também cadastrar/editar do mesmo módulo.
-  const alternarPermissao = (id: string) =>
-    setPermissoes((atual) => {
-      const modulo = id.split('-')[0]
-      if (atual.includes(id)) {
-        return id === modulo ? atual.filter((p) => p.split('-')[0] !== modulo) : atual.filter((p) => p !== id)
-      }
-      return [...new Set([...atual, id, modulo])]
-    })
-
   const salvar = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (salvando) return
     setEnviado(true)
     const novos = validar()
-    const invalido = (['nome', 'email', 'senha'] as const).find((c) => novos[c])
+    const invalido = (['nome', 'email', 'telefone', 'senha'] as const).find((c) => novos[c])
     if (invalido) {
       document.getElementById(invalido)?.focus()
       return
@@ -128,9 +121,9 @@ export default function UsuarioFormPage() {
     setAviso(null)
     try {
       if (novo) {
-        await criarUsuario(sessao.token, { nome, email, senha, administrador, permissoes })
+        await criarUsuario(sessao.token, { nome, email, telefone, senha, administrador })
       } else {
-        await editarUsuario(sessao.token, id!, { nome, administrador, permissoes, ativo })
+        await editarUsuario(sessao.token, id!, { nome, telefone, administrador, ativo })
       }
       const texto = novo ? 'Usuário criado.' : 'Usuário atualizado.'
       navigate('/app/usuarios', { state: { aviso: { tipo: 'ok', texto } } })
@@ -139,6 +132,9 @@ export default function UsuarioFormPage() {
       if (erro instanceof ErroApi && erro.campo === 'email') {
         setErroServidor({ email: 'Já tem conta' })
         document.getElementById('email')?.focus()
+      } else if (erro instanceof ErroApi && erro.campo === 'telefone') {
+        setErroServidor({ telefone: erro.message })
+        document.getElementById('telefone')?.focus()
       }
       setAviso({ tipo: 'erro', texto: mensagemDe(erro) })
       setSalvando(false)
@@ -176,7 +172,22 @@ export default function UsuarioFormPage() {
                 setAviso(null)
               }}
               erro={erros.nome}
-              className={novo ? undefined : 'largo'}
+            />
+
+            <CampoTexto
+              id="telefone"
+              rotulo="WhatsApp"
+              type="tel"
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="(16) 99999-9999"
+              valor={telefone}
+              onChange={(v) => {
+                setTelefone(formatarTelefone(v))
+                setErroServidor({})
+                setAviso(null)
+              }}
+              erro={erros.telefone}
             />
 
             {novo && (
@@ -225,45 +236,13 @@ export default function UsuarioFormPage() {
               <label className={!administrador ? 'erp-opcao marcada' : 'erp-opcao'}>
                 <input type="radio" name="tipo" checked={!administrador} onChange={() => setAdministrador(false)} />
                 <span>
-                  <span className="erp-opcao-titulo">Personalizado</span>
-                  <span className="erp-opcao-texto">Escolha os módulos.</span>
+                  <span className="erp-opcao-titulo">Funcionário</span>
+                  <span className="erp-opcao-texto">Visualiza produtos, clientes e cadastra novos clientes.</span>
                 </span>
               </label>
             </div>
           </fieldset>
         </SecaoPagina>
-
-        {!administrador && (
-          <SecaoPagina id="usuario-modulos" numero={proxima()} titulo="Módulos">
-            <fieldset className="erp-permissoes">
-              <legend className="sr-only">Módulos liberados</legend>
-              <div className="erp-permissoes-modulos">
-                {PERMISSOES.map((grupo) => {
-                  const modulo = MODULOS_PRINCIPAIS.find((m) => m.id === grupo.modulo)!
-                  const { Ilustracao } = modulo
-                  return (
-                    <div key={grupo.modulo} className={`erp-permissoes-modulo tema-${grupo.modulo}`}>
-                      <div className="erp-permissoes-modulo-topo">
-                        {Ilustracao && <Ilustracao tamanho={44} />}
-                        <span className="erp-permissoes-modulo-nome">{modulo.rotulo}</span>
-                      </div>
-                      {grupo.itens.map((item) => (
-                        <label key={item.id} className="erp-permissao">
-                          <input
-                            type="checkbox"
-                            checked={permissoes.includes(item.id)}
-                            onChange={() => alternarPermissao(item.id)}
-                          />
-                          <span>{item.rotulo}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )
-                })}
-              </div>
-            </fieldset>
-          </SecaoPagina>
-        )}
 
         {!novo && !euMesmo && (
           <SecaoPagina id="usuario-situacao" numero={proxima()} titulo="Situação">

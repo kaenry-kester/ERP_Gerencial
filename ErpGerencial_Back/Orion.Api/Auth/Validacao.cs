@@ -24,6 +24,21 @@ public static partial class Validacao
 
     public static string SoDigitos(string valor) => new(valor.Where(char.IsAsciiDigit).ToArray());
 
+    /// <summary>Celular só com dígitos e DDD, sem o +55 (aceita com ou sem).</summary>
+    public static string Telefone(string? valor)
+    {
+        var digitos = SoDigitos(valor ?? "");
+        return digitos.Length is 12 or 13 && digitos.StartsWith("55") ? digitos[2..] : digitos;
+    }
+
+    /// <summary>WhatsApp obrigatório (usuário da equipe): o código de acesso pode ir para ele.</summary>
+    private static void WhatsApp(Dictionary<string, string[]> erros, string? valor)
+    {
+        var telefone = Telefone(valor);
+        if (telefone.Length == 0) erros["telefone"] = ["Digite o WhatsApp com DDD"];
+        else if (telefone.Length is not (10 or 11)) erros["telefone"] = ["Número incompleto"];
+    }
+
     /// <summary>Tira pontuação e espaços e deixa as letras maiúsculas (CNPJ alfanumérico).</summary>
     public static string NormalizarCnpj(string valor) =>
         new(valor.Where(char.IsAsciiLetterOrDigit).Select(char.ToUpperInvariant).ToArray());
@@ -67,6 +82,7 @@ public static partial class Validacao
         var erros = new Dictionary<string, string[]>();
         Nome(erros, "nome", req.Nome, "Digite o nome", 120);
         Email(erros, "email", req.Email);
+        WhatsApp(erros, req.Telefone);
         Senha(erros, "senha", req.Senha);
         return erros;
     }
@@ -75,6 +91,7 @@ public static partial class Validacao
     {
         var erros = new Dictionary<string, string[]>();
         Nome(erros, "nome", req.Nome, "Digite o nome", 120);
+        WhatsApp(erros, req.Telefone);
         return erros;
     }
 

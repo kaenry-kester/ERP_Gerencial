@@ -9,6 +9,7 @@ namespace Orion.Api.Produtos;
 public record ProdutoRequest(
     string Nome,
     string? Codigo,
+    string? CodigoBarras,
     decimal? PrecoCusto,
     decimal? PrecoVendaPf,
     decimal? PrecoVendaPj,
@@ -24,6 +25,7 @@ public record ProdutoDto(
     int Numero,
     string Nome,
     string? Codigo,
+    string? CodigoBarras,
     decimal PrecoCusto,
     decimal PrecoVendaPf,
     decimal PrecoVendaPj,
@@ -34,7 +36,9 @@ public record ProdutoDto(
     string? Voltagem,
     string? Observacao,
     DateTime CriadoEm,
-    DateTime AtualizadoEm);
+    DateTime AtualizadoEm,
+    /// <summary>Ids das imagens na ordem da galeria; a primeira é a capa (endereço: /api/produtos/imagens/{id}).</summary>
+    List<Guid> Imagens);
 
 public record ListaProdutos(List<ProdutoDto> Itens, int Total, int Pagina, int TamanhoPagina);
 
@@ -46,6 +50,7 @@ public static class ProdutoEndpoints
 {
     private const int TamanhoPagina = 50;
     private const string CodigoDuplicado = "Já existe um produto com este código";
+    private const string CodigoBarrasDuplicado = "Já existe um produto com este código de barras";
 
     public static void MapProdutoEndpoints(this WebApplication app)
     {
@@ -57,7 +62,7 @@ public static class ProdutoEndpoints
         grupo.MapDelete("/{id:guid}", Excluir);
     }
 
-    /// <summary>Lista paginada (50 por página), mais novos primeiro; busca por nome, código, marca ou modelo.</summary>
+    /// <summary>Lista paginada (50 por página), mais novos primeiro; busca por nome, código, código de barras, marca ou modelo.</summary>
     private static async Task<IResult> Listar(ClaimsPrincipal user, OrionDbContext db, string? busca, int? pagina)
     {
         var (usuario, negado) = await Permissoes.Exigir(user, db, Permissoes.Produtos);
@@ -70,6 +75,7 @@ public static class ProdutoEndpoints
             consulta = consulta.Where(p =>
                 EF.Functions.ILike(p.Nome, termo)
                 || (p.Codigo != null && EF.Functions.ILike(p.Codigo, termo))
+                || (p.CodigoBarras != null && EF.Functions.ILike(p.CodigoBarras, termo))
                 || (p.Marca != null && EF.Functions.ILike(p.Marca, termo))
                 || (p.Modelo != null && EF.Functions.ILike(p.Modelo, termo)));
         }
@@ -81,7 +87,9 @@ public static class ProdutoEndpoints
             .Skip((numeroPagina - 1) * TamanhoPagina)
             .Take(TamanhoPagina)
             .ToListAsync();
-        return Results.Ok(new ListaProdutos(itens.Select(Dto).ToList(), total, numeroPagina, TamanhoPagina));
+        var imagens = await ProdutoImagemEndpoints.IdsPorProduto(db, itens.Select(p => p.Id).ToList());
+        return Results.Ok(new ListaProdutos(
+            itens.Select(p => Dto(p, imagens.GetValueOrDefault(p.Id))).ToList(), total, numeroPagina, TamanhoPagina));
     }
 
     private static async Task<IResult> Obter(Guid id, ClaimsPrincipal user, OrionDbContext db)
@@ -89,7 +97,7 @@ public static class ProdutoEndpoints
         var (usuario, negado) = await Permissoes.Exigir(user, db, Permissoes.Produtos);
         if (usuario is null) return negado!;
         var produto = await db.Produtos.SingleOrDefaultAsync(p => p.Id == id && p.EmpresaId == usuario.EmpresaId);
-        return produto is null ? Results.NotFound() : Results.Ok(Dto(produto));
+        return produto is null ? Results.NotFound() : Results.Ok(await DtoComImagens(db, produto));
     }
 
     private static async Task<IResult> Criar(ProdutoRequest req, ClaimsPrincipal user, OrionDbContext db)
@@ -116,13 +124,12 @@ public static class ProdutoEndpoints
             }
             catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } pg)
             {
-                if (pg.ConstraintName?.Contains("codigo") == true)
-                    return Results.Conflict(new { erro = CodigoDuplicado, campo = "codigo" });
+                if (Duplicado(pg) is { } conflito) return conflito;
                 if (tentativa >= 3) throw;
             }
         }
 
-        return Results.Created($"/api/produtos/{produto.Id}", Dto(produto));
+        return Results.Created($"/api/produtos/{produto.Id}", Dto(produto, []));
     }
 
     private static async Task<IResult> Editar(Guid id, ProdutoRequest req, ClaimsPrincipal user, OrionDbContext db)
@@ -142,11 +149,11 @@ public static class ProdutoEndpoints
         {
             await db.SaveChangesAsync();
         }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } pg)
         {
-            return Results.Conflict(new { erro = CodigoDuplicado, campo = "codigo" });
+            return Duplicado(pg) ?? Results.Conflict(new { erro = CodigoDuplicado, campo = "codigo" });
         }
-        return Results.Ok(Dto(produto));
+        return Results.Ok(await DtoComImagens(db, produto));
     }
 
     private static async Task<IResult> Excluir(Guid id, ClaimsPrincipal user, OrionDbContext db)
@@ -155,6 +162,27 @@ public static class ProdutoEndpoints
         if (usuario is null) return negado!;
         var apagados = await db.Produtos.Where(p => p.Id == id && p.EmpresaId == usuario.EmpresaId).ExecuteDeleteAsync();
         return apagados == 0 ? Results.NotFound() : Results.NoContent();
+    }
+
+    /// <summary>Código ou código de barras repetido na empresa (null: foi outro índice, ex.: o ID sequencial).</summary>
+    private static IResult? Duplicado(PostgresException pg) => pg.ConstraintName switch
+    {
+        { } nome when nome.Contains("codigo_barras") => Results.Conflict(new { erro = CodigoBarrasDuplicado, campo = "codigoBarras" }),
+        { } nome when nome.Contains("codigo") => Results.Conflict(new { erro = CodigoDuplicado, campo = "codigo" }),
+        _ => null,
+    };
+
+    /// <summary>
+    /// EAN-8, UPC-A (12), EAN-13 e GTIN-14 terminam num dígito verificador: se não bater, a leitura saiu errada.
+    /// Outros formatos (com letras ou outro tamanho) são aceitos como estão.
+    /// </summary>
+    public static bool CodigoBarrasValido(string codigo)
+    {
+        if (!codigo.All(char.IsAsciiDigit) || codigo.Length is not (8 or 12 or 13 or 14)) return true;
+        var soma = 0;
+        for (var i = codigo.Length - 2; i >= 0; i--)
+            soma += (codigo[i] - '0') * ((codigo.Length - 2 - i) % 2 == 0 ? 3 : 1);
+        return (10 - soma % 10) % 10 == codigo[^1] - '0';
     }
 
     private static Dictionary<string, string[]> Validar(ProdutoRequest req)
@@ -169,6 +197,10 @@ public static class ProdutoEndpoints
             if ((valor?.Trim().Length ?? 0) > maximo) erros[campo] = [$"Máximo de {maximo} letras"];
         }
         Tamanho("codigo", req.Codigo, 60);
+        Tamanho("codigoBarras", req.CodigoBarras, 50);
+        var barras = req.CodigoBarras?.Trim() ?? "";
+        if (barras.Length is > 0 and <= 50 && !CodigoBarrasValido(barras))
+            erros["codigoBarras"] = ["Código de barras inválido (confira a leitura)"];
         Tamanho("marca", req.Marca, 80);
         Tamanho("modelo", req.Modelo, 80);
         Tamanho("cor", req.Cor, 50);
@@ -192,6 +224,7 @@ public static class ProdutoEndpoints
         static string? Opcional(string? valor) => string.IsNullOrWhiteSpace(valor) ? null : valor.Trim();
         p.Nome = req.Nome.Trim();
         p.Codigo = Opcional(req.Codigo);
+        p.CodigoBarras = Opcional(req.CodigoBarras);
         p.PrecoCusto = Math.Round(req.PrecoCusto ?? 0, 2);
         p.PrecoVendaPf = Math.Round(req.PrecoVendaPf ?? 0, 2);
         p.PrecoVendaPj = Math.Round(req.PrecoVendaPj ?? 0, 2);
@@ -203,7 +236,10 @@ public static class ProdutoEndpoints
         p.Observacao = Opcional(req.Observacao);
     }
 
-    private static ProdutoDto Dto(Produto p) =>
-        new(p.Id, p.Numero, p.Nome, p.Codigo, p.PrecoCusto, p.PrecoVendaPf, p.PrecoVendaPj, p.Quantidade,
-            p.Marca, p.Modelo, p.Cor, p.Voltagem, p.Observacao, p.CriadoEm, p.AtualizadoEm);
+    private static ProdutoDto Dto(Produto p, List<Guid>? imagens) =>
+        new(p.Id, p.Numero, p.Nome, p.Codigo, p.CodigoBarras, p.PrecoCusto, p.PrecoVendaPf, p.PrecoVendaPj, p.Quantidade,
+            p.Marca, p.Modelo, p.Cor, p.Voltagem, p.Observacao, p.CriadoEm, p.AtualizadoEm, imagens ?? []);
+
+    private static async Task<ProdutoDto> DtoComImagens(OrionDbContext db, Produto p) =>
+        Dto(p, (await ProdutoImagemEndpoints.IdsPorProduto(db, [p.Id])).GetValueOrDefault(p.Id));
 }

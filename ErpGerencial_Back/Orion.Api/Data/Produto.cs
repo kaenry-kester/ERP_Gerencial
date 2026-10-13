@@ -13,8 +13,11 @@ public class Produto
 
     public required string Nome { get; set; }
 
-    /// <summary>Código do produto (SKU, código de barras...). Não se repete na empresa.</summary>
+    /// <summary>Código interno do produto (SKU). Não se repete na empresa.</summary>
     public string? Codigo { get; set; }
+
+    /// <summary>Código de barras (EAN-13, EAN-8, UPC...), lido pelo leitor ou digitado. Não se repete na empresa.</summary>
+    public string? CodigoBarras { get; set; }
 
     public decimal PrecoCusto { get; set; }
     public decimal PrecoVendaPf { get; set; }

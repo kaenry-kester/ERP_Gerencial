@@ -122,27 +122,3 @@ export function podeAcessar(usuario: Usuario, modulo: Modulo) {
 /** Tem a permissão? (administrador tem todas; o servidor confere de novo em cada rota) */
 export const tem = (usuario: Usuario, permissao: string) =>
   usuario.administrador || usuario.permissoes.includes(permissao)
-
-/**
- * Permissões que o administrador marca em "Usuários e permissões", por módulo
- * (ids iguais aos de Auth/Permissoes.cs). A primeira de cada grupo é "ver"; as outras a incluem.
- */
-export const PERMISSOES: { modulo: string; itens: { id: string; rotulo: string }[] }[] = [
-  {
-    modulo: 'produtos',
-    itens: [
-      { id: 'produtos', rotulo: 'Ver produtos' },
-      { id: 'produtos-cadastrar', rotulo: 'Cadastrar produto' },
-      { id: 'produtos-editar', rotulo: 'Editar produtos' },
-    ],
-  },
-  {
-    modulo: 'clientes',
-    itens: [
-      { id: 'clientes', rotulo: 'Ver clientes' },
-      { id: 'clientes-cadastrar', rotulo: 'Cadastrar cliente' },
-      { id: 'clientes-editar', rotulo: 'Editar clientes' },
-    ],
-  },
-  { modulo: 'financeiro', itens: [{ id: 'financeiro', rotulo: 'Ver financeiro' }] },
-]

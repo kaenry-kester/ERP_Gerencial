@@ -2,7 +2,7 @@
 Robô de mensagens automáticas do Órion (WhatsApp).
 
 A cada minuto olha o banco e, quando chega o horário do envio de um cliente, envia a mensagem pelo
-WhatsApp Web. O horário vem do cadastro do cliente: mensalmente (a cada N meses, às 6h, no mesmo dia do
+WhatsApp (Evolution API, pasta evolution-api). O horário vem do cadastro do cliente: mensalmente (a cada N meses, às 6h, no mesmo dia do
 mês em que o intervalo foi salvo; depois de enviar, o robô marca o próximo) ou numa data e hora
 específica (uma vez só; depois do envio, fica vazio). A mensagem é a personalizada do cliente ou, se ele não tiver, a mensagem padrão
 (da lista de clientes). Cada envio fica em envios_whatsapp (histórico da página "Mensagem automática").
@@ -10,16 +10,19 @@ específica (uma vez só; depois do envio, fica vazio). A mensagem é a personal
 Comandos (dentro da pasta ErpGerencial_Automacao, com o ambiente .venv):
     python lembretes.py                         roda sem parar (verifica a cada minuto)
     python lembretes.py --uma-vez               verifica uma vez
-    python lembretes.py conectar 16991039268    conecta o WhatsApp desse celular (QR Code)
+    python lembretes.py conectar 16991039268    conecta o WhatsApp desse celular (código ou QR Code)
     python lembretes.py testar 16991039268 16999998888 "Olá!"   envia uma mensagem de teste
 
 Configuração no arquivo .env (veja .env.exemplo):
     ORION_BANCO                conexão com o PostgreSQL
-    WHATSAPP_MODO              "web" (envia de verdade) ou "teste" (só registra, nada sai)
+    WHATSAPP_MODO              "envio" (envia de verdade) ou "teste" (só registra, nada sai)
+    EVOLUTION_URL              endereço da Evolution API (padrão: http://localhost:8080)
+    EVOLUTION_CHAVE            chave da Evolution API (AUTHENTICATION_API_KEY do evolution-api/.env)
     VERIFICAR_A_CADA_SEGUNDOS  intervalo entre as verificações (padrão: 60)
 """
 
 import argparse
+import base64
 import logging
 import os
 import random
@@ -33,7 +36,7 @@ from pathlib import Path
 import psycopg
 from psycopg.rows import dict_row
 
-from whatsapp import ErroEnvio, WhatsAppWeb
+from whatsapp import CONECTADO, ErroEnvio, EvolutionAPI
 
 PASTA = Path(__file__).resolve().parent
 log = logging.getLogger("lembretes")
@@ -90,7 +93,7 @@ WHERE e.whatsapp_remetente = %(remetente)s
 # Ritmo de envio de cada celular: a partir de quando ele pode mandar a próxima mensagem (relógio do robô).
 PROXIMO_LIBERADO: dict[str, float] = {}
 
-SEM_CELULAR = "Configure o celular que envia em Clientes > Mensagem automática"
+SEM_CELULAR = "Configure o Número remetente em Clientes > Mensagem automática"
 SEM_MENSAGEM = "Sem mensagem: escreva a mensagem padrão (lista de clientes) ou a personalizada do cliente"
 
 
@@ -135,7 +138,7 @@ def ritmo() -> tuple[int, float, float]:
     return limite, minimo, max(minimo, maximo)
 
 
-def processar(conexao, envios: list[dict], modo: str, oculto: bool) -> None:
+def processar(conexao, envios: list[dict], modo: str) -> None:
     """
     Envia as mensagens vencidas, com cuidado para o número não ser bloqueado:
       - uma de cada vez por celular, com um intervalo sorteado entre elas (ESPACO_MIN/MAX_SEGUNDOS):
@@ -143,7 +146,7 @@ def processar(conexao, envios: list[dict], modo: str, oculto: bool) -> None:
       - no máximo LIMITE_DIARIO mensagens por celular por dia; o resto fica para o dia seguinte.
     As que não saem agora continuam marcadas e são enviadas nas próximas verificações.
     """
-    # Sem celular que envia ou sem mensagem: nem abre o navegador, só registra o motivo.
+    # Sem celular que envia ou sem mensagem: nem tenta enviar, só registra o motivo.
     for e in envios:
         if not e["remetente"] or not e["modelo"]:
             motivo = SEM_CELULAR if not e["remetente"] else SEM_MENSAGEM
@@ -170,25 +173,31 @@ def processar(conexao, envios: list[dict], modo: str, oculto: bool) -> None:
                 log.info("[modo teste] De +55%s para +55%s:\n%s", remetente, e["celular"], mensagem)
                 registrar(conexao, e, mensagem, "teste")
         else:
-            with WhatsAppWeb(remetente, oculto=oculto) as whatsapp:
-                if not whatsapp.conectado():
-                    motivo = f"WhatsApp de {remetente} desconectado: rode 'python lembretes.py conectar {remetente}'"
-                    log.error(motivo)
-                    for e in lista:
-                        registrar(conexao, e, mensagem_de(e), "erro", motivo)
-                    continue
-                for i, e in enumerate(lista):
-                    mensagem = mensagem_de(e)
-                    try:
-                        whatsapp.enviar(e["celular"], mensagem)
-                        registrar(conexao, e, mensagem, "enviado")
-                        log.info("Enviada para %s (+55%s).", e["nome"], e["celular"])
-                    except ErroEnvio as erro:
-                        registrar(conexao, e, mensagem, "erro", str(erro))
-                        log.warning("Não enviada para %s (+55%s): %s", e["nome"], e["celular"], erro)
-                    # Sem intervalo configurado: pequena pausa entre uma e outra, como uma pessoa faria.
-                    if i < len(lista) - 1:
-                        time.sleep(random.uniform(4, 9))
+            whatsapp = EvolutionAPI(remetente)
+            try:
+                conectado = whatsapp.conectado()
+            except ErroEnvio as erro:
+                # Evolution fora do ar (ou ainda subindo): não gasta o envio, tenta de novo na próxima verificação.
+                log.warning("%s. Tento de novo na próxima verificação.", erro)
+                return
+            if not conectado:
+                motivo = f"WhatsApp de {remetente} desconectado: rode 'python lembretes.py conectar {remetente}'"
+                log.error(motivo)
+                for e in lista:
+                    registrar(conexao, e, mensagem_de(e), "erro", motivo)
+                continue
+            for i, e in enumerate(lista):
+                mensagem = mensagem_de(e)
+                try:
+                    whatsapp.enviar(e["celular"], mensagem)
+                    registrar(conexao, e, mensagem, "enviado")
+                    log.info("Enviada para %s (+55%s).", e["nome"], e["celular"])
+                except ErroEnvio as erro:
+                    registrar(conexao, e, mensagem, "erro", str(erro))
+                    log.warning("Não enviada para %s (+55%s): %s", e["nome"], e["celular"], erro)
+                # Sem intervalo configurado: pequena pausa entre uma e outra, como uma pessoa faria.
+                if i < len(lista) - 1:
+                    time.sleep(random.uniform(4, 9))
 
         # Próxima mensagem deste celular só depois de um intervalo sorteado (não fica um padrão fixo).
         if espaco_max > 0:
@@ -198,13 +207,13 @@ def processar(conexao, envios: list[dict], modo: str, oculto: bool) -> None:
                 log.info("Próxima mensagem de %s em %.0f minuto(s).", remetente, espera / 60)
 
 
-def verificar(conexao, modo: str, oculto: bool = False) -> int:
+def verificar(conexao, modo: str) -> int:
     """Envia as mensagens cujo horário já chegou. Devolve quantas processou."""
     envios = conexao.execute(SQL_PENDENTES).fetchall()
     if not envios:
         return 0
     log.info("%s mensagem(ns) com o horário de envio vencido.", len(envios))
-    processar(conexao, envios, modo, oculto)
+    processar(conexao, envios, modo)
     return len(envios)
 
 
@@ -212,6 +221,40 @@ def so_digitos(valor: str) -> str:
     digitos = re.sub(r"\D", "", valor)
     # Aceita com ou sem o +55 na frente.
     return digitos[2:] if len(digitos) in (12, 13) and digitos.startswith("55") else digitos
+
+
+def conectar(celular: str, minutos: int = 3) -> int:
+    """Conecta o WhatsApp do celular na Evolution: mostra o código para digitar no celular e o QR Code."""
+    whatsapp = EvolutionAPI(celular)
+    if whatsapp.conectado():
+        print(f"O celular {celular} já está conectado. O robô já pode enviar por ele.")
+        return 0
+    imagem = PASTA / f"qrcode-{celular}.png"
+    print(f"Conectando o WhatsApp do celular {celular}. No celular: WhatsApp > Aparelhos conectados > Conectar um aparelho.")
+    codigo_atual = qr_atual = None
+    limite = time.monotonic() + minutos * 60
+    try:
+        while time.monotonic() < limite:
+            conexao = whatsapp.iniciar_conexao()
+            if whatsapp.estado() == CONECTADO:
+                print("Conectado! O login ficou salvo; o robô já pode enviar por este celular.")
+                return 0
+            codigo = conexao.get("pairingCode")
+            if codigo and codigo != codigo_atual:
+                codigo_atual = codigo
+                print(f'  Opção 1: toque em "Conectar com número de telefone" e digite o código {codigo[:4]}-{codigo[4:]}')
+            qr = conexao.get("base64") or ""
+            if qr.startswith("data:image") and qr != qr_atual:
+                imagem.write_bytes(base64.b64decode(qr.split(",", 1)[1]))
+                print(f"  Opção 2: escaneie o QR Code{' (atualizado)' if qr_atual else ''}: {imagem}")
+                if not qr_atual and hasattr(os, "startfile"):
+                    os.startfile(imagem)  # abre a imagem no Windows
+                qr_atual = qr
+            time.sleep(3)
+    finally:
+        imagem.unlink(missing_ok=True)
+    print("O celular não foi conectado a tempo. Rode o comando de novo.")
+    return 1
 
 
 def main() -> int:
@@ -223,39 +266,30 @@ def main() -> int:
 
     parser = argparse.ArgumentParser(description="Mensagens automáticas de manutenção pelo WhatsApp.")
     parser.add_argument("--uma-vez", action="store_true", help="verifica uma vez e termina")
-    parser.add_argument("--oculto", action="store_true", help="tenta abrir o Chrome sem janela")
     comandos = parser.add_subparsers(dest="comando")
-    conectar = comandos.add_parser("conectar", help="conecta o WhatsApp de um celular (QR Code)")
-    conectar.add_argument("celular")
+    comando_conectar = comandos.add_parser("conectar", help="conecta o WhatsApp de um celular (código ou QR Code)")
+    comando_conectar.add_argument("celular")
     testar = comandos.add_parser("testar", help="envia uma mensagem de teste agora")
     testar.add_argument("remetente")
     testar.add_argument("destino")
     testar.add_argument("mensagem")
     args = parser.parse_args()
 
-    if args.comando == "conectar":
-        celular = so_digitos(args.celular)
-        print(f"Abrindo o WhatsApp Web para o celular {celular}.")
-        print("No celular: WhatsApp > Aparelhos conectados > Conectar um aparelho, e escaneie o QR Code.")
-        with WhatsAppWeb(celular) as whatsapp:
-            if whatsapp.aguardar_login():
-                print("Conectado! O login ficou salvo; o robô já pode enviar por este celular.")
-                return 0
-        print("O QR Code não foi escaneado a tempo. Rode o comando de novo.")
-        return 1
+    try:
+        if args.comando == "conectar":
+            return conectar(so_digitos(args.celular))
 
-    if args.comando == "testar":
-        with WhatsAppWeb(so_digitos(args.remetente), oculto=args.oculto) as whatsapp:
+        if args.comando == "testar":
+            whatsapp = EvolutionAPI(so_digitos(args.remetente))
             if not whatsapp.conectado():
                 print(f"WhatsApp desconectado. Rode: python lembretes.py conectar {so_digitos(args.remetente)}")
                 return 1
-            try:
-                whatsapp.enviar(so_digitos(args.destino), args.mensagem)
-            except ErroEnvio as erro:
-                print(f"Não enviada: {erro}")
-                return 1
-        print("Mensagem enviada.")
-        return 0
+            whatsapp.enviar(so_digitos(args.destino), args.mensagem)
+            print("Mensagem enviada.")
+            return 0
+    except ErroEnvio as erro:
+        print(f"Não deu certo: {erro}")
+        return 1
 
     banco = os.environ.get("ORION_BANCO")
     if not banco:
@@ -268,8 +302,8 @@ def main() -> int:
     while True:
         try:
             with psycopg.connect(banco, row_factory=dict_row) as conexao:
-                verificar(conexao, modo, oculto=args.oculto)
-        except Exception:  # o robô não pode parar por causa de uma falha passageira (banco fora, Chrome travou...)
+                verificar(conexao, modo)
+        except Exception:  # o robô não pode parar por causa de uma falha passageira (banco fora, Evolution reiniciando...)
             log.exception("Falha ao verificar os envios agendados")
             if args.uma_vez:
                 return 1

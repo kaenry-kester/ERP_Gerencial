@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import type { Aviso } from '../../../components/formulario/FaixaAviso'
-import { IconeLapis, IconeLixeira, IconeVoltar } from '../../../components/icones/Icones'
+import { IconeLapis, IconeLixeira, IconeMensagem, IconeVoltar } from '../../../components/icones/Icones'
 import { IlustracaoClientes } from '../../../components/icones/Ilustracoes'
 import { useSessaoExpirada } from '../../../hooks/useSessaoExpirada'
-import { excluirCliente, mensagemDe, obterCliente, type Cliente } from '../../../services/api'
+import { excluirCliente, listarEnviosCliente, mensagemDe, obterCliente, type Cliente, type EnvioWhatsapp } from '../../../services/api'
 import { formatarCep, formatarDocumento, formatarTelefone } from '../../../utils/validacao'
 import AvisoPagina from '../AvisoPagina'
 import { useErp } from '../contexto'
@@ -12,12 +12,13 @@ import FaixaPagina from '../FaixaPagina'
 import { tem } from '../modulos'
 import SemAcesso from '../SemAcesso'
 import { descreverIntervalo, formatarCadastro, formatarDataHora, situacaoManutencao } from './formatos'
+import JanelaEnvios from './JanelaEnvios'
 import MensagemPersonalizada from './MensagemPersonalizada'
 import './clientes.css'
 
 const CLASSE_SITUACAO = { atrasada: 'lista-etiqueta alerta', proxima: 'lista-etiqueta atencao', 'em-dia': 'lista-etiqueta' }
 
-// Detalhes do cliente: todas as informações. Quem pode editar vê "Editar", "Excluir" e o campo da mensagem personalizada.
+// Detalhes do cliente: todas as informações e o histórico de envios. Quem pode editar vê "Editar", "Excluir" e o campo da mensagem personalizada.
 export default function ClientePage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -27,6 +28,10 @@ export default function ClientePage() {
   const [aviso, setAviso] = useState<Aviso>((useLocation().state as { aviso?: Aviso } | null)?.aviso ?? null)
   const [confirmando, setConfirmando] = useState(false)
   const [excluindo, setExcluindo] = useState(false)
+  // Histórico de envios da mensagem automática: carregado de novo a cada vez que a janela abre
+  const [historicoAberto, setHistoricoAberto] = useState(false)
+  const [envios, setEnvios] = useState<EnvioWhatsapp[] | null>(null)
+  const [erroEnvios, setErroEnvios] = useState<string>()
 
   const podeVer = tem(sessao.usuario, 'clientes')
   const podeEditar = tem(sessao.usuario, 'clientes-editar')
@@ -70,14 +75,28 @@ export default function ClientePage() {
   }
 
   const situacao = cliente.proximaManutencao ? situacaoManutencao(cliente.proximaManutencao) : null
+  const telefone = (t: string | null) => (t ? formatarTelefone(t) : '—')
+  // "1980-05-20" → "20/05/1980"
+  const dia = (d: string | null) => (d ? d.split('-').reverse().join('/') : '—')
   const grupos: { titulo: string; itens: [string, string][] }[] = [
     {
       titulo: 'Contato',
       itens: [
-        ['Celular', formatarTelefone(cliente.celular)],
-        ['CPF/CNPJ', cliente.documento ? formatarDocumento(cliente.documento) : '—'],
+        ['Celular (WhatsApp)', formatarTelefone(cliente.celular)],
+        ['Celular 2', telefone(cliente.celular2)],
+        ['Fone residencial', telefone(cliente.telefoneResidencial)],
+        ['Fone comercial', telefone(cliente.telefoneComercial)],
       ],
     },
+    {
+      titulo: 'Dados pessoais',
+      itens: [
+        ['CPF/CNPJ', cliente.documento ? formatarDocumento(cliente.documento) : '—'],
+        ['Data de nascimento', dia(cliente.dataNascimento)],
+        ['Cônjuge', cliente.conjuge ?? '—'],
+      ],
+    },
+    { titulo: 'Compra', itens: [['Data da compra', dia(cliente.dataCompra)]] },
     {
       titulo: 'Endereço',
       itens: [
@@ -87,6 +106,7 @@ export default function ClientePage() {
         ['Complemento', cliente.complemento ?? '—'],
         ['Bairro', cliente.bairro ?? '—'],
         ['Cidade', [cliente.cidade, cliente.uf].filter(Boolean).join('/') || '—'],
+        ['Ponto de referência', cliente.pontoReferencia ?? '—'],
       ],
     },
     {
@@ -104,28 +124,44 @@ export default function ClientePage() {
     },
   ]
 
-  const acoes = podeEditar && (
+  const abrirHistorico = () => {
+    setEnvios(null)
+    setErroEnvios(undefined)
+    setHistoricoAberto(true)
+    listarEnviosCliente(sessao.token, cliente.id)
+      .then(setEnvios)
+      .catch((erro) => !sessaoExpirada(erro) && setErroEnvios(mensagemDe(erro)))
+  }
+
+  const acoes = (
     <>
-      <Link to={`/app/clientes/${cliente.id}/editar`} className="pagina-botao claro">
-        <IconeLapis tamanho={20} />
-        Editar
-      </Link>
-      {!confirmando ? (
-        <button type="button" className="pagina-botao escuro" onClick={() => setConfirmando(true)}>
-          <IconeLixeira tamanho={20} />
-          Excluir
-        </button>
-      ) : (
-        <>
-          <button type="button" className="pagina-botao perigo" onClick={excluir} disabled={excluindo}>
-            <IconeLixeira tamanho={20} />
-            {excluindo ? 'Excluindo...' : 'Confirmar exclusão'}
-          </button>
-          <button type="button" className="pagina-botao escuro" onClick={() => setConfirmando(false)}>
-            Cancelar
-          </button>
-        </>
+      <button type="button" className={podeEditar ? 'pagina-botao escuro' : 'pagina-botao claro'} onClick={abrirHistorico}>
+        <IconeMensagem tamanho={20} />
+        Histórico de envios
+      </button>
+      {podeEditar && (
+        <Link to={`/app/clientes/${cliente.id}/editar`} className="pagina-botao claro">
+          <IconeLapis tamanho={20} />
+          Editar
+        </Link>
       )}
+      {podeEditar &&
+        (!confirmando ? (
+          <button type="button" className="pagina-botao escuro" onClick={() => setConfirmando(true)}>
+            <IconeLixeira tamanho={20} />
+            Excluir
+          </button>
+        ) : (
+          <>
+            <button type="button" className="pagina-botao perigo" onClick={excluir} disabled={excluindo}>
+              <IconeLixeira tamanho={20} />
+              {excluindo ? 'Excluindo...' : 'Confirmar exclusão'}
+            </button>
+            <button type="button" className="pagina-botao escuro" onClick={() => setConfirmando(false)}>
+              Cancelar
+            </button>
+          </>
+        ))}
     </>
   )
 
@@ -145,7 +181,17 @@ export default function ClientePage() {
           )
         }
         voltar={{ para: '/app/clientes', rotulo: 'Clientes' }}
-        acoes={acoes || undefined}
+        acoes={acoes}
+      />
+
+      <JanelaEnvios
+        aberto={historicoAberto}
+        titulo="Histórico de envios"
+        dica={`Todas as mensagens automáticas para ${cliente.nome}, das mais novas para as mais antigas.`}
+        envios={envios}
+        erro={erroEnvios}
+        mostrarMensagem
+        onFechar={() => setHistoricoAberto(false)}
       />
 
       <div className="pagina-corpo">
