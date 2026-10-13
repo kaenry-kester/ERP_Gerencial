@@ -22,7 +22,6 @@ Configuração no arquivo .env (veja .env.exemplo):
 """
 
 import argparse
-import base64
 import logging
 import os
 import random
@@ -223,36 +222,66 @@ def so_digitos(valor: str) -> str:
     return digitos[2:] if len(digitos) in (12, 13) and digitos.startswith("55") else digitos
 
 
-def conectar(celular: str, minutos: int = 3) -> int:
-    """Conecta o WhatsApp do celular na Evolution: mostra o código para digitar no celular e o QR Code."""
+PAGINA_CONEXAO = """<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta http-equiv="refresh" content="3">
+<title>Conectar WhatsApp - Órion</title>
+<style>
+  body {{ margin: 0; min-height: 100vh; display: grid; place-items: center; background: #eef1f3;
+         font-family: Montserrat, Segoe UI, sans-serif; color: #11161a; }}
+  main {{ width: min(460px, 92vw); padding: 2rem; background: #fff; border-radius: 4px; text-align: center; }}
+  h1 {{ margin: 0 0 .5rem; font-size: 1.3rem; color: #0f4255; }}
+  p {{ margin: .4rem 0; line-height: 1.45; color: #4a5560; }}
+  .codigo {{ margin: .8rem 0; font-size: 2rem; font-weight: 800; letter-spacing: .12em; color: #145369; }}
+  img {{ width: 260px; height: 260px; image-rendering: pixelated; }}
+  .ok {{ font-size: 1.6rem; font-weight: 800; color: #2e6b47; }}
+</style></head><body><main>{conteudo}</main></body></html>"""
+
+
+def conectar(celular: str, minutos: int = 5) -> int:
+    """
+    Conecta o WhatsApp do celular na Evolution. Abre no navegador uma página com o código de pareamento e o
+    QR Code, que se atualiza sozinha (o QR muda a cada ~20 s); o navegador não trava o arquivo, ao contrário
+    do visualizador de imagens do Windows.
+    """
     whatsapp = EvolutionAPI(celular)
     if whatsapp.conectado():
         print(f"O celular {celular} já está conectado. O robô já pode enviar por ele.")
         return 0
-    imagem = PASTA / f"qrcode-{celular}.png"
+    pagina = PASTA / f"conectar-{celular}.html"
+    numero = f"({celular[:2]}) {celular[2:-4]}-{celular[-4:]}"
+
+    def mostrar(conteudo: str) -> None:
+        pagina.write_text(PAGINA_CONEXAO.format(conteudo=conteudo), encoding="utf-8")
+
     print(f"Conectando o WhatsApp do celular {celular}. No celular: WhatsApp > Aparelhos conectados > Conectar um aparelho.")
-    codigo_atual = qr_atual = None
+    print(f"  O código e o QR Code aparecem no navegador: {pagina}")
+    codigo_atual = None
+    aberta = False
     limite = time.monotonic() + minutos * 60
-    try:
-        while time.monotonic() < limite:
-            conexao = whatsapp.iniciar_conexao()
-            if whatsapp.estado() == CONECTADO:
-                print("Conectado! O login ficou salvo; o robô já pode enviar por este celular.")
-                return 0
-            codigo = conexao.get("pairingCode")
-            if codigo and codigo != codigo_atual:
-                codigo_atual = codigo
-                print(f'  Opção 1: toque em "Conectar com número de telefone" e digite o código {codigo[:4]}-{codigo[4:]}')
-            qr = conexao.get("base64") or ""
-            if qr.startswith("data:image") and qr != qr_atual:
-                imagem.write_bytes(base64.b64decode(qr.split(",", 1)[1]))
-                print(f"  Opção 2: escaneie o QR Code{' (atualizado)' if qr_atual else ''}: {imagem}")
-                if not qr_atual and hasattr(os, "startfile"):
-                    os.startfile(imagem)  # abre a imagem no Windows
-                qr_atual = qr
-            time.sleep(3)
-    finally:
-        imagem.unlink(missing_ok=True)
+    while time.monotonic() < limite:
+        conexao = whatsapp.iniciar_conexao()
+        if whatsapp.estado() == CONECTADO:
+            mostrar(f'<h1>WhatsApp {numero}</h1><p class="ok">Conectado!</p><p>Pode fechar esta página.</p>')
+            print("Conectado! O login ficou salvo; o robô já pode enviar por este celular.")
+            return 0
+        codigo = conexao.get("pairingCode") or ""
+        qr = conexao.get("base64") or ""
+        if codigo and codigo != codigo_atual:
+            codigo_atual = codigo
+            print(f'  Código para "Conectar com número de telefone": {codigo[:4]}-{codigo[4:]}')
+        mostrar(
+            f"<h1>Conectar o WhatsApp {numero}</h1>"
+            "<p>No celular: <b>WhatsApp → Aparelhos conectados → Conectar um aparelho</b>.</p>"
+            + (f'<p>Toque em <b>"Conectar com número de telefone"</b> e digite:</p>'
+               f'<p class="codigo">{codigo[:4]}-{codigo[4:]}</p>' if codigo else "")
+            + (f'<p>ou escaneie o QR Code:</p><img src="{qr}" alt="QR Code">' if qr.startswith("data:image") else "")
+            + "<p><small>Esta página se atualiza sozinha.</small></p>"
+        )
+        if not aberta and hasattr(os, "startfile"):
+            os.startfile(pagina)  # abre no navegador padrão do Windows
+            aberta = True
+        time.sleep(3)
+    mostrar("<h1>Tempo esgotado</h1><p>O celular não foi conectado a tempo. Rode o comando de novo.</p>")
     print("O celular não foi conectado a tempo. Rode o comando de novo.")
     return 1
 

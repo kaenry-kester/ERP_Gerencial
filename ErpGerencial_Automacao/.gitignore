@@ -5,7 +5,7 @@
 __pycache__/
 # Evolution API (baixada do GitHub na instalação; o .env dela tem a senha do banco e a chave)
 evolution-api/
-# QR Code temporário do comando "conectar"
-qrcode-*.png
+# Página temporária do comando "conectar" (código e QR Code)
+conectar-*.html
 # Login antigo do WhatsApp Web (robô com Chrome, não é mais usado; dá acesso às conversas: nunca compartilhar)
 sessoes/

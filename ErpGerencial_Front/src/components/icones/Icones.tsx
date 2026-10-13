@@ -221,3 +221,35 @@ export function IconeEmail({ tamanho = 24 }: IconeProps) {
     </svg>
   )
 }
+
+export function IconeCarrinho({ tamanho = 24 }: IconeProps) {
+  return (
+    <svg {...base(tamanho)}>
+      <circle cx="9" cy="20" r="1.4" />
+      <circle cx="18" cy="20" r="1.4" />
+      <path d="M2.5 3.5h2.5l2.4 11.2a1.8 1.8 0 0 0 1.8 1.4h8.3a1.8 1.8 0 0 0 1.7-1.3L21 7.5H6.2" />
+    </svg>
+  )
+}
+
+export function IconeRecibo({ tamanho = 24 }: IconeProps) {
+  return (
+    <svg {...base(tamanho)}>
+      <path d="M6 2.5h12v19l-2.5-1.6-2.5 1.6-1-.6-1 .6-2.5-1.6L6 21.5z" />
+      <line x1="9" y1="8" x2="15" y2="8" />
+      <line x1="9" y1="12" x2="15" y2="12" />
+    </svg>
+  )
+}
+
+export function IconeOrdemServico({ tamanho = 24 }: IconeProps) {
+  return (
+    <svg {...base(tamanho)}>
+      <path d="M14 2.5H6a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h7" />
+      <polyline points="14 2.5 14 8 19.5 8" />
+      <path d="M19.5 8v3" />
+      <circle cx="17" cy="16.5" r="2.8" />
+      <line x1="19" y1="18.5" x2="21.5" y2="21" />
+    </svg>
+  )
+}

@@ -141,10 +141,10 @@
   color: var(--texto-suave);
 }
 
+/* Todos os módulos numa fileira só (a tela inicial cabe sem rolar); cada um com até 330px */
 .erp-blocos {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, clamp(210px, 23vw, 330px));
-  gap: clamp(1rem, 2.5vw, 1.75rem);
+  display: flex;
+  gap: clamp(0.75rem, 1.6vw, 1.75rem);
 }
 
 /*
@@ -153,6 +153,8 @@
   do mesmo tamanho mantém os blocos alinhados.
 */
 .erp-modulo {
+  flex: 0 1 330px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
@@ -169,8 +171,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   width: 100%;
+  /* "Cadastrar produto" numa linha só, mesmo com os 6 módulos lado a lado */
+  white-space: nowrap;
+  font-size: clamp(0.82rem, 1.05vw, 1rem);
   border-radius: 10px;
   background: var(--tema);
   font-weight: 700;
@@ -237,12 +242,17 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 0.25rem;
-  padding: clamp(0.9rem, 2.5vh, 1.25rem) 1.25rem clamp(1rem, 2.5vh, 1.35rem);
+  padding: clamp(0.6rem, 1.8vh, 1.1rem) clamp(0.8rem, 1.2vw, 1.25rem);
 }
 
+/* Espaço para 2 linhas em todos (ex.: "Número de ordem de serviço"): os cartões ficam do mesmo tamanho */
 .erp-bloco-titulo {
-  font-size: clamp(1.3rem, 2vw, 1.6rem);
+  display: flex;
+  align-items: center;
+  min-height: 2.4em;
+  font-size: clamp(1.1rem, 1.55vw, 1.6rem);
   font-weight: 700;
   line-height: 1.2;
   color: var(--tema-texto);
@@ -870,6 +880,17 @@
 
 /* ---------- Tablets ---------- */
 
+/* Tablets: 3 módulos por linha */
+@media (max-width: 1000px) {
+  .erp-blocos {
+    flex-wrap: wrap;
+  }
+
+  .erp-modulo {
+    flex: 1 1 calc((100% - 2 * clamp(0.75rem, 1.6vw, 1.75rem)) / 3 - 1px);
+  }
+}
+
 @media (max-width: 900px) {
   .erp-opcoes.tres {
     grid-template-columns: minmax(0, 1fr);
@@ -912,6 +933,7 @@
 
   /* Blocos em largura total: ilustração à esquerda, textos à direita */
   .erp-blocos {
+    display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 0.75rem;
   }
@@ -1030,5 +1052,56 @@
 
   .erp-header-curto {
     display: inline;
+  }
+}
+
+/* Celular com muitos módulos (4 ou mais, ex.: administrador): 2 por linha, cartões compactos e em pé,
+   para a tela inicial caber sem rolar. Com poucos módulos, continua um embaixo do outro. */
+@media (max-width: 600px) {
+  .erp-blocos:has(> .erp-modulo:nth-child(4)) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .erp-blocos:has(> .erp-modulo:nth-child(4)) .erp-modulo {
+    gap: 0.35rem;
+  }
+
+  .erp-blocos:has(> .erp-modulo:nth-child(4)) .erp-cadastro {
+    height: 36px;
+    gap: 0.3rem;
+    font-size: 0.78rem;
+  }
+
+  .erp-blocos:has(> .erp-modulo:nth-child(4)) .erp-cadastro svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .erp-blocos:has(> .erp-modulo:nth-child(4)) .erp-bloco {
+    flex-direction: column;
+  }
+
+  .erp-blocos:has(> .erp-modulo:nth-child(4)) .erp-bloco-arte {
+    padding: 0.4rem;
+  }
+
+  .erp-blocos:has(> .erp-modulo:nth-child(4)) .erp-bloco-imagem {
+    width: clamp(48px, 8vh, 72px);
+    height: clamp(48px, 8vh, 72px);
+  }
+
+  .erp-blocos:has(> .erp-modulo:nth-child(4)) .erp-bloco-corpo {
+    justify-content: flex-start;
+    padding: 0.45rem 0.6rem 0.55rem;
+  }
+
+  .erp-blocos:has(> .erp-modulo:nth-child(4)) .erp-bloco-titulo {
+    font-size: 0.98rem;
+  }
+
+  .erp-blocos:has(> .erp-modulo:nth-child(4)) .erp-bloco-texto {
+    font-size: 0.78rem;
+    line-height: 1.3;
   }
 }

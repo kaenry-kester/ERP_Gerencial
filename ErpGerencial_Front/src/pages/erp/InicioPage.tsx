@@ -6,7 +6,7 @@ import FaixaPagina from './FaixaPagina'
 import { caminhoDo, MODULOS_PRINCIPAIS, podeAcessar, tem } from './modulos'
 
 /*
-  Tela inicial do ERP: um botão grande para cada módulo, com ilustração, nome e descrição.
+  Tela inicial do ERP: um botão grande para cada módulo, com ilustração e nome, todos numa fileira só.
   Cada módulo tem a sua cor (Produtos marrom, Clientes azul, Financeiro preto), e o botão de
   cadastro fica logo acima do módulo, na mesma cor — fácil de associar, inclusive para quem tem dislexia.
 */
@@ -60,7 +60,6 @@ export default function InicioPage() {
                 </span>
                 <span className="erp-bloco-corpo">
                   <span className="erp-bloco-titulo">{m.rotulo}</span>
-                  <span className="erp-bloco-texto">{m.resumo}</span>
                 </span>
               </Link>
             </div>
