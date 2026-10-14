@@ -9,9 +9,10 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
     public DbSet<Produto> Produtos => Set<Produto>();
     public DbSet<ProdutoImagem> ProdutoImagens => Set<ProdutoImagem>();
     public DbSet<Cliente> Clientes => Set<Cliente>();
+    public DbSet<ClienteFoto> ClienteFotos => Set<ClienteFoto>();
     public DbSet<EnvioWhatsapp> EnviosWhatsapp => Set<EnvioWhatsapp>();
+    public DbSet<MensagemImagem> MensagemImagens => Set<MensagemImagem>();
     public DbSet<CodigoLogin> CodigosLogin => Set<CodigoLogin>();
-    public DbSet<DispositivoConfiavel> DispositivosConfiaveis => Set<DispositivoConfiavel>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -118,7 +119,8 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
             e.Property(c => c.Cidade).HasColumnName("cidade").HasMaxLength(100);
             e.Property(c => c.Uf).HasColumnName("uf").HasMaxLength(2);
             e.Property(c => c.TipoIntervalo).HasColumnName("tipo_intervalo").HasMaxLength(10).HasDefaultValue("meses");
-            e.Property(c => c.IntervaloManutencaoMeses).HasColumnName("intervalo_manutencao_meses");
+            e.Property(c => c.IntervaloQuantidade).HasColumnName("intervalo_quantidade");
+            e.Property(c => c.IntervaloUnidade).HasColumnName("intervalo_unidade").HasMaxLength(10).HasDefaultValue("meses");
             e.Property(c => c.MensagemWhatsapp).HasColumnName("mensagem_whatsapp").HasMaxLength(1000);
             e.Property(c => c.EnvioEm).HasColumnName("envio_em");
             e.Property(c => c.CriadoEm).HasColumnName("criado_em");
@@ -126,6 +128,35 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
             // ID sequencial não se repete dentro da mesma empresa.
             e.HasIndex(c => new { c.EmpresaId, c.Numero }).IsUnique();
             e.HasOne(c => c.Empresa).WithMany().HasForeignKey(c => c.EmpresaId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ClienteFoto>(e =>
+        {
+            e.ToTable("cliente_fotos");
+            e.Property(f => f.Id).HasColumnName("id");
+            e.Property(f => f.ClienteId).HasColumnName("cliente_id");
+            e.Property(f => f.TipoConteudo).HasColumnName("tipo_conteudo").HasMaxLength(20);
+            e.Property(f => f.Dados).HasColumnName("dados");
+            e.Property(f => f.CriadoEm).HasColumnName("criado_em");
+            // Uma foto por cliente; excluir o cliente apaga a foto.
+            e.HasIndex(f => f.ClienteId).IsUnique();
+            e.HasOne(f => f.Cliente).WithMany().HasForeignKey(f => f.ClienteId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MensagemImagem>(e =>
+        {
+            e.ToTable("mensagem_imagens");
+            e.Property(i => i.Id).HasColumnName("id");
+            e.Property(i => i.EmpresaId).HasColumnName("empresa_id");
+            e.Property(i => i.ClienteId).HasColumnName("cliente_id");
+            e.Property(i => i.TipoConteudo).HasColumnName("tipo_conteudo").HasMaxLength(20);
+            e.Property(i => i.Dados).HasColumnName("dados");
+            e.Property(i => i.CriadoEm).HasColumnName("criado_em");
+            // Uma imagem na mensagem padrão da empresa e uma na mensagem de cada cliente.
+            e.HasIndex(i => i.EmpresaId).IsUnique().HasFilter("cliente_id IS NULL");
+            e.HasIndex(i => i.ClienteId).IsUnique().HasFilter("cliente_id IS NOT NULL");
+            e.HasOne<Empresa>().WithMany().HasForeignKey(i => i.EmpresaId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Cliente>().WithMany().HasForeignKey(i => i.ClienteId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<EnvioWhatsapp>(e =>
@@ -162,20 +193,6 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
             e.Property(c => c.UsadoEm).HasColumnName("usado_em");
             e.Property(c => c.CriadoEm).HasColumnName("criado_em");
             e.HasOne(c => c.Usuario).WithMany().HasForeignKey(c => c.UsuarioId).OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<DispositivoConfiavel>(e =>
-        {
-            e.ToTable("dispositivos_confiaveis");
-            e.Property(d => d.Id).HasColumnName("id");
-            e.Property(d => d.UsuarioId).HasColumnName("usuario_id");
-            e.Property(d => d.TokenHash).HasColumnName("token_hash").HasMaxLength(64);
-            e.Property(d => d.Descricao).HasColumnName("descricao").HasMaxLength(300);
-            e.Property(d => d.ExpiraEm).HasColumnName("expira_em");
-            e.Property(d => d.CriadoEm).HasColumnName("criado_em");
-            e.Property(d => d.UltimoUsoEm).HasColumnName("ultimo_uso_em");
-            e.HasIndex(d => d.TokenHash).IsUnique();
-            e.HasOne(d => d.Usuario).WithMany().HasForeignKey(d => d.UsuarioId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

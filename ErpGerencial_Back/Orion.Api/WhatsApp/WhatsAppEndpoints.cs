@@ -19,7 +19,8 @@ public record EnvioDto(
     string? Erro,
     DateTime CriadoEm);
 
-public record ConfiguracaoWhatsappDto(string? Remetente, string? Mensagem, List<EnvioDto> Envios);
+/// <summary>ImagemId: imagem da mensagem padrão (ver /api/whatsapp/imagens/{id}); vazio quando não tem.</summary>
+public record ConfiguracaoWhatsappDto(string? Remetente, string? Mensagem, Guid? ImagemId, List<EnvioDto> Envios);
 
 /// <summary>
 /// Mensagem automática da empresa (WhatsApp): a mensagem padrão, o número remetente e os últimos
@@ -40,7 +41,73 @@ public static class WhatsAppEndpoints
         grupo.MapGet("/", Obter);
         grupo.MapPut("/", Salvar);
         app.MapGet("/api/clientes/{clienteId:guid}/envios", EnviosDoCliente).RequireAuthorization();
+
+        // Imagem da mensagem (vai como foto, com o texto de legenda): a da mensagem padrão e a de cada cliente.
+        // Login por token (Bearer), sem cookie: o envio de arquivo não precisa de antiforgery.
+        grupo.MapPut("/imagem", (IFormFile? arquivo, ClaimsPrincipal user, OrionDbContext db) =>
+            SalvarImagem(null, arquivo, user, db)).DisableAntiforgery();
+        grupo.MapDelete("/imagem", (ClaimsPrincipal user, OrionDbContext db) => ExcluirImagem(null, user, db));
+        app.MapPut("/api/clientes/{clienteId:guid}/mensagem/imagem",
+            (Guid clienteId, IFormFile? arquivo, ClaimsPrincipal user, OrionDbContext db) =>
+                SalvarImagem(clienteId, arquivo, user, db)).RequireAuthorization().DisableAntiforgery();
+        app.MapDelete("/api/clientes/{clienteId:guid}/mensagem/imagem",
+            (Guid clienteId, ClaimsPrincipal user, OrionDbContext db) => ExcluirImagem(clienteId, user, db))
+            .RequireAuthorization();
+        // A tag <img> não manda o token: o endereço é aberto, mas o id é aleatório (não dá para adivinhar).
+        app.MapGet("/api/whatsapp/imagens/{id:guid}", BaixarImagem);
     }
+
+    /// <summary>O site reduz a imagem antes de enviar; isto é só o teto.</summary>
+    private const int ImagemTamanhoMaximo = 5 * 1024 * 1024;
+
+    /// <summary>Envia (ou troca) a imagem da mensagem padrão (clienteId vazio) ou da mensagem de um cliente.</summary>
+    private static async Task<IResult> SalvarImagem(Guid? clienteId, IFormFile? arquivo, ClaimsPrincipal user, OrionDbContext db)
+    {
+        var (usuario, negado) = await Permissoes.Exigir(user, db, Permissoes.ClientesEditar);
+        if (usuario is null) return negado!;
+        if (clienteId is { } id && !await db.Clientes.AnyAsync(c => c.Id == id && c.EmpresaId == usuario.EmpresaId))
+            return Results.NotFound(new { erro = "Cliente não encontrado (pode ter sido excluído)", campo = "imagem" });
+        if (arquivo is null || arquivo.Length == 0) return ErroImagem("Escolha uma imagem");
+        if (arquivo.Length > ImagemTamanhoMaximo) return ErroImagem("Imagem grande demais (máximo de 5 MB)");
+
+        using var memoria = new MemoryStream();
+        await arquivo.CopyToAsync(memoria);
+        var dados = memoria.ToArray();
+        var tipo = Clientes.ClienteEndpoints.TipoDaFoto(dados);
+        if (tipo is null) return ErroImagem("Envie uma imagem JPG, PNG ou WEBP");
+
+        // Trocar = apagar a antiga e gravar outra (id novo: o navegador não mostra a antiga guardada).
+        await Imagens(db, usuario.EmpresaId, clienteId).ExecuteDeleteAsync();
+        var imagem = new MensagemImagem { EmpresaId = usuario.EmpresaId, ClienteId = clienteId, TipoConteudo = tipo, Dados = dados };
+        db.MensagemImagens.Add(imagem);
+        await db.SaveChangesAsync();
+        return Results.Ok(new { imagem.Id });
+    }
+
+    private static async Task<IResult> ExcluirImagem(Guid? clienteId, ClaimsPrincipal user, OrionDbContext db)
+    {
+        var (usuario, negado) = await Permissoes.Exigir(user, db, Permissoes.ClientesEditar);
+        if (usuario is null) return negado!;
+        await Imagens(db, usuario.EmpresaId, clienteId).ExecuteDeleteAsync();
+        return Results.NoContent();
+    }
+
+    private static IQueryable<MensagemImagem> Imagens(OrionDbContext db, Guid empresaId, Guid? clienteId) =>
+        db.MensagemImagens.Where(i => i.EmpresaId == empresaId && i.ClienteId == clienteId);
+
+    private static async Task<IResult> BaixarImagem(Guid id, HttpContext contexto, OrionDbContext db)
+    {
+        var imagem = await db.MensagemImagens.Where(i => i.Id == id)
+            .Select(i => new { i.TipoConteudo, i.Dados })
+            .SingleOrDefaultAsync();
+        if (imagem is null) return Results.NotFound();
+        // A imagem de um id nunca muda (trocar = gravar outra): o navegador pode guardar para sempre.
+        contexto.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+        contexto.Response.Headers.XContentTypeOptions = "nosniff";
+        return Results.File(imagem.Dados, imagem.TipoConteudo);
+    }
+
+    private static IResult ErroImagem(string mensagem) => Results.BadRequest(new { erro = mensagem, campo = "imagem" });
 
     /// <summary>Todo o histórico de envios da mensagem automática para um cliente, do mais novo ao mais antigo.</summary>
     private static async Task<IResult> EnviosDoCliente(Guid clienteId, ClaimsPrincipal user, OrionDbContext db)
@@ -100,6 +167,7 @@ public static class WhatsAppEndpoints
             .Select(w => new EnvioDto(w.Id, w.ClienteId, w.Cliente!.Nome, w.Telefone, w.DataReferencia,
                 w.Tipo, w.Mensagem, w.Status, w.Erro, w.CriadoEm))
             .ToListAsync();
-        return new ConfiguracaoWhatsappDto(empresa.WhatsappRemetente, empresa.MensagemManutencao, envios);
+        var imagemId = await Imagens(db, empresa.Id, null).Select(i => (Guid?)i.Id).SingleOrDefaultAsync();
+        return new ConfiguracaoWhatsappDto(empresa.WhatsappRemetente, empresa.MensagemManutencao, imagemId, envios);
     }
 }

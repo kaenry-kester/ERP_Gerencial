@@ -5,7 +5,16 @@ import type { Aviso } from '../../../components/formulario/FaixaAviso'
 import { IconeCheck, IconeMensagem } from '../../../components/icones/Icones'
 import { IlustracaoClientes } from '../../../components/icones/Ilustracoes'
 import { useSessaoExpirada } from '../../../hooks/useSessaoExpirada'
-import { ErroApi, mensagemDe, obterWhatsapp, salvarWhatsapp, type ConfiguracaoWhatsapp } from '../../../services/api'
+import {
+  ErroApi,
+  excluirImagemMensagem,
+  mensagemDe,
+  obterWhatsapp,
+  salvarImagemMensagem,
+  salvarWhatsapp,
+  urlImagemMensagem,
+  type ConfiguracaoWhatsapp,
+} from '../../../services/api'
 import { formatarTelefone, telefoneValido } from '../../../utils/validacao'
 import AvisoPagina from '../AvisoPagina'
 import { useErp } from '../contexto'
@@ -14,6 +23,8 @@ import { tem } from '../modulos'
 import SecaoPagina from '../SecaoPagina'
 import SemAcesso from '../SemAcesso'
 import { MENSAGEM_MAXIMO as MAXIMO, TRECHOS_MENSAGEM as TRECHOS } from './formatos'
+import BalaoMensagem from './BalaoMensagem'
+import ExtrasMensagem from './ExtrasMensagem'
 import JanelaEnvios from './JanelaEnvios'
 import '../../../styles/acesso.css'
 import './clientes.css'
@@ -101,12 +112,6 @@ export default function MensagemAutomaticaPage() {
     }
   }
 
-  // Prévia com um cliente de exemplo, do jeito que o robô vai montar a mensagem.
-  const previa = mensagem
-    .replace(/\{nome\}/gi, 'Maria')
-    .replace(/\{data\}/gi, new Date().toLocaleDateString('pt-BR'))
-    .replace(/\{empresa\}/gi, sessao.empresa.nome)
-
   return (
     <div className="pagina tema-clientes">
       <FaixaPagina
@@ -163,6 +168,34 @@ export default function MensagemAutomaticaPage() {
             }}
             erro={erros.mensagem}
           />
+          <ExtrasMensagem
+            idCampo="whatsapp-mensagem"
+            valor={mensagem}
+            maximo={MAXIMO}
+            onChange={(v) => {
+              setMensagem(v)
+              mudou()
+            }}
+            imagemUrl={config.imagemId ? urlImagemMensagem(config.imagemId) : null}
+            onImagem={async (imagem) => {
+              try {
+                const { id } = await salvarImagemMensagem(sessao.token, imagem)
+                setConfig((c) => c && { ...c, imagemId: id })
+                return null
+              } catch (erro) {
+                return sessaoExpirada(erro) ? null : mensagemDe(erro)
+              }
+            }}
+            onRemoverImagem={async () => {
+              try {
+                await excluirImagemMensagem(sessao.token)
+                setConfig((c) => c && { ...c, imagemId: null })
+                return null
+              } catch (erro) {
+                return sessaoExpirada(erro) ? null : mensagemDe(erro)
+              }
+            }}
+          />
           <div className="mensagem-trechos">
             <span>Inserir:</span>
             {TRECHOS.map((t) => (
@@ -180,12 +213,15 @@ export default function MensagemAutomaticaPage() {
               </button>
             ))}
           </div>
-          {mensagem.trim() && (
-            <div className="mensagem-previa">
-              <span className="mensagem-previa-rotulo">Como o cliente recebe</span>
-              <p className="mensagem-balao">{previa}</p>
-            </div>
-          )}
+          <div className="mensagem-previa">
+            <span className="cliente-whatsapp-rotulo">Como o cliente recebe (exemplo com a cliente Maria)</span>
+            <BalaoMensagem
+              texto={mensagem}
+              imagemUrl={config.imagemId ? urlImagemMensagem(config.imagemId) : null}
+              nome="Maria"
+              empresa={sessao.empresa.nome}
+            />
+          </div>
         </SecaoPagina>
 
         <div className="pagina-barra">

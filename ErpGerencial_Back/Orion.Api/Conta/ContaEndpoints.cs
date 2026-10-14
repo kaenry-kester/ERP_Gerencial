@@ -28,14 +28,9 @@ public record ConfirmarEmailRequest(Guid DesafioId, string Codigo);
 public record ReenviarEmailRequest(Guid DesafioId);
 public record ExcluirContaRequest(string? Senha, string Confirmacao);
 
-public record DispositivoDto(Guid Id, string? Descricao, DateTime CriadoEm, DateTime UltimoUsoEm, DateTime ExpiraEm, bool Atual);
-
-/// <summary>"Minha conta": dados da pessoa, e-mail, senha, computadores lembrados e exclusão da conta.</summary>
+/// <summary>"Minha conta": dados da pessoa, e-mail, senha e exclusão da conta.</summary>
 public static class ContaEndpoints
 {
-    /// <summary>Cabeçalho com o token do "Lembrar de quem sou", para marcar "este computador" na lista.</summary>
-    private const string CabecalhoDispositivo = "X-Dispositivo";
-
     public static void MapContaEndpoints(this WebApplication app)
     {
         var grupo = app.MapGroup("/api/conta").RequireAuthorization();
@@ -45,9 +40,6 @@ public static class ContaEndpoints
         grupo.MapPost("/email", PedirTrocaDeEmail).RequireRateLimiting(Politicas.Conta);
         grupo.MapPost("/email/confirmar", ConfirmarTrocaDeEmail).RequireRateLimiting(Politicas.Codigo);
         grupo.MapPost("/email/reenviar", ReenviarCodigoDoEmail).RequireRateLimiting(Politicas.Codigo);
-        grupo.MapGet("/dispositivos", ListarDispositivos);
-        grupo.MapDelete("/dispositivos/{id:guid}", EsquecerDispositivo);
-        grupo.MapDelete("/dispositivos", EsquecerTodos);
         grupo.MapPost("/excluir", Excluir).RequireRateLimiting(Politicas.Conta);
     }
 
@@ -74,7 +66,7 @@ public static class ContaEndpoints
         return Results.Ok(await Dto(db, usuario));
     }
 
-    /// <summary>Troca a senha; os computadores lembrados são esquecidos.</summary>
+    /// <summary>Troca a senha.</summary>
     private static async Task<IResult> TrocarSenha(
         TrocarSenhaRequest req, ClaimsPrincipal user, OrionDbContext db, IPasswordHasher<Usuario> hasher)
     {
@@ -88,8 +80,6 @@ public static class ContaEndpoints
         if (erros.Count > 0) return Results.ValidationProblem(erros);
 
         usuario.SenhaHash = hasher.HashPassword(usuario, req.NovaSenha);
-        // Quem tinha a senha antiga não continua entrando sem código em outros computadores.
-        await db.DispositivosConfiaveis.Where(d => d.UsuarioId == usuario.Id).ExecuteDeleteAsync();
         await db.SaveChangesAsync();
         return Results.Ok(await Dto(db, usuario));
     }
@@ -114,7 +104,7 @@ public static class ContaEndpoints
         if (await db.Usuarios.AnyAsync(u => u.Email == novo, ct))
             return Results.Conflict(new { erro = "Este e-mail já tem uma conta no Órion", campo = "novoEmail" });
 
-        var verificacao = await VerificacaoLogin.EnviarCodigo(db, email, null, usuario, null, "email", ct, novo);
+        var verificacao = await VerificacaoLogin.EnviarCodigo(db, email, usuario, null, ct, novo);
         return verificacao is null
             ? Results.Problem("Não foi possível enviar o código por e-mail. Tente de novo em instantes.", statusCode: 503)
             : Results.Json(verificacao, statusCode: StatusCodes.Status202Accepted);
@@ -171,44 +161,10 @@ public static class ContaEndpoints
             return Results.Json(new { erro = $"Aguarde {Math.Ceiling(espera.TotalSeconds)} segundos para pedir outro código." },
                 statusCode: StatusCodes.Status429TooManyRequests);
 
-        var verificacao = await VerificacaoLogin.EnviarCodigo(db, email, null, usuario, desafio, "email", ct);
+        var verificacao = await VerificacaoLogin.EnviarCodigo(db, email, usuario, desafio, ct);
         return verificacao is null
             ? Results.Problem("Não foi possível enviar o código por e-mail. Tente de novo em instantes.", statusCode: 503)
             : Results.Ok(verificacao);
-    }
-
-    private static async Task<IResult> ListarDispositivos(HttpContext http, ClaimsPrincipal user, OrionDbContext db)
-    {
-        var usuario = await UsuarioAtual.Carregar(user, db);
-        if (usuario is null) return Results.Unauthorized();
-
-        var token = http.Request.Headers[CabecalhoDispositivo].ToString();
-        var hashAtual = string.IsNullOrEmpty(token) ? null : VerificacaoLogin.Hash(token);
-        var agora = DateTime.UtcNow;
-        var dispositivos = await db.DispositivosConfiaveis
-            .Where(d => d.UsuarioId == usuario.Id && d.ExpiraEm > agora)
-            .OrderByDescending(d => d.UltimoUsoEm)
-            .ToListAsync();
-        return Results.Ok(dispositivos.Select(d =>
-            new DispositivoDto(d.Id, d.Descricao, d.CriadoEm, d.UltimoUsoEm, d.ExpiraEm, d.TokenHash == hashAtual)));
-    }
-
-    private static async Task<IResult> EsquecerDispositivo(Guid id, ClaimsPrincipal user, OrionDbContext db)
-    {
-        var usuario = await UsuarioAtual.Carregar(user, db);
-        if (usuario is null) return Results.Unauthorized();
-        var apagados = await db.DispositivosConfiaveis
-            .Where(d => d.Id == id && d.UsuarioId == usuario.Id)
-            .ExecuteDeleteAsync();
-        return apagados == 0 ? Results.NotFound() : Results.NoContent();
-    }
-
-    private static async Task<IResult> EsquecerTodos(ClaimsPrincipal user, OrionDbContext db)
-    {
-        var usuario = await UsuarioAtual.Carregar(user, db);
-        if (usuario is null) return Results.Unauthorized();
-        await db.DispositivosConfiaveis.Where(d => d.UsuarioId == usuario.Id).ExecuteDeleteAsync();
-        return Results.NoContent();
     }
 
     /// <summary>Exclui a conta (e a empresa, quando a pessoa é a única nela). Pede a senha e "EXCLUIR".</summary>
@@ -229,13 +185,13 @@ public static class ContaEndpoints
         var empresaId = usuario.EmpresaId;
         if (exclusao == "conta-e-empresa")
         {
-            // Única administradora: sai a empresa inteira (usuários, códigos e dispositivos vão junto).
+            // Única administradora: sai a empresa inteira (usuários e códigos vão junto).
             await db.Usuarios.Where(u => u.EmpresaId == empresaId).ExecuteDeleteAsync();
             await db.Empresas.Where(e => e.Id == empresaId).ExecuteDeleteAsync();
         }
         else
         {
-            db.Usuarios.Remove(usuario); // códigos e computadores lembrados saem junto (cascade)
+            db.Usuarios.Remove(usuario); // os códigos saem junto (cascade)
             await db.SaveChangesAsync();
         }
         await transacao.CommitAsync();

@@ -5,6 +5,7 @@
 // O administrador cria os outros usuários da empresa, cada um com login e permissões próprios.
 
 const SESSAO_KEY = 'orion-sessao'
+/** "Lembrar de quem sou" de versões anteriores (o login não pede mais código): apagado ao sair. */
 const LEMBRAR_KEY = 'orion-lembrar'
 
 export type Usuario = {
@@ -115,45 +116,22 @@ export const cadastrar = (dados: {
   senha: string
 }) => requisicao<Sessao>('POST', '/api/auth/cadastro', { corpo: dados })
 
-export type CanalCodigo = 'email' | 'whatsapp'
-
-/** Login em duas etapas: depois da senha, o código de 6 dígitos vai por e-mail ou WhatsApp (a não ser no navegador lembrado). */
+/** Código de 6 dígitos enviado por e-mail (confirmação da troca de e-mail em Minha conta). */
 export type Verificacao = {
   desafioId: string
-  canal: CanalCodigo
-  /** Para onde foi, com parte escondida: "an•••@gmail.com" ou "(16) •••••-9268" */
+  canal: 'email'
+  /** Para onde foi, com parte escondida: "an•••@gmail.com" */
   destino: string
   expiraEm: string
   reenviarEmSegundos: number
 }
 
-/**
- * Depois da senha, a pessoa escolhe por onde receber o código (com parte escondida). whatsapp null: o celular não
- * pode ser usado, e semWhatsapp diz o porquê (a opção aparece desativada).
- */
-export type EscolhaCanal = { desafioId: string; email: string; whatsapp: string | null; semWhatsapp: string | null }
-
-/** Resposta da 1ª etapa: a sessão (navegador lembrado) ou a escolha do canal do código. */
-export type RespostaLogin = Sessao | EscolhaCanal
-
-export const precisaEscolherCanal = (r: RespostaLogin): r is EscolhaCanal => 'desafioId' in r
-
-export const entrar = (dados: { email: string; senha: string }) =>
+/** Entra com e-mail ou com o celular (o mesmo cadastrado em Minha conta) e a senha. */
+export const entrar = (dados: { email: string; senha: string } | { telefone: string; senha: string }) =>
   login(
-    requisicao<RespostaLogin>('POST', '/api/auth/login', {
-      // Token do "Lembrar de quem sou": neste navegador, o código não é pedido.
-      corpo: { ...dados, dispositivo: lerLembrado()?.token ?? null },
-    }),
-    'E-mail ou senha incorretos',
+    requisicao<Sessao>('POST', '/api/auth/login', { corpo: dados }),
+    'telefone' in dados ? 'Celular ou senha incorretos' : 'E-mail ou senha incorretos',
   )
-
-/** 2ª etapa: o código do e-mail. Com "lembrar", a resposta traz o token deste navegador. */
-export const verificarCodigo = (dados: { desafioId: string; codigo: string; lembrar: boolean }) =>
-  requisicao<Sessao & { dispositivo: string | null }>('POST', '/api/auth/login/verificar', { corpo: dados })
-
-/** Envia o código pelo canal (o primeiro envio, a troca de canal ou o reenvio; sem canal = o mesmo de antes). */
-export const enviarCodigo = (desafioId: string, canal?: CanalCodigo) =>
-  requisicao<Verificacao>('POST', '/api/auth/login/enviar', { corpo: { desafioId, canal: canal ?? null } })
 
 /** Sessão atualizada (permissões, empresa e status podem ter mudado). */
 export const sessaoAtual = (token: string) => requisicao<Sessao>('GET', '/api/auth/eu', { token })
@@ -322,16 +300,21 @@ export type Cliente = {
   bairro: string | null
   cidade: string | null
   uf: string | null
-  /** "meses" (a cada N meses, às 6h, e se repete) ou "data" (data e hora específica, uma vez só). */
+  /** "meses" (a cada N meses, no horário escolhido, e se repete) ou "data" (cadastros antigos: uma vez só). */
   tipoIntervalo: TipoIntervalo
-  /** No tipo "meses": de quantos em quantos meses o cliente precisa de manutenção. */
-  intervaloManutencaoMeses: number | null
+  /** De quanto em quanto tempo a mensagem se repete (em intervaloUnidade); null: sem envios automáticos. */
+  intervaloQuantidade: number | null
+  intervaloUnidade: UnidadeIntervalo
   /** Dia do próximo envio ("2026-12-08"); null quando não há envio marcado. */
   proximaManutencao: string | null
   /** Mensagem de WhatsApp só deste cliente (null: usa a mensagem padrão da empresa). */
   mensagemWhatsapp: string | null
   /** Próximo envio da mensagem de WhatsApp (ISO, UTC). */
   envioEm: string | null
+  /** Foto do cliente (ver urlFotoCliente); null quando não tem. */
+  fotoId: string | null
+  /** Imagem da mensagem personalizada (ver urlImagemMensagem); null quando não tem. */
+  mensagemImagemId: string | null
   criadoEm: string
   atualizadoEm: string
 }
@@ -359,13 +342,18 @@ export type DadosCliente = {
   bairro: string
   cidade: string
   uf: string
-  tipoIntervalo: TipoIntervalo
-  intervaloManutencaoMeses: number | null
-  /** Só no tipo "data" (no tipo "meses" o servidor calcula: hoje + N meses, às 6h). */
+  /**
+   * Data e hora do próximo envio (ISO). O servidor calcula o intervalo por ela: hoje 14/10 e próximo envio 14/12 →
+   * a cada 2 meses. null: sem envios automáticos.
+   */
   envioEm: string | null
+  /** Edição sem mexer no calendário: o servidor mantém o envio e o intervalo como estão (envioEm é ignorado). */
+  manterEnvio?: boolean
 }
 
 export type TipoIntervalo = 'meses' | 'data'
+
+export type UnidadeIntervalo = 'minutos' | 'horas' | 'dias' | 'semanas' | 'meses'
 
 export type ListaClientes = { itens: Cliente[]; total: number; pagina: number; tamanhoPagina: number }
 
@@ -390,6 +378,23 @@ export const salvarMensagemCliente = (token: string, id: string, mensagem: strin
 
 export const excluirCliente = (token: string, id: string) =>
   requisicao<void>('DELETE', `/api/clientes/${id}`, { token })
+
+/** Botão "Cancelar envios automáticos": nada mais é enviado para o cliente. */
+export const cancelarEnviosCliente = (token: string, id: string) =>
+  requisicao<Cliente>('POST', `/api/clientes/${id}/cancelar-envios`, { token })
+
+/** Endereço da foto para a tag <img> (aberto: o id é aleatório, não dá para adivinhar). */
+export const urlFotoCliente = (id: string) => `/api/clientes/fotos/${id}`
+
+/** Envia (ou troca) a foto do cliente, tirada pela webcam. */
+export const salvarFotoCliente = (token: string, clienteId: string, foto: Blob) => {
+  const corpo = new FormData()
+  corpo.append('arquivo', foto, 'foto.jpg')
+  return rotaDeImagem(requisicao<{ id: string }>('PUT', `/api/clientes/${clienteId}/foto`, { corpo, token }))
+}
+
+export const excluirFotoCliente = (token: string, clienteId: string) =>
+  requisicao<void>('DELETE', `/api/clientes/${clienteId}/foto`, { token })
 
 /** Endereço de um CEP (ViaCEP, serviço público e gratuito). */
 export type EnderecoCep = { logradouro: string; bairro: string; cidade: string; uf: string }
@@ -425,6 +430,8 @@ export type ConfiguracaoWhatsapp = {
   /** Número remetente, só dígitos com DDD. */
   remetente: string | null
   mensagem: string | null
+  /** Imagem da mensagem padrão (ver urlImagemMensagem); null quando não tem. */
+  imagemId: string | null
   /** Últimos envios: os 15 clientes que receberam a mensagem mais recentemente (um envio por cliente). */
   envios: EnvioWhatsapp[]
 }
@@ -435,6 +442,23 @@ export const obterWhatsapp = (token: string) => requisicao<ConfiguracaoWhatsapp>
 
 export const salvarWhatsapp = (token: string, dados: DadosWhatsapp) =>
   requisicao<ConfiguracaoWhatsapp>('PUT', '/api/whatsapp', { corpo: dados, token })
+
+/** Endereço da imagem da mensagem para a tag <img> (aberto: o id é aleatório, não dá para adivinhar). */
+export const urlImagemMensagem = (id: string) => `/api/whatsapp/imagens/${id}`
+
+/**
+ * Envia (ou troca) a imagem da mensagem: a da mensagem padrão (sem clienteId) ou a da mensagem de um cliente.
+ * Ela vai como foto, com o texto de legenda.
+ */
+export const salvarImagemMensagem = (token: string, imagem: Blob, clienteId?: string) => {
+  const corpo = new FormData()
+  corpo.append('arquivo', imagem, 'imagem.jpg')
+  const caminho = clienteId ? `/api/clientes/${clienteId}/mensagem/imagem` : '/api/whatsapp/imagem'
+  return rotaDeImagem(requisicao<{ id: string }>('PUT', caminho, { corpo, token }))
+}
+
+export const excluirImagemMensagem = (token: string, clienteId?: string) =>
+  requisicao<void>('DELETE', clienteId ? `/api/clientes/${clienteId}/mensagem/imagem` : '/api/whatsapp/imagem', { token })
 
 /** Todo o histórico de envios da mensagem automática para um cliente (mais novos primeiro). */
 export const listarEnviosCliente = (token: string, clienteId: string) =>
@@ -456,16 +480,6 @@ export type Conta = {
   exclusao: TipoExclusao
 }
 
-export type Dispositivo = {
-  id: string
-  descricao: string | null
-  criadoEm: string
-  ultimoUsoEm: string
-  expiraEm: string
-  /** É este navegador */
-  atual: boolean
-}
-
 export const obterConta = (token: string) => requisicao<Conta>('GET', '/api/conta', { token })
 
 export const editarConta = (token: string, dados: { nome: string; telefone: string }) =>
@@ -483,19 +497,6 @@ export const confirmarTrocaDeEmail = (token: string, dados: { desafioId: string;
 
 export const reenviarCodigoDoEmail = (token: string, desafioId: string) =>
   requisicao<Verificacao>('POST', '/api/conta/email/reenviar', { corpo: { desafioId }, token })
-
-export const listarDispositivos = (token: string) =>
-  requisicao<Dispositivo[]>('GET', '/api/conta/dispositivos', {
-    token,
-    // Para a API marcar qual é "este computador"
-    cabecalhos: lerLembrado() ? { 'X-Dispositivo': lerLembrado()!.token } : undefined,
-  })
-
-export const esquecerDispositivo = (token: string, id: string) =>
-  requisicao<void>('DELETE', `/api/conta/dispositivos/${id}`, { token })
-
-export const esquecerTodosDispositivos = (token: string) =>
-  requisicao<void>('DELETE', '/api/conta/dispositivos', { token })
 
 export const excluirConta = (token: string, dados: { senha: string; confirmacao: string }) =>
   requisicao<{ excluida: TipoExclusao }>('POST', '/api/conta/excluir', { corpo: dados, token })
@@ -525,35 +526,6 @@ export function sair() {
   try {
     localStorage.removeItem(SESSAO_KEY)
     localStorage.removeItem('orion-sessao-loja') // sessão das lojas, de versões anteriores
-  } catch {
-    // nada a limpar
-  }
-}
-
-// ---------- "Lembrar de quem sou" ----------
-
-/** Navegador lembrado: o e-mail já vem preenchido e o login não pede o código (por 30 dias). */
-export type Lembrado = { email: string; token: string }
-
-export function lerLembrado(): Lembrado | null {
-  try {
-    const bruto = localStorage.getItem(LEMBRAR_KEY)
-    return bruto ? (JSON.parse(bruto) as Lembrado) : null
-  } catch {
-    return null
-  }
-}
-
-export function salvarLembrado(lembrado: Lembrado) {
-  try {
-    localStorage.setItem(LEMBRAR_KEY, JSON.stringify(lembrado))
-  } catch {
-    // Sem armazenamento: o código volta a ser pedido no próximo login.
-  }
-}
-
-export function esquecerLembrado() {
-  try {
     localStorage.removeItem(LEMBRAR_KEY)
   } catch {
     // nada a limpar

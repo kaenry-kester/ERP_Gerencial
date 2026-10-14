@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { Aviso } from '../../../components/formulario/FaixaAviso'
 import { IconeBusca, IconeCaixa, IconeMais } from '../../../components/icones/Icones'
 import { IlustracaoProdutos } from '../../../components/icones/Ilustracoes'
+import { useLeitorCodigoBarras } from '../../../hooks/useLeitorCodigoBarras'
 import { useSessaoExpirada } from '../../../hooks/useSessaoExpirada'
 import { listarProdutos, mensagemDe, urlImagemProduto, type ListaProdutos } from '../../../services/api'
 import { formatarMoeda, formatarQuantidade } from '../../../utils/validacao'
@@ -35,6 +36,15 @@ export default function ProdutosPage() {
     }, 350)
     return () => window.clearTimeout(id)
   }, [busca])
+
+  // Leitor de código de barras: em qualquer lugar da lista, o código lido vira a busca na hora
+  // (substitui o que estava digitado) e aparece o produto com esse código de barras.
+  useLeitorCodigoBarras('produtos-busca', ({ codigo }) => {
+    setBusca(codigo)
+    setBuscaAplicada(codigo)
+    setPagina(1)
+    document.getElementById('produtos-busca')?.focus()
+  })
 
   useEffect(() => {
     if (!podeVer) return
@@ -87,7 +97,7 @@ export default function ProdutosPage() {
           <input
             id="produtos-busca"
             type="search"
-            placeholder="Nome, código, marca, modelo ou código de barras"
+            placeholder="Nome, código, marca, modelo ou use o leitor de código de barras"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
           />

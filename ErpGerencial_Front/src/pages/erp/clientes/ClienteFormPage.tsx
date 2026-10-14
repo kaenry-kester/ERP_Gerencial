@@ -6,14 +6,23 @@ import { IlustracaoClientes } from '../../../components/icones/Ilustracoes'
 import { useSessaoExpirada } from '../../../hooks/useSessaoExpirada'
 import {
   buscarCep,
+  cancelarEnviosCliente,
   criarCliente,
   editarCliente,
   ErroApi,
+  excluirFotoCliente,
+  excluirImagemMensagem,
   mensagemDe,
   obterCliente,
+  obterWhatsapp,
+  salvarFotoCliente,
+  salvarImagemMensagem,
+  salvarMensagemCliente,
+  urlFotoCliente,
+  urlImagemMensagem,
   type Cliente,
+  type ConfiguracaoWhatsapp,
   type DadosCliente,
-  type TipoIntervalo,
 } from '../../../services/api'
 import {
   apenasDigitos,
@@ -30,11 +39,22 @@ import FaixaPagina from '../FaixaPagina'
 import { tem } from '../modulos'
 import SemAcesso from '../SemAcesso'
 import CampoFicha from '../CampoFicha'
-import { envioMensalAPartirDeHoje, formatarCadastro, formatarDataHora, INTERVALO_MAXIMO } from './formatos'
+import CalendarioEnvio from './CalendarioEnvio'
+import FotoCliente from './FotoCliente'
+import JanelaMensagem from './JanelaMensagem'
+import {
+  formatarCadastro,
+  HORA_DO_ENVIO,
+  INTERVALO_MAXIMO,
+  calcularIntervalo,
+  diaDe,
+  proximosEnvios,
+} from './formatos'
 import '../../../styles/acesso.css'
 import './clientes.css'
 
-type Campo = keyof Omit<DadosCliente, 'intervaloManutencaoMeses' | 'envioEm'> | 'intervalo' | 'envio'
+/** Próximo envio: dia (calendário) e horário, em campos separados. */
+type Campo = keyof Omit<DadosCliente, 'envioEm' | 'manterEnvio'> | 'envioDia' | 'envioHora'
 type Valores = Record<Campo, string>
 
 const VAZIO: Valores = {
@@ -57,23 +77,40 @@ const VAZIO: Valores = {
   bairro: '',
   cidade: '',
   uf: '',
-  tipoIntervalo: 'meses',
-  intervalo: '',
-  envio: '',
+  envioDia: '',
+  envioHora: '',
 }
 
-/** Como a manutenção é marcada (o robô envia a mensagem na data resultante). */
-const TIPOS: { valor: TipoIntervalo; rotulo: string }[] = [
-  { valor: 'meses', rotulo: 'Mensalmente' },
-  { valor: 'data', rotulo: 'Data específica' },
-]
+/** Envios marcados no calendário (dá para navegar pelos meses e ver os seguintes). */
+const ENVIOS_NO_CALENDARIO = 24
 
-/** ISO (UTC) → valor do campo de data e hora ("2026-10-08T14:30", no horário do computador). */
-function paraCampoDataHora(iso: string | null) {
-  if (!iso) return ''
+const dois = (n: number) => String(n).padStart(2, '0')
+
+/** Data local → "2026-10-14" (valor do campo de data). */
+const paraCampoDia = (d: Date) => `${d.getFullYear()}-${dois(d.getMonth() + 1)}-${dois(d.getDate())}`
+
+/** ISO (UTC) → dia e horário dos campos ("2026-10-14" e "14:30", no horário do computador). */
+function paraCamposEnvio(iso: string | null) {
+  if (!iso) return { envioDia: '', envioHora: '' }
   const d = new Date(iso)
-  const dois = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${dois(d.getMonth() + 1)}-${dois(d.getDate())}T${dois(d.getHours())}:${dois(d.getMinutes())}`
+  return { envioDia: paraCampoDia(d), envioHora: `${dois(d.getHours())}:${dois(d.getMinutes())}` }
+}
+
+/** Horário sugerido ao escolher o dia: hoje, a próxima meia hora; nos outros dias, HORA_DO_ENVIO. */
+function sugerirHora(dia: string) {
+  const agora = new Date()
+  if (dia !== paraCampoDia(agora)) return HORA_DO_ENVIO
+  const proxima = new Date(agora.getTime() + (30 - (agora.getMinutes() % 30)) * 60_000)
+  return proxima.getDate() === agora.getDate() ? `${dois(proxima.getHours())}:${dois(proxima.getMinutes())}` : '23:59'
+}
+
+/** Dia e horário dos campos → data e hora local (null se faltar algum). */
+const envioDosCampos = (v: Valores) => (v.envioDia && v.envioHora ? new Date(`${v.envioDia}T${v.envioHora}`) : null)
+
+/** O envio dos campos é o mesmo já salvo (ao minuto)? Então ele e o intervalo ficam como estão. */
+const mesmoEnvio = (v: Valores, salvo: string | null | undefined) => {
+  const envio = envioDosCampos(v)
+  return !!envio && !!salvo && Math.abs(envio.getTime() - new Date(salvo).getTime()) < 60_000
 }
 
 const MASCARAS: Partial<Record<Campo, (v: string) => string>> = {
@@ -84,7 +121,6 @@ const MASCARAS: Partial<Record<Campo, (v: string) => string>> = {
   documento: formatarDocumento,
   cep: formatarCep,
   uf: (v) => v.replace(/[^a-z]/gi, '').slice(0, 2).toUpperCase(),
-  intervalo: (v) => apenasDigitos(v).slice(0, 3),
 }
 
 /** Ordem dos campos (a da ficha), para levar o cursor ao primeiro com erro. */
@@ -92,15 +128,15 @@ const ORDEM: Campo[] = [
   'nome',
   'documento',
   'dataNascimento',
-  'uf',
-  'cep',
-  'telefoneResidencial',
-  'telefoneComercial',
+  'dataCompra',
   'celular',
   'celular2',
-  'dataCompra',
-  'intervalo',
-  'envio',
+  'telefoneResidencial',
+  'telefoneComercial',
+  'cep',
+  'uf',
+  'envioDia',
+  'envioHora',
 ]
 
 /** Telefones extras da ficha: opcionais, mas completos quando preenchidos. */
@@ -126,12 +162,10 @@ const paraFormulario = (c: Cliente): Valores => ({
   bairro: c.bairro ?? '',
   cidade: c.cidade ?? '',
   uf: c.uf ?? '',
-  tipoIntervalo: c.tipoIntervalo,
-  intervalo: c.intervaloManutencaoMeses ? String(c.intervaloManutencaoMeses) : '',
-  envio: c.tipoIntervalo === 'data' ? paraCampoDataHora(c.envioEm) : '',
+  ...paraCamposEnvio(c.envioEm),
 })
 
-const paraApi = ({ intervalo, envio, tipoIntervalo, ...v }: Valores): DadosCliente => ({
+const paraApi = ({ envioDia, envioHora, ...v }: Valores): DadosCliente => ({
   ...v,
   celular: apenasDigitos(v.celular),
   celular2: apenasDigitos(v.celular2),
@@ -141,13 +175,12 @@ const paraApi = ({ intervalo, envio, tipoIntervalo, ...v }: Valores): DadosClien
   dataCompra: v.dataCompra || null,
   documento: normalizarCnpj(v.documento),
   cep: apenasDigitos(v.cep),
-  tipoIntervalo: tipoIntervalo as TipoIntervalo,
-  // Mensalmente: o servidor marca o envio (hoje + N meses, às 6h). Data específica: a data escolhida.
-  intervaloManutencaoMeses: tipoIntervalo === 'meses' && intervalo ? Number(intervalo) : null,
-  envioEm: tipoIntervalo === 'data' && envio ? new Date(envio).toISOString() : null,
+  // O servidor calcula o intervalo pela data: hoje 14/10 e próximo envio 14/12 → a cada 2 meses
+  envioEm: envioDosCampos({ envioDia, envioHora } as Valores)?.toISOString() ?? null,
 })
 
-function validar(v: Valores): Partial<Record<Campo, string>> {
+/** @param envioSalvo o envio já marcado (na edição): ele não precisa estar no futuro. */
+function validar(v: Valores, envioSalvo: string | null | undefined): Partial<Record<Campo, string>> {
   const erros: Partial<Record<Campo, string>> = {}
   if (!v.nome.trim()) erros.nome = 'Obrigatório'
   if (!v.celular) erros.celular = 'Obrigatório'
@@ -158,11 +191,13 @@ function validar(v: Valores): Partial<Record<Campo, string>> {
   const cep = apenasDigitos(v.cep)
   if (cep && cep.length !== 8) erros.cep = 'Incompleto'
   if (v.uf && v.uf.length !== 2) erros.uf = 'Ex.: SP'
-  if (v.tipoIntervalo === 'meses') {
-    const meses = Number(v.intervalo)
-    if (!v.intervalo) erros.intervalo = 'Obrigatório'
-    else if (meses < 1 || meses > INTERVALO_MAXIMO) erros.intervalo = `De 1 a ${INTERVALO_MAXIMO}`
-  } else if (!v.envio) erros.envio = 'Obrigatório'
+  if (v.envioHora && !v.envioDia) erros.envioDia = 'Escolha o dia'
+  else if (v.envioDia && !v.envioHora) erros.envioHora = 'Obrigatório'
+  else if (v.envioDia && !mesmoEnvio(v, envioSalvo)) {
+    if (envioDosCampos(v)!.getTime() <= Date.now()) erros.envioDia = 'Escolha uma data futura'
+    else if (envioDosCampos(v)!.getFullYear() > new Date().getFullYear() + INTERVALO_MAXIMO / 12)
+      erros.envioDia = 'No máximo 10 anos'
+  }
   return erros
 }
 
@@ -176,6 +211,9 @@ const TEXTO_CEP: Record<Exclude<EstadoCep, 'encontrado' | null>, string> = {
   'sem-conexao': 'Não foi possível buscar o CEP agora. Preencha o endereço.',
 }
 
+/** Foto: a salva, uma nova tirada pela webcam (enviada ao salvar) ou removida. */
+type Foto = { tipo: 'salva' } | { tipo: 'nova'; arquivo: Blob; url: string } | { tipo: 'removida' }
+
 /** Cadastro (/app/clientes/novo) e edição (/app/clientes/:id/editar) de cliente. */
 export default function ClienteFormPage() {
   const { id } = useParams()
@@ -185,9 +223,16 @@ export default function ClienteFormPage() {
   const sessaoExpirada = useSessaoExpirada()
   const [original, setOriginal] = useState<Cliente | null>(null)
   const [valores, setValores] = useState<Valores>(VAZIO)
+  const [foto, setFoto] = useState<Foto>({ tipo: 'salva' })
+  // Mensagem de WhatsApp deste cliente (texto e imagem): editada na janela, salva junto com o cadastro
+  const [mensagem, setMensagem] = useState('')
+  const [imagemMensagem, setImagemMensagem] = useState<Foto>({ tipo: 'salva' })
+  const [janelaMensagem, setJanelaMensagem] = useState(false)
+  const [padrao, setPadrao] = useState<ConfiguracaoWhatsapp | null>(null)
   const [enviado, setEnviado] = useState(false)
   const [salvando, setSalvando] = useState(false)
-  const [erroServidor, setErroServidor] = useState<Partial<Record<Campo, string>>>({})
+  const [cancelando, setCancelando] = useState(false)
+  const [erroServidor, setErroServidor] = useState<Partial<Record<Campo | 'foto', string>>>({})
   const [aviso, setAviso] = useState<Aviso>(null)
   const [estadoCep, setEstadoCep] = useState<EstadoCep>(null)
   // Campos preenchidos pelo CEP (ficam mais escuros até a pessoa mexer neles).
@@ -206,6 +251,7 @@ export default function ClienteFormPage() {
         cepBuscado.current = c.cep ?? ''
         setOriginal(c)
         setValores(paraFormulario(c))
+        setMensagem(c.mensagemWhatsapp ?? '')
       })
       .catch((e) => ativo && !sessaoExpirada(e) && setAviso({ tipo: 'erro', texto: mensagemDe(e) }))
     return () => {
@@ -213,6 +259,26 @@ export default function ClienteFormPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, sessao.token, permitido])
+
+  // Mensagem padrão da empresa: prévia na janela da mensagem quando o cliente não tem texto próprio
+  useEffect(() => {
+    if (!permitido) return
+    let ativo = true
+    obterWhatsapp(sessao.token).then((c) => ativo && setPadrao(c)).catch(() => {})
+    return () => {
+      ativo = false
+    }
+  }, [sessao.token, permitido])
+
+  // Foto ou imagem nova: libera da memória ao trocar ou sair da página
+  useEffect(() => {
+    if (foto.tipo !== 'nova') return
+    return () => URL.revokeObjectURL(foto.url)
+  }, [foto])
+  useEffect(() => {
+    if (imagemMensagem.tipo !== 'nova') return
+    return () => URL.revokeObjectURL(imagemMensagem.url)
+  }, [imagemMensagem])
 
   // CEP completo: busca o endereço e preenche os campos da ficha.
   const cep = apenasDigitos(valores.cep)
@@ -255,14 +321,19 @@ export default function ClienteFormPage() {
     )
   }
 
-  const erros = { ...erroServidor, ...(enviado ? validar(valores) : {}) }
+  const erros = { ...erroServidor, ...(enviado ? validar(valores, original?.envioEm) : {}) }
 
   const campo = (c: Campo) => ({
     id: `cliente-${c}`,
     valor: valores[c],
     erro: erros[c],
     onChange: (v: string) => {
-      setValores((atual) => ({ ...atual, [c]: MASCARAS[c]?.(v) ?? v }))
+      setValores((atual) => ({
+        ...atual,
+        [c]: MASCARAS[c]?.(v) ?? v,
+        // Escolheu o dia no calendário: já sugere o horário do envio
+        ...(c === 'envioDia' && v && !atual.envioHora ? { envioHora: sugerirHora(v) } : {}),
+      }))
       setDoCep((lista) => lista.filter((x) => x !== c))
       if (c === 'cep' && apenasDigitos(v).length < 8) setEstadoCep(null)
       setErroServidor({})
@@ -270,11 +341,37 @@ export default function ClienteFormPage() {
     },
   })
 
+  /**
+   * Depois de salvar o cadastro: a foto e a mensagem de WhatsApp (texto e imagem), quando mudaram.
+   * Devolve o que não deu certo, se houver.
+   */
+  const salvarExtras = async (clienteId: string) => {
+    const falhas: string[] = []
+    const tentar = async (oQue: string, acao: () => Promise<unknown>) => {
+      try {
+        await acao()
+      } catch (erro) {
+        if (sessaoExpirada(erro)) throw erro
+        falhas.push(`${oQue}: ${mensagemDe(erro)}`)
+      }
+    }
+    if (foto.tipo === 'nova') await tentar('a foto', () => salvarFotoCliente(sessao.token, clienteId, foto.arquivo))
+    else if (foto.tipo === 'removida' && original?.fotoId)
+      await tentar('a foto', () => excluirFotoCliente(sessao.token, clienteId))
+    if (mensagem.trim() !== (original?.mensagemWhatsapp ?? ''))
+      await tentar('a mensagem', () => salvarMensagemCliente(sessao.token, clienteId, mensagem))
+    if (imagemMensagem.tipo === 'nova')
+      await tentar('a imagem da mensagem', () => salvarImagemMensagem(sessao.token, imagemMensagem.arquivo, clienteId))
+    else if (imagemMensagem.tipo === 'removida' && original?.mensagemImagemId)
+      await tentar('a imagem da mensagem', () => excluirImagemMensagem(sessao.token, clienteId))
+    return falhas.length ? falhas.join('; ') : null
+  }
+
   const salvar = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (salvando) return
     setEnviado(true)
-    const invalido = ORDEM.find((c) => validar(valores)[c])
+    const invalido = ORDEM.find((c) => validar(valores, original?.envioEm)[c])
     if (invalido) {
       document.getElementById(`cliente-${invalido}`)?.focus()
       return
@@ -282,19 +379,29 @@ export default function ClienteFormPage() {
     setSalvando(true)
     setAviso(null)
     try {
-      if (novo) {
+      // Calendário intocado: o envio automático pode ter avançado o próximo envio enquanto o cadastro estava aberto
+      const intocado = paraCamposEnvio(original?.envioEm ?? null)
+      const manterEnvio = valores.envioDia === intocado.envioDia && valores.envioHora === intocado.envioHora
+      const cliente = novo
+        ? await criarCliente(sessao.token, paraApi(valores))
+        : await editarCliente(sessao.token, id!, { ...paraApi(valores), manterEnvio })
+      const falhas = await salvarExtras(cliente.id)
+      if (falhas) {
+        // O cadastro foi salvo; só a foto ou a mensagem não: mostra o aviso na ficha do cliente
+        navigate(`/app/clientes/${cliente.id}`, {
+          state: { aviso: { tipo: 'erro', texto: `Cliente salvo, mas não foi possível salvar ${falhas}` } },
+        })
+      } else if (novo) {
         // Volta para a lista, onde o cliente novo aparece no topo (sem aviso)
-        await criarCliente(sessao.token, paraApi(valores))
         navigate('/app/clientes')
       } else {
-        await editarCliente(sessao.token, id!, paraApi(valores))
         // Volta para a ficha do cliente (sem aviso)
         navigate(`/app/clientes/${id}`)
       }
     } catch (erro) {
       if (sessaoExpirada(erro)) return
       if (erro instanceof ErroApi && erro.campo) {
-        const c = ({ intervaloManutencaoMeses: 'intervalo', envioEm: 'envio' }[erro.campo] ?? erro.campo) as Campo
+        const c = (erro.campo === 'envioEm' ? 'envioDia' : erro.campo) as Campo
         setErroServidor({ [c]: erro.message })
         document.getElementById(`cliente-${c}`)?.focus()
       }
@@ -303,25 +410,57 @@ export default function ClienteFormPage() {
     }
   }
 
+  /**
+   * "Cancelar envios automáticos". Na edição de um cliente com envio marcado, cancela na hora (nada mais é enviado);
+   * no cadastro novo (ou se o envio ainda não foi salvo), só limpa a data.
+   */
+  const cancelarEnvios = async () => {
+    setErroServidor({})
+    setAviso(null)
+    if (novo || !original?.envioEm) {
+      setValores((atual) => ({ ...atual, envioDia: '', envioHora: '' }))
+      return
+    }
+    setCancelando(true)
+    try {
+      const atualizado = await cancelarEnviosCliente(sessao.token, id!)
+      setOriginal(atualizado)
+      setValores((atual) => ({ ...atual, envioDia: '', envioHora: '' }))
+      setAviso({ tipo: 'ok', texto: 'Envios automáticos cancelados. Nenhuma mensagem será enviada para este cliente.' })
+    } catch (erro) {
+      if (!sessaoExpirada(erro)) setAviso({ tipo: 'erro', texto: mensagemDe(erro) })
+    } finally {
+      setCancelando(false)
+    }
+  }
+
   // Colunas da grade + "do-cep" (fundo mais escuro) nos campos preenchidos pelo CEP
   const colunas = (c: Campo, base: string) => (doCep.includes(c) ? `${base} do-cep` : base)
 
   const voltar = novo ? '/app/clientes' : `/app/clientes/${id}`
-  const mensal = valores.tipoIntervalo === 'meses'
-  const meses = Number(valores.intervalo)
-  // Próximo envio. Mensalmente: o que já está marcado (se o intervalo não mudou) ou hoje + N meses, às 6h.
-  // Data específica: a data e hora escolhidas.
-  const mantem =
-    original?.tipoIntervalo === 'meses' && original.intervaloManutencaoMeses === meses && !!original.envioEm
-  const previa = mensal
-    ? meses >= 1 && meses <= INTERVALO_MAXIMO
-      ? mantem
-        ? formatarDataHora(original!.envioEm!)
-        : envioMensalAPartirDeHoje(meses)
-      : null
-    : valores.envio
-      ? formatarDataHora(new Date(valores.envio).toISOString())
-      : null
+  const imagemMensagemUrl =
+    imagemMensagem.tipo === 'nova'
+      ? imagemMensagem.url
+      : imagemMensagem.tipo === 'salva' && original?.mensagemImagemId
+        ? urlImagemMensagem(original.mensagemImagemId)
+        : null
+  const urlFoto =
+    foto.tipo === 'nova' ? foto.url : foto.tipo === 'salva' && original?.fotoId ? urlFotoCliente(original.fotoId) : null
+
+  // Envios agendados: o próximo (escolhido no calendário) e os seguintes, a cada intervalo.
+  // Intervalo = a diferença entre agora e o próximo envio (ou o já salvo, se o envio não mudou).
+  const diaValido = /^\d{4}-\d{2}-\d{2}$/.test(valores.envioDia)
+  const envio = diaValido ? envioDosCampos({ ...valores, envioHora: valores.envioHora || HORA_DO_ENVIO }) : null
+  const intervalo =
+    envio && mesmoEnvio(valores, original?.envioEm) && original?.intervaloQuantidade
+      ? { quantidade: original.intervaloQuantidade, unidade: original.intervaloUnidade }
+      : envio && envio.getTime() > Date.now()
+        ? calcularIntervalo(envio)
+        : null
+  // Dias marcados no calendário (com intervalos de minutos ou horas, só os dias em que cai algum envio)
+  const agendados = envio
+    ? [...new Set((intervalo ? proximosEnvios(envio, intervalo, ENVIOS_NO_CALENDARIO) : [envio]).map(diaDe))]
+    : []
 
   return (
     <div className="pagina tema-clientes">
@@ -332,58 +471,120 @@ export default function ClienteFormPage() {
         voltar={{ para: voltar, rotulo: novo ? 'Clientes' : original!.nome }}
       />
 
+      <JanelaMensagem
+        aberto={janelaMensagem}
+        onFechar={() => setJanelaMensagem(false)}
+        texto={mensagem}
+        onTexto={(t) => {
+          setMensagem(t)
+          setAviso(null)
+        }}
+        imagemUrl={imagemMensagemUrl}
+        onImagem={(arquivo) => setImagemMensagem({ tipo: 'nova', arquivo, url: URL.createObjectURL(arquivo) })}
+        onRemoverImagem={() => setImagemMensagem({ tipo: 'removida' })}
+        padrao={
+          padrao && {
+            texto: padrao.mensagem ?? '',
+            imagemUrl: padrao.imagemId ? urlImagemMensagem(padrao.imagemId) : null,
+          }
+        }
+        nomeCliente={valores.nome}
+        empresa={sessao.empresa.nome}
+        envio={envio}
+      />
+
       {/* Ficha do cliente (como o registro em papel), centralizada e compacta: cabe na tela sem rolar */}
       <form className="ficha-pagina" onSubmit={salvar} noValidate>
         <div className="ficha-area">
           <div className="ficha" role="group" aria-label="Registro de cliente">
-            <CampoFicha {...campo('nome')} rotulo="Nome completo" obrigatorio maxLength={200} className="c6" />
-            <CampoFicha {...campo('documento')} rotulo="CPF / CNPJ" placeholder="000.000.000-00" className="c3" />
-            <CampoFicha {...campo('dataNascimento')} rotulo="Data de nascimento" type="date" className="c3" />
+            {/* Foto no canto de cima, ao lado dos dados pessoais e dos telefones */}
+            <div className="ficha-topo c12">
+              <FotoCliente
+                url={urlFoto}
+                erro={erroServidor.foto}
+                onEscolher={(arquivo) => setFoto({ tipo: 'nova', arquivo, url: URL.createObjectURL(arquivo) })}
+                onRemover={() => setFoto({ tipo: 'removida' })}
+              />
+              <div className="ficha-grade">
+                <CampoFicha {...campo('nome')} rotulo="Nome completo" obrigatorio maxLength={200} className="c9" />
+                <CampoFicha {...campo('documento')} rotulo="CPF / CNPJ" placeholder="000.000.000-00" className="c3" />
 
-            <CampoFicha {...campo('logradouro')} rotulo="Endereço" maxLength={150} className={colunas('logradouro', 'c6')} />
-            <CampoFicha {...campo('numeroEndereco')} rotulo="Nº" maxLength={20} className="c2" />
-            <CampoFicha {...campo('bairro')} rotulo="Bairro" maxLength={100} className={colunas('bairro', 'c4')} />
+                <CampoFicha {...campo('dataNascimento')} rotulo="Data de nascimento" type="date" className="c3" />
+                <CampoFicha {...campo('conjuge')} rotulo="Cônjuge" maxLength={200} className="c6" />
+                <CampoFicha {...campo('dataCompra')} rotulo="Data da compra" type="date" className="c3" />
 
-            <CampoFicha {...campo('complemento')} rotulo="Complemento" maxLength={100} placeholder="Apto, bloco, fundos..." className="c4" />
-            <CampoFicha {...campo('cidade')} rotulo="Cidade" maxLength={100} className={colunas('cidade', 'c4')} />
-            <CampoFicha {...campo('uf')} rotulo="Estado" placeholder="SP" className={colunas('uf', 'c1')} />
-            <CampoFicha {...campo('cep')} rotulo="CEP" inputMode="numeric" placeholder="00000-000" className="c3" />
+                <CampoFicha {...campo('celular')} rotulo="Celular" obrigatorio type="tel" inputMode="numeric" icone="/imgs/whatsapp.png" className="c3" />
+                <CampoFicha {...campo('celular2')} rotulo="Celular 2" type="tel" inputMode="numeric" icone="/imgs/whatsapp.png" className="c3" />
+                <CampoFicha {...campo('telefoneResidencial')} rotulo="Fone residencial" type="tel" inputMode="numeric" className="c3" />
+                <CampoFicha {...campo('telefoneComercial')} rotulo="Fone comercial" type="tel" inputMode="numeric" className="c3" />
+              </div>
+            </div>
 
-            <CampoFicha {...campo('pontoReferencia')} rotulo="Ponto de referência" maxLength={200} className="c12" />
+            {/* Embaixo: endereço à esquerda e o envio automático no canto direito */}
+            <div className="ficha-base c12">
+              <div className="ficha-grade">
+                <CampoFicha {...campo('cep')} rotulo="CEP" inputMode="numeric" placeholder="00000-000" className="c4" />
+                <CampoFicha {...campo('logradouro')} rotulo="Endereço" maxLength={150} className={colunas('logradouro', 'c8')} />
 
-            <CampoFicha {...campo('telefoneResidencial')} rotulo="Fone residencial" type="tel" inputMode="numeric" className="c3" />
-            <CampoFicha {...campo('telefoneComercial')} rotulo="Fone comercial" type="tel" inputMode="numeric" className="c3" />
-            <CampoFicha {...campo('celular')} rotulo="Celular (WhatsApp)" obrigatorio type="tel" inputMode="numeric" className="c3" />
-            <CampoFicha {...campo('celular2')} rotulo="Celular 2" type="tel" inputMode="numeric" className="c3" />
+                <CampoFicha {...campo('numeroEndereco')} rotulo="Número" maxLength={20} className="c3" />
+                <CampoFicha {...campo('complemento')} rotulo="Complemento" maxLength={100} placeholder="Apto, bloco..." className="c4" />
+                <CampoFicha {...campo('bairro')} rotulo="Bairro" maxLength={100} className={colunas('bairro', 'c5')} />
 
-            <CampoFicha {...campo('conjuge')} rotulo="Cônjuge" maxLength={200} className="c9" />
-            <CampoFicha {...campo('dataCompra')} rotulo="Data da compra" type="date" className="c3" />
+                <CampoFicha {...campo('cidade')} rotulo="Cidade" maxLength={100} className={colunas('cidade', 'c5')} />
+                <CampoFicha {...campo('uf')} rotulo="UF" placeholder="SP" className={colunas('uf', 'c2')} />
+                <CampoFicha {...campo('pontoReferencia')} rotulo="Ponto de referência" maxLength={200} className="c5" />
 
-            {/* Tópico da ficha: quando a mensagem automática de manutenção sai */}
-            <h2 className="ficha-topico">Manutenção e envio</h2>
-            <CampoFicha {...campo('tipoIntervalo')} rotulo="Intervalo de manutenção" obrigatorio opcoes={TIPOS} className="c4" />
-            {mensal ? (
-              <CampoFicha {...campo('intervalo')} rotulo="A cada quantos meses" obrigatorio inputMode="numeric" placeholder="Ex.: 6" className="c4" />
-            ) : (
-              <CampoFicha {...campo('envio')} rotulo="Data e horário do envio" obrigatorio type="datetime-local" className="c4" />
-            )}
-            {/* O robô envia a mensagem de WhatsApp nesta data */}
-            <div className="ficha-campo ficha-previa c4" aria-live="polite">
-              <span className="ficha-rotulo">Envio da mensagem</span>
-              <span className="ficha-previa-valor">
-                {previa ?? (mensal ? 'Às 6h, a cada N meses' : 'Na data e hora escolhidas')}
-              </span>
+                {/* Nota no espaço livre embaixo do endereço: sobra altura para o calendário */}
+                <p className="ficha-nota c12">
+                  <span aria-hidden="true">*</span> Obrigatório. O celular recebe a mensagem automática.
+                  {estadoCep && estadoCep !== 'encontrado' && (
+                    <strong className={estadoCep === 'buscando' ? 'ficha-cep' : 'ficha-cep erro'} role="status">
+                      {TEXTO_CEP[estadoCep]}
+                    </strong>
+                  )}
+                </p>
+              </div>
+
+              {/* Calendário: clicar num dia marca o próximo envio da mensagem; os seguintes saem a cada N meses */}
+              <section className="ficha-envio" aria-labelledby="cliente-envio-titulo">
+                <div className="ficha-topico ficha-envio-cabecalho">
+                  <h2 id="cliente-envio-titulo">Calendário</h2>
+                  {/* A mensagem que sai nas datas do calendário (texto, emojis e imagem) */}
+                  <button type="button" className="ficha-envio-mensagem" onClick={() => setJanelaMensagem(true)}>
+                    <span aria-hidden="true">💬</span> Mensagem do WhatsApp
+                    {(mensagem.trim() || imagemMensagemUrl) && <span className="ficha-envio-mensagem-marca">personalizada</span>}
+                  </button>
+                </div>
+                <div className="ficha-envio-corpo">
+                  <CalendarioEnvio
+                    id="cliente-envioDia"
+                    dia={valores.envioDia}
+                    agendados={agendados}
+                    mesesMaximo={INTERVALO_MAXIMO}
+                    erro={erros.envioDia}
+                    onEscolher={campo('envioDia').onChange}
+                  />
+
+                  {/* Horário e os envios já agendados: o robô manda cada um e marca o seguinte */}
+                  <div className="ficha-envio-agenda" aria-live="polite">
+                    <CampoFicha {...campo('envioHora')} rotulo="Selecione o horário do envio" type="time" />
+                    {/* O intervalo e as datas seguintes são salvos, mas não aparecem aqui (só marcados no calendário) */}
+                    {!diaValido && (
+                      <p className="ficha-envio-vazio">
+                        Clique no dia do próximo envio. O intervalo é calculado sozinho: de hoje até o dia escolhido.
+                      </p>
+                    )}
+                    {(diaValido || original?.envioEm) && (
+                      <button type="button" className="ficha-envio-cancelar" onClick={cancelarEnvios} disabled={cancelando}>
+                        {cancelando ? 'Cancelando...' : 'Cancelar envios automáticos'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </section>
             </div>
           </div>
 
-          <p className="ficha-nota">
-            <span aria-hidden="true">*</span> Obrigatório. O celular (WhatsApp) recebe a mensagem automática.
-            {estadoCep && estadoCep !== 'encontrado' && (
-              <strong className={estadoCep === 'buscando' ? 'ficha-cep' : 'ficha-cep erro'} role="status">
-                {TEXTO_CEP[estadoCep]}
-              </strong>
-            )}
-          </p>
         </div>
 
         <div className="pagina-barra">

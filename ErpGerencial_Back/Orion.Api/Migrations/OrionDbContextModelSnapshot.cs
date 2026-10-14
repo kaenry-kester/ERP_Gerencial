@@ -95,9 +95,17 @@ namespace Orion.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("envio_em");
 
-                    b.Property<int?>("IntervaloManutencaoMeses")
+                    b.Property<int?>("IntervaloQuantidade")
                         .HasColumnType("integer")
-                        .HasColumnName("intervalo_manutencao_meses");
+                        .HasColumnName("intervalo_quantidade");
+
+                    b.Property<string>("IntervaloUnidade")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("meses")
+                        .HasColumnName("intervalo_unidade");
 
                     b.Property<string>("Logradouro")
                         .HasMaxLength(150)
@@ -170,6 +178,40 @@ namespace Orion.Api.Migrations
                     b.ToTable("clientes", (string)null);
                 });
 
+            modelBuilder.Entity("Orion.Api.Data.ClienteFoto", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ClienteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cliente_id");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<byte[]>("Dados")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("dados");
+
+                    b.Property<string>("TipoConteudo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tipo_conteudo");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClienteId")
+                        .IsUnique();
+
+                    b.ToTable("cliente_fotos", (string)null);
+                });
+
             modelBuilder.Entity("Orion.Api.Data.CodigoLogin", b =>
                 {
                     b.Property<Guid>("Id")
@@ -222,50 +264,6 @@ namespace Orion.Api.Migrations
                     b.HasIndex("UsuarioId");
 
                     b.ToTable("codigos_login", (string)null);
-                });
-
-            modelBuilder.Entity("Orion.Api.Data.DispositivoConfiavel", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CriadoEm")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("criado_em");
-
-                    b.Property<string>("Descricao")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)")
-                        .HasColumnName("descricao");
-
-                    b.Property<DateTime>("ExpiraEm")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("expira_em");
-
-                    b.Property<string>("TokenHash")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("token_hash");
-
-                    b.Property<DateTime>("UltimoUsoEm")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("ultimo_uso_em");
-
-                    b.Property<Guid>("UsuarioId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("usuario_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TokenHash")
-                        .IsUnique();
-
-                    b.HasIndex("UsuarioId");
-
-                    b.ToTable("dispositivos_confiaveis", (string)null);
                 });
 
             modelBuilder.Entity("Orion.Api.Data.Empresa", b =>
@@ -387,6 +385,49 @@ namespace Orion.Api.Migrations
                     b.HasIndex("EmpresaId", "CriadoEm");
 
                     b.ToTable("envios_whatsapp", (string)null);
+                });
+
+            modelBuilder.Entity("Orion.Api.Data.MensagemImagem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ClienteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cliente_id");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<byte[]>("Dados")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("dados");
+
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<string>("TipoConteudo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tipo_conteudo");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClienteId")
+                        .IsUnique()
+                        .HasFilter("cliente_id IS NOT NULL");
+
+                    b.HasIndex("EmpresaId")
+                        .IsUnique()
+                        .HasFilter("cliente_id IS NULL");
+
+                    b.ToTable("mensagem_imagens", (string)null);
                 });
 
             modelBuilder.Entity("Orion.Api.Data.Produto", b =>
@@ -599,18 +640,18 @@ namespace Orion.Api.Migrations
                     b.Navigation("Empresa");
                 });
 
-            modelBuilder.Entity("Orion.Api.Data.CodigoLogin", b =>
+            modelBuilder.Entity("Orion.Api.Data.ClienteFoto", b =>
                 {
-                    b.HasOne("Orion.Api.Data.Usuario", "Usuario")
+                    b.HasOne("Orion.Api.Data.Cliente", "Cliente")
                         .WithMany()
-                        .HasForeignKey("UsuarioId")
+                        .HasForeignKey("ClienteId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Usuario");
+                    b.Navigation("Cliente");
                 });
 
-            modelBuilder.Entity("Orion.Api.Data.DispositivoConfiavel", b =>
+            modelBuilder.Entity("Orion.Api.Data.CodigoLogin", b =>
                 {
                     b.HasOne("Orion.Api.Data.Usuario", "Usuario")
                         .WithMany()
@@ -636,6 +677,20 @@ namespace Orion.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Cliente");
+                });
+
+            modelBuilder.Entity("Orion.Api.Data.MensagemImagem", b =>
+                {
+                    b.HasOne("Orion.Api.Data.Cliente", null)
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Orion.Api.Data.Empresa", null)
+                        .WithMany()
+                        .HasForeignKey("EmpresaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Orion.Api.Data.Produto", b =>

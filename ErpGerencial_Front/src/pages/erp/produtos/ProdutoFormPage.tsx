@@ -310,10 +310,10 @@ export default function ProdutoFormPage() {
             <CampoFicha {...campo('modelo')} rotulo="Modelo" maxLength={80} className="c3" />
             <CampoFicha {...campo('cor')} rotulo="Cor" maxLength={50} className="c3" />
             <CampoFicha {...campo('voltagem')} rotulo="Voltagem" opcoes={opcoesVoltagem(valores.voltagem)} className="c3" />
-            <CampoFicha {...campo('observacao')} rotulo="Observação" linhas={2} maxLength={2000} className="c12" />
-
-            <h2 className="ficha-topico">Imagens</h2>
-            <div id="produto-imagens-celula" className="ficha-campo ficha-imagens c12">
+            {/* Observação e imagens lado a lado: o cadastro inteiro cabe na tela sem rolar */}
+            <CampoFicha {...campo('observacao')} rotulo="Observação" linhas={4} maxLength={2000} className="c5" />
+            <div id="produto-imagens-celula" className="ficha-campo ficha-imagens c7">
+              <span className="ficha-rotulo">Imagens</span>
               <ImagensProduto
                 imagens={imagens}
                 alterar={(atualizar) => {

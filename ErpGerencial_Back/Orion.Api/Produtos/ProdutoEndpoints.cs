@@ -82,8 +82,11 @@ public static class ProdutoEndpoints
 
         var numeroPagina = Math.Max(1, pagina ?? 1);
         var total = await consulta.CountAsync();
+        // O produto com o código (ou código de barras) igual ao buscado vem primeiro (ex.: leitura do leitor).
+        var exato = busca?.Trim() ?? "";
         var itens = await consulta
-            .OrderByDescending(p => p.Numero)
+            .OrderByDescending(p => p.CodigoBarras == exato || p.Codigo == exato)
+            .ThenByDescending(p => p.Numero)
             .Skip((numeroPagina - 1) * TamanhoPagina)
             .Take(TamanhoPagina)
             .ToListAsync();

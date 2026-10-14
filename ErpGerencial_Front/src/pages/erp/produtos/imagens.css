@@ -187,7 +187,7 @@
 }
 
 .ficha-imagens .imagens-grade {
-  grid-template-columns: repeat(auto-fill, 84px);
+  grid-template-columns: repeat(auto-fill, 76px);
   gap: 0.5rem;
 }
 

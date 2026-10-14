@@ -1,7 +1,7 @@
 /* ---------- Ficha de cadastro (clientes e produtos) ----------
-   Inspirada no registro em papel: grade de células separadas por linhas finas, rótulo pequeno no canto
-   de cima de cada célula e o campo sem borda (exceção pedida às regras "sem bordas"). Centralizada e
-   compacta, para o cadastro inteiro caber numa tela de notebook sem rolar. As cores vêm do tema da página
+   Inspirada no registro em papel (pedido de 2026-10-14): folha branca, rótulo em negrito em cima de cada campo e o
+   campo numa caixa retangular de linha fina (exceção pedida às regras "sem bordas"). Centralizada e compacta, para o
+   cadastro inteiro caber numa tela de notebook sem rolar. As cores vêm do tema da página
    (.pagina.tema-clientes azul; .pagina.tema-produtos marrom e creme). */
 
 .ficha-pagina {
@@ -12,50 +12,46 @@
 
 .ficha-area {
   width: min(1060px, 100% - 2 * var(--erp-lado));
-  margin: clamp(0.25rem, 1vh, 1.25rem) auto;
+  margin: clamp(0.15rem, 0.6vh, 1.25rem) auto;
 }
 
+/* A folha: grade de 12 colunas. .ficha-grade é uma grade igual dentro da folha (ao lado da foto, por exemplo). */
 .ficha {
-  --ficha-linha: #b7c5ce;
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  border-top: 1px solid var(--ficha-linha);
-  border-left: 1px solid var(--ficha-linha);
+  --ficha-linha: #7d8c96;
+  --ficha-gap: clamp(0.35rem, 1.1vh, 0.6rem) 0.75rem;
+  padding: clamp(0.5rem, 1.2vh, 1rem) clamp(0.75rem, 1.5vw, 1.1rem);
   background: #fff;
 }
 
 .tema-produtos .ficha {
-  --ficha-linha: #d2c39d;
+  --ficha-linha: #a08a62;
 }
 
-.ficha > .c1 { grid-column: span 1; }
-.ficha > .c2 { grid-column: span 2; }
-.ficha > .c3 { grid-column: span 3; }
-.ficha > .c4 { grid-column: span 4; }
-.ficha > .c6 { grid-column: span 6; }
-.ficha > .c9 { grid-column: span 9; }
-.ficha > .c12 { grid-column: span 12; }
+.ficha,
+.ficha-grade {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--ficha-gap);
+  align-content: start;
+}
 
+:is(.ficha, .ficha-grade) > .c1 { grid-column: span 1; }
+:is(.ficha, .ficha-grade) > .c2 { grid-column: span 2; }
+:is(.ficha, .ficha-grade) > .c3 { grid-column: span 3; }
+:is(.ficha, .ficha-grade) > .c4 { grid-column: span 4; }
+:is(.ficha, .ficha-grade) > .c5 { grid-column: span 5; }
+:is(.ficha, .ficha-grade) > .c6 { grid-column: span 6; }
+:is(.ficha, .ficha-grade) > .c7 { grid-column: span 7; }
+:is(.ficha, .ficha-grade) > .c8 { grid-column: span 8; }
+:is(.ficha, .ficha-grade) > .c9 { grid-column: span 9; }
+:is(.ficha, .ficha-grade) > .c12 { grid-column: span 12; }
+
+/* Campo: rótulo em cima, caixa embaixo */
 .ficha-campo {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  padding: 0.18rem 0.65rem 0.15rem;
-  border-right: 1px solid var(--ficha-linha);
-  border-bottom: 1px solid var(--ficha-linha);
-  transition:
-    background-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-/* Célula em uso: fundo claro do tema e uma linha na cor do tema embaixo */
-.ficha-campo:focus-within {
-  background: var(--pg-lado, var(--azul-claro));
-  box-shadow: inset 0 -2px 0 var(--pg-cor, var(--azul));
-}
-
-.ficha-campo.com-erro {
-  background: var(--erro-fundo);
+  gap: 0.15rem;
 }
 
 .ficha-cabecalho {
@@ -70,11 +66,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.66rem;
+  font-size: 0.78rem;
   font-weight: 700;
   line-height: 1.25;
-  letter-spacing: 0.02em;
-  color: var(--texto-suave);
+  color: var(--texto);
 }
 
 .ficha-obrigatorio,
@@ -84,38 +79,82 @@
 
 .ficha-erro {
   flex-shrink: 0;
-  font-size: 0.66rem;
+  font-size: 0.7rem;
   font-weight: 700;
   line-height: 1.25;
   color: var(--erro);
 }
 
-.ficha-campo :is(input, select, textarea) {
+/* A caixa do campo (input, lista, texto longo ou campo com ícone) */
+.ficha-campo > :is(input, select, textarea),
+.ficha-com-icone {
   width: 100%;
-  min-height: 1.3rem;
-  padding: 0;
-  border: none;
-  background: transparent;
+  min-height: clamp(1.85rem, 4.2vh, 2.15rem);
+  padding: 0 0.5rem;
+  border: 1px solid var(--ficha-linha);
+  border-radius: 2px;
+  background: #fff;
   font: inherit;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   line-height: 1.3;
   color: var(--texto);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-.ficha-campo :is(input, select, textarea):focus {
+.ficha-campo textarea {
+  padding-block: 0.3rem;
+  resize: none;
+}
+
+/* Em uso: linha na cor do tema, um pouco mais grossa */
+.ficha-campo > :is(input, select, textarea):focus,
+.ficha-com-icone:focus-within {
   outline: none;
+  border-color: var(--pg-cor, var(--azul));
+  box-shadow: 0 0 0 1px var(--pg-cor, var(--azul));
+}
+
+.ficha-campo.com-erro > :is(input, select, textarea),
+.ficha-campo.com-erro .ficha-com-icone {
+  border-color: var(--erro);
+  background: var(--erro-fundo);
 }
 
 .ficha-campo select {
   cursor: pointer;
 }
 
-.ficha-campo textarea {
-  resize: none;
-}
-
 .ficha-campo :is(input, textarea)::placeholder {
   color: #9aa6ae;
+}
+
+/* Campo com imagem à esquerda (ex.: ícone do WhatsApp nos celulares): a caixa é o contorno de fora */
+.ficha-com-icone {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ficha-com-icone img {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+}
+
+.ficha-com-icone input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+}
+
+.ficha-com-icone input:focus {
+  outline: none;
 }
 
 /* Campos com sugestões (ex.: Voltagem): sem a setinha do navegador; as sugestões aparecem ao digitar */
@@ -123,12 +162,11 @@
   display: none !important;
 }
 
-/* Tópico dentro da ficha (ex.: "Manutenção e envio", "Preços e estoque"): uma faixa de ponta a ponta */
+/* Tópico dentro da ficha (ex.: "Preços e estoque"): título na cor do tema, de ponta a ponta */
 .ficha-topico {
   grid-column: 1 / -1;
-  padding: 0.3rem 0.75rem;
-  border-right: 1px solid var(--ficha-linha);
-  border-bottom: 1px solid var(--ficha-linha);
+  margin-top: 0.2rem;
+  padding: 0.25rem 0.6rem;
   background: var(--pg-lado, var(--azul-claro));
   font-size: 0.74rem;
   font-weight: 800;
@@ -145,20 +183,27 @@
 
 /* Tablets: 6 colunas (os campos longos ocupam a linha toda) */
 @media (max-width: 1100px) {
-  .ficha {
+  .ficha,
+  .ficha-grade {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
-  .ficha > :is(.c6, .c9, .c12) { grid-column: span 6; }
-  .ficha > :is(.c3, .c4) { grid-column: span 3; }
-  .ficha > :is(.c1, .c2) { grid-column: span 3; }
+  :is(.ficha, .ficha-grade) > :is(.c6, .c8, .c9, .c12) { grid-column: span 6; }
+  :is(.ficha, .ficha-grade) > :is(.c3, .c4, .c5, .c7) { grid-column: span 3; }
+  :is(.ficha, .ficha-grade) > :is(.c1, .c2) { grid-column: span 3; }
 }
 
 /* Celular: um campo por linha */
 @media (max-width: 600px) {
-  .ficha {
+  .ficha,
+  .ficha-grade {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .ficha > [class*='c'] { grid-column: auto; }
+  :is(.ficha, .ficha-grade) > [class*='c'] { grid-column: auto; }
+}
+
+/* Data e horário: a caixa inteira abre o seletor (ver CampoFicha) */
+.ficha-campo input:is([type='date'], [type='time'], [type='datetime-local']) {
+  cursor: pointer;
 }

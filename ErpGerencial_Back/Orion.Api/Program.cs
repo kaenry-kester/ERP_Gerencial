@@ -25,7 +25,11 @@ builder.Services.AddDbContext<OrionDbContext>(o => o.UseNpgsql(conexao));
 builder.Services.AddScoped<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>();
 builder.Services.AddSingleton<TokenService>();
 builder.Services.AddSingleton<EmailService>();
-builder.Services.AddHttpClient<WhatsAppService>(c => c.Timeout = TimeSpan.FromSeconds(20));
+// Envio automático das mensagens de WhatsApp: roda em segundo plano dentro da API (ver WhatsApp/EnvioAutomatico.cs).
+builder.Services.AddHttpClient<EvolutionApi>(c => c.Timeout = TimeSpan.FromSeconds(120));
+builder.Services.AddHostedService<EnvioAutomatico>();
+// Um erro inesperado no envio nunca derruba a API (e o envio segue na verificação seguinte).
+builder.Services.Configure<HostOptions>(o => o.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore);
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
