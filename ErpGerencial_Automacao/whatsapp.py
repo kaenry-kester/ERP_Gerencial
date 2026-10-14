@@ -1,155 +1,116 @@
 """
-Envio de mensagens pelo WhatsApp Web, controlando o Google Chrome com o Playwright.
+Envio de mensagens pelo WhatsApp através da Evolution API (pasta evolution-api, roda em http://localhost:8080).
 
-Cada celular que envia tem a sua própria pasta de sessão (sessoes/<celular>). Na primeira vez,
-rode `python lembretes.py conectar <celular>` e escaneie o QR Code com esse celular
-(WhatsApp > Aparelhos conectados). Depois disso o login fica salvo.
+A Evolution conversa direto com o WhatsApp, como um "aparelho conectado", sem abrir navegador: cada mensagem
+sai em menos de um segundo. Cada celular que envia vira uma "instância" da Evolution, com o nome igual ao
+número (só dígitos, com DDD). Na primeira vez, rode `python lembretes.py conectar <celular>` e conecte esse
+celular (WhatsApp > Aparelhos conectados). Depois disso o login fica salvo na Evolution.
+
+Configuração no .env: EVOLUTION_URL (padrão http://localhost:8080) e EVOLUTION_CHAVE (a AUTHENTICATION_API_KEY
+do evolution-api/.env).
 """
 
-import time
-from pathlib import Path
+import json
+import os
+import urllib.error
+import urllib.request
 from urllib.parse import quote
 
-from playwright.sync_api import Error as ErroPlaywright
-from playwright.sync_api import sync_playwright
-
-PASTA_SESSOES = Path(__file__).resolve().parent / "sessoes"
-ENDERECO = "https://web.whatsapp.com/"
-
-# Elementos do WhatsApp Web
-LISTA_DE_CONVERSAS = "#pane-side"
-QR_CODE = "canvas"
-CAIXA_DE_TEXTO = 'footer div[contenteditable="true"]'
-BOTAO_ENVIAR = 'footer button[aria-label="Enviar"], footer button[aria-label="Send"]'
-JANELA_DE_AVISO = 'div[role="dialog"]'
-
-# Situação da mensagem enviada, como o WhatsApp Web descreve (aria-label do ícone de tique)
-SITUACAO_OK = ("enviada", "entregue", "lida", "sent", "delivered", "read")
-SITUACAO_PENDENTE = ("pendente", "pending")
-
-# Lê a situação da última mensagem que contém o texto (fora da caixa de digitação):
-# null = ainda não apareceu na conversa; "" = apareceu, sem situação ainda; senão o texto da situação.
-JS_SITUACAO = """(trecho) => {
-    const main = document.querySelector('#main');
-    if (!main) return null;
-    const textos = [...main.querySelectorAll('span')].filter(s => !s.closest('footer') && (s.innerText || '').includes(trecho));
-    const ultimo = textos.pop();
-    if (!ultimo) return null;
-    let bolha = ultimo;
-    for (let i = 0; i < 10 && bolha && !bolha.querySelector('[aria-label]'); i++) bolha = bolha.parentElement;
-    const rotulos = bolha ? [...bolha.querySelectorAll('[aria-label]')].map(e => (e.getAttribute('aria-label') || '').trim().toLowerCase()) : [];
-    return rotulos.join('|');
-}"""
+# Situação da conexão, como a Evolution descreve
+CONECTADO = "open"
+CONECTANDO = "connecting"
+INEXISTENTE = "inexistente"
 
 
 class ErroEnvio(Exception):
     """A mensagem não saiu (motivo em português, vai para o histórico)."""
 
 
-def sessao_existe(remetente: str) -> bool:
-    return (PASTA_SESSOES / remetente).exists()
+def _endereco() -> str:
+    return os.environ.get("EVOLUTION_URL", "http://localhost:8080").rstrip("/")
 
 
-class WhatsAppWeb:
+def _detalhe(resposta: dict | list) -> str:
+    """Tira a mensagem de erro da resposta da Evolution ({"response": {"message": [...]}})."""
+    mensagem = resposta.get("response", {}).get("message", resposta) if isinstance(resposta, dict) else resposta
+    return "; ".join(map(str, mensagem)) if isinstance(mensagem, list) else str(mensagem)
+
+
+class EvolutionAPI:
     """
     Uso:
-        with WhatsAppWeb("16991039268") as wa:
-            if wa.conectado():
-                wa.enviar("16999998888", "Olá!")
+        wa = EvolutionAPI("16991039268")
+        if wa.conectado():
+            wa.enviar("16999998888", "Olá!")
     """
 
-    def __init__(self, remetente: str, oculto: bool = False):
+    def __init__(self, remetente: str):
         self.remetente = remetente
-        self.oculto = oculto
-        self._playwright = None
-        self._navegador = None
-        self.pagina = None
+        self.instancia = quote(remetente)
 
-    def __enter__(self):
-        self._playwright = sync_playwright().start()
-        # Usa o Google Chrome instalado no computador, com a sessão salva deste celular.
-        self._navegador = self._playwright.chromium.launch_persistent_context(
-            user_data_dir=str(PASTA_SESSOES / self.remetente),
-            channel="chrome",
-            headless=self.oculto,
-            no_viewport=True,
-            locale="pt-BR",
+    def _chamar(self, metodo: str, caminho: str, dados: dict | None = None, segundos: int = 60) -> tuple[int, dict | list]:
+        """Chama a Evolution e devolve (código HTTP, resposta). Lança ErroEnvio se ela não estiver rodando."""
+        corpo = json.dumps(dados).encode() if dados is not None else None
+        pedido = urllib.request.Request(
+            _endereco() + caminho, data=corpo, method=metodo,
+            headers={"apikey": os.environ.get("EVOLUTION_CHAVE", ""), "Content-Type": "application/json"},
         )
-        self.pagina = self._navegador.pages[0] if self._navegador.pages else self._navegador.new_page()
-        return self
-
-    def __exit__(self, *_):
         try:
-            if self._navegador:
-                self._navegador.close()
-        finally:
-            if self._playwright:
-                self._playwright.stop()
+            with urllib.request.urlopen(pedido, timeout=segundos) as resposta:
+                return resposta.status, json.loads(resposta.read() or b"{}")
+        except urllib.error.HTTPError as erro:
+            texto = erro.read().decode(errors="replace")
+            if erro.code == 401:
+                raise ErroEnvio("A Evolution API recusou a chave: confira EVOLUTION_CHAVE no .env") from None
+            try:
+                return erro.code, json.loads(texto)
+            except ValueError:
+                return erro.code, {"response": {"message": texto}}
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as erro:
+            if isinstance(erro, TimeoutError) or isinstance(getattr(erro, "reason", None), TimeoutError):
+                raise ErroEnvio("A Evolution API demorou demais para responder (o celular está conectado?)") from None
+            raise ErroEnvio(f"A Evolution API não está rodando em {_endereco()}") from None
 
-    def conectado(self, segundos: int = 60) -> bool:
-        """Abre o WhatsApp Web e diz se a conta está conectada (lista de conversas) ou pede QR Code."""
-        self.pagina.goto(ENDERECO)
-        try:
-            self.pagina.wait_for_selector(f"{LISTA_DE_CONVERSAS}, {QR_CODE}", timeout=segundos * 1000)
-        except ErroPlaywright:
-            return False
-        return self.pagina.locator(LISTA_DE_CONVERSAS).count() > 0
+    def estado(self) -> str:
+        """"open" (conectado), "connecting", "close" ou "inexistente" (celular nunca foi conectado)."""
+        codigo, resposta = self._chamar("GET", f"/instance/connectionState/{self.instancia}", segundos=15)
+        if codigo == 404:
+            return INEXISTENTE
+        return (resposta.get("instance") or {}).get("state") or "close"
 
-    def aguardar_login(self, minutos: int = 3) -> bool:
-        """Mostra o QR Code e espera a pessoa escanear com o celular."""
-        if self.conectado():
-            return True
-        try:
-            self.pagina.wait_for_selector(LISTA_DE_CONVERSAS, timeout=minutos * 60_000)
-            # Dá tempo de o WhatsApp Web terminar de sincronizar antes de fechar.
-            self.pagina.wait_for_timeout(5000)
-            return True
-        except ErroPlaywright:
-            return False
+    def conectado(self) -> bool:
+        return self.estado() == CONECTADO
+
+    def iniciar_conexao(self) -> dict:
+        """
+        Cria a instância deste celular (se ainda não existir) e pede a conexão.
+        Devolve {"pairingCode": código para digitar no celular, "base64": imagem do QR Code (data:image/png...)}.
+        """
+        if self.estado() == INEXISTENTE:
+            codigo, resposta = self._chamar("POST", "/instance/create", {
+                "instanceName": self.remetente, "integration": "WHATSAPP-BAILEYS", "qrcode": False,
+            })
+            if codigo >= 300:
+                raise ErroEnvio(f"Não foi possível criar a conexão: {_detalhe(resposta)}")
+        _, resposta = self._chamar("GET", f"/instance/connect/{self.instancia}?number=55{self.remetente}")
+        return resposta if isinstance(resposta, dict) else {}
 
     def enviar(self, destino: str, mensagem: str) -> None:
         """
         Envia a mensagem para um celular brasileiro (só dígitos, com DDD).
-        Lança ErroEnvio se o número não tiver WhatsApp ou a conversa não abrir.
+        Lança ErroEnvio se o número não tiver WhatsApp ou a Evolution não aceitar o envio.
         """
-        pagina = self.pagina
-        pagina.goto(f"{ENDERECO}send?phone=55{destino}&text={quote(mensagem)}")
+        # Confere se o número tem WhatsApp (a Evolution também acerta o nono dígito dos celulares).
+        codigo, resposta = self._chamar("POST", f"/chat/whatsappNumbers/{self.instancia}", {"numbers": [f"55{destino}"]})
+        if codigo >= 300:
+            raise ErroEnvio(f"Não foi possível conferir o número: {_detalhe(resposta)}")
+        numero = resposta[0] if isinstance(resposta, list) and resposta else {}
+        if not numero.get("exists"):
+            raise ErroEnvio("Este celular não tem WhatsApp ou o número está errado")
 
-        # Espera a conversa abrir de vez: texto na caixa e sem a janela "Iniciando conversa".
-        # (Enviar durante essa janela faz a caixa esvaziar sem a mensagem sair.)
-        limite = time.monotonic() + 60
-        while True:
-            aviso = pagina.locator(JANELA_DE_AVISO)
-            texto_aviso = aviso.first.inner_text().lower() if aviso.count() else ""
-            if "inválido" in texto_aviso or "invalid" in texto_aviso:
-                raise ErroEnvio("Este celular não tem WhatsApp ou o número está errado")
-            caixa = pagina.locator(CAIXA_DE_TEXTO)
-            if not texto_aviso and caixa.count() and caixa.first.inner_text().strip():
-                break
-            if time.monotonic() > limite:
-                raise ErroEnvio("A conversa não abriu a tempo no WhatsApp Web")
-            pagina.wait_for_timeout(500)
-        pagina.wait_for_timeout(1500)
-
-        # Clica em "Enviar" (ou aperta Enter, se o botão não estiver lá)
-        botao = pagina.locator(BOTAO_ENVIAR)
-        if botao.count():
-            botao.first.click()
-        else:
-            caixa.first.click()
-            pagina.keyboard.press("Enter")
-
-        # Só conta como enviada quando a mensagem aparece na conversa e o WhatsApp
-        # confirma (enviada, entregue ou lida). Pendente por muito tempo = erro (o robô tenta de novo).
-        trecho = mensagem.strip().splitlines()[0][:30]
-        limite = time.monotonic() + 45
-        situacao = None
-        while time.monotonic() < limite:
-            situacao = pagina.evaluate(JS_SITUACAO, trecho)
-            if situacao and any(ok in situacao for ok in SITUACAO_OK) and not any(p in situacao for p in SITUACAO_PENDENTE):
-                pagina.wait_for_timeout(2000)
-                return
-            pagina.wait_for_timeout(1000)
-        if situacao is None:
-            raise ErroEnvio("A mensagem não apareceu na conversa do WhatsApp")
-        raise ErroEnvio("O WhatsApp não confirmou o envio (ficou pendente)")
+        # "delay": mostra "digitando..." por um instante antes de enviar, como uma pessoa faria.
+        codigo, resposta = self._chamar("POST", f"/message/sendText/{self.instancia}", {
+            "number": numero.get("jid") or f"55{destino}", "text": mensagem, "delay": 1500,
+        })
+        if codigo >= 300 or not (resposta.get("key") or {}).get("id"):
+            raise ErroEnvio(f"O WhatsApp não aceitou a mensagem: {_detalhe(resposta)}")

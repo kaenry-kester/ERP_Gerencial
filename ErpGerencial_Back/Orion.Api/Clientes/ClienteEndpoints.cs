@@ -11,6 +11,15 @@ public record ClienteRequest(
     string Celular,
     /// <summary>CPF ou CNPJ (opcional).</summary>
     string? Documento,
+    string? Produto,
+    string? RgInscricao,
+    DateOnly? DataNascimento,
+    string? PontoReferencia,
+    string? TelefoneResidencial,
+    string? TelefoneComercial,
+    string? Celular2,
+    string? Conjuge,
+    DateOnly? DataCompra,
     string? Cep,
     string? Logradouro,
     string? NumeroEndereco,
@@ -33,6 +42,15 @@ public record ClienteDto(
     string Nome,
     string Celular,
     string? Documento,
+    string? Produto,
+    string? RgInscricao,
+    DateOnly? DataNascimento,
+    string? PontoReferencia,
+    string? TelefoneResidencial,
+    string? TelefoneComercial,
+    string? Celular2,
+    string? Conjuge,
+    DateOnly? DataCompra,
     string? Cep,
     string? Logradouro,
     string? NumeroEndereco,
@@ -204,6 +222,21 @@ public static class ClienteEndpoints
 
         Validacao.Documento(erros, "documento", req.Documento);
 
+        // Telefones extras da ficha: opcionais, mas completos quando preenchidos.
+        foreach (var (campo, valor) in new[]
+                 {
+                     ("telefoneResidencial", req.TelefoneResidencial), ("telefoneComercial", req.TelefoneComercial),
+                     ("celular2", req.Celular2),
+                 })
+        {
+            if (SoDigitos(valor).Length is not (0 or 10 or 11)) erros[campo] = ["Número incompleto"];
+        }
+        var hoje = DateOnly.FromDateTime(DateTime.UtcNow);
+        if (req.DataNascimento is { } nascimento && (nascimento > hoje || nascimento.Year < 1900))
+            erros["dataNascimento"] = ["Data inválida"];
+        if (req.DataCompra is { } compra && (compra > hoje.AddDays(1) || compra.Year < 1990))
+            erros["dataCompra"] = ["Data inválida"];
+
         var cep = SoDigitos(req.Cep);
         if (cep.Length > 0 && cep.Length != 8) erros["cep"] = ["CEP incompleto"];
 
@@ -211,6 +244,10 @@ public static class ClienteEndpoints
         {
             if ((valor?.Trim().Length ?? 0) > maximo) erros[campo] = [$"Máximo de {maximo} letras"];
         }
+        Tamanho("produto", req.Produto, 200);
+        Tamanho("rgInscricao", req.RgInscricao, 30);
+        Tamanho("pontoReferencia", req.PontoReferencia, 200);
+        Tamanho("conjuge", req.Conjuge, 200);
         Tamanho("logradouro", req.Logradouro, 150);
         Tamanho("numeroEndereco", req.NumeroEndereco, 20);
         Tamanho("complemento", req.Complemento, 100);
@@ -242,6 +279,15 @@ public static class ClienteEndpoints
         c.Nome = req.Nome.Trim();
         c.Celular = SoDigitos(req.Celular);
         c.Documento = Opcional(Validacao.NormalizarDocumento(req.Documento ?? ""));
+        c.Produto = Opcional(req.Produto);
+        c.RgInscricao = Opcional(req.RgInscricao);
+        c.DataNascimento = req.DataNascimento;
+        c.PontoReferencia = Opcional(req.PontoReferencia);
+        c.TelefoneResidencial = Opcional(SoDigitos(req.TelefoneResidencial));
+        c.TelefoneComercial = Opcional(SoDigitos(req.TelefoneComercial));
+        c.Celular2 = Opcional(SoDigitos(req.Celular2));
+        c.Conjuge = Opcional(req.Conjuge);
+        c.DataCompra = req.DataCompra;
         c.Cep = Opcional(SoDigitos(req.Cep));
         c.Logradouro = Opcional(req.Logradouro);
         c.NumeroEndereco = Opcional(req.NumeroEndereco);
@@ -291,7 +337,8 @@ public static class ClienteEndpoints
         c.EnvioEm is { } envio ? DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(envio, Brasilia)) : null;
 
     private static ClienteDto Dto(Cliente c) =>
-        new(c.Id, c.Numero, c.Nome, c.Celular, c.Documento, c.Cep, c.Logradouro, c.NumeroEndereco, c.Complemento,
+        new(c.Id, c.Numero, c.Nome, c.Celular, c.Documento, c.Produto, c.RgInscricao, c.DataNascimento, c.PontoReferencia,
+            c.TelefoneResidencial, c.TelefoneComercial, c.Celular2, c.Conjuge, c.DataCompra, c.Cep, c.Logradouro, c.NumeroEndereco, c.Complemento,
             c.Bairro, c.Cidade, c.Uf, c.TipoIntervalo, c.IntervaloManutencaoMeses, Proxima(c), c.MensagemWhatsapp, c.EnvioEm,
             c.CriadoEm, c.AtualizadoEm);
 }

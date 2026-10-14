@@ -1,9 +1,8 @@
 import { useEffect, useState, type SubmitEvent } from 'react'
-import { Link } from 'react-router-dom'
 import CampoArea from '../../../components/formulario/CampoArea'
 import CampoTexto from '../../../components/formulario/CampoTexto'
 import type { Aviso } from '../../../components/formulario/FaixaAviso'
-import { IconeCheck } from '../../../components/icones/Icones'
+import { IconeCheck, IconeMensagem } from '../../../components/icones/Icones'
 import { IlustracaoClientes } from '../../../components/icones/Ilustracoes'
 import { useSessaoExpirada } from '../../../hooks/useSessaoExpirada'
 import { ErroApi, mensagemDe, obterWhatsapp, salvarWhatsapp, type ConfiguracaoWhatsapp } from '../../../services/api'
@@ -14,19 +13,14 @@ import FaixaPagina from '../FaixaPagina'
 import { tem } from '../modulos'
 import SecaoPagina from '../SecaoPagina'
 import SemAcesso from '../SemAcesso'
-import { formatarDia, MENSAGEM_MAXIMO as MAXIMO, TRECHOS_MENSAGEM as TRECHOS } from './formatos'
+import { MENSAGEM_MAXIMO as MAXIMO, TRECHOS_MENSAGEM as TRECHOS } from './formatos'
+import JanelaEnvios from './JanelaEnvios'
 import '../../../styles/acesso.css'
 import './clientes.css'
 
 /** Sugestão de texto para quem ainda não escreveu nenhuma mensagem. */
 const SUGESTAO =
   'Olá, {nome}! Aqui é da {empresa}. Hoje, {data}, é o dia da manutenção do seu filtro. Quer agendar a visita?'
-
-const STATUS = {
-  enviado: { texto: 'Enviada', classe: 'lista-etiqueta' },
-  teste: { texto: 'Teste', classe: 'lista-etiqueta atencao' },
-  erro: { texto: 'Não enviada', classe: 'lista-etiqueta alerta' },
-}
 
 type Campo = 'remetente' | 'mensagem'
 
@@ -42,6 +36,7 @@ export default function MensagemAutomaticaPage() {
   const [salvando, setSalvando] = useState(false)
   const [erroServidor, setErroServidor] = useState<Partial<Record<Campo, string>>>({})
   const [aviso, setAviso] = useState<Aviso>(null)
+  const [ultimosAbertos, setUltimosAbertos] = useState(false)
   const permitido = tem(sessao.usuario, 'clientes-editar')
 
   const aplicar = (c: ConfiguracaoWhatsapp) => {
@@ -119,6 +114,21 @@ export default function MensagemAutomaticaPage() {
         titulo="Mensagem automática"
         subtitulo="Enviada pelo WhatsApp na data e horário do envio marcados em cada cliente."
         voltar={{ para: '/app/clientes', rotulo: 'Clientes' }}
+        acoes={
+          <button type="button" className="pagina-botao claro" onClick={() => setUltimosAbertos(true)}>
+            <IconeMensagem tamanho={20} />
+            Últimos envios
+          </button>
+        }
+      />
+
+      <JanelaEnvios
+        aberto={ultimosAbertos}
+        titulo="Últimos envios"
+        dica="Os últimos 15 clientes que receberam a mensagem automática."
+        envios={config.envios}
+        mostrarCliente
+        onFechar={() => setUltimosAbertos(false)}
       />
 
       <form className="pagina-secoes" onSubmit={salvar} noValidate>
@@ -126,7 +136,7 @@ export default function MensagemAutomaticaPage() {
           <div className="erp-form">
             <CampoTexto
               id="whatsapp-remetente"
-              rotulo="Celular que envia"
+              rotulo="Número remetente"
               type="tel"
               inputMode="numeric"
               placeholder="(16) 99103-9268"
@@ -138,7 +148,6 @@ export default function MensagemAutomaticaPage() {
               }}
               erro={erros.remetente}
             />
-            <p className="clientes-previa">Este celular precisa estar conectado ao robô (QR Code, uma vez só).</p>
           </div>
         </SecaoPagina>
 
@@ -176,31 +185,6 @@ export default function MensagemAutomaticaPage() {
               <span className="mensagem-previa-rotulo">Como o cliente recebe</span>
               <p className="mensagem-balao">{previa}</p>
             </div>
-          )}
-        </SecaoPagina>
-
-        <SecaoPagina id="whatsapp-historico" numero={3} titulo="Últimos envios">
-          {config.envios.length === 0 ? (
-            <p className="erp-nota">Nenhuma mensagem enviada ainda.</p>
-          ) : (
-            <ul className="mensagem-envios">
-              {config.envios.map((e) => (
-                <li key={e.id} className="mensagem-envio">
-                  <span className={STATUS[e.status].classe}>{STATUS[e.status].texto}</span>
-                  <span className="mensagem-envio-textos">
-                    <Link to={`/app/clientes/${e.clienteId}`} className="lista-nome">
-                      {e.clienteNome}
-                    </Link>
-                    <span className="mensagem-envio-detalhe">
-                      {formatarTelefone(e.telefone)} ·{' '}
-                      {e.tipo === 'agendado' ? `envio de ${formatarDia(e.dataReferencia)}` : `manutenção de ${formatarDia(e.dataReferencia)}`} ·{' '}
-                      {new Date(e.criadoEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
-                    </span>
-                    {e.erro && <span className="mensagem-envio-erro">{e.erro}</span>}
-                  </span>
-                </li>
-              ))}
-            </ul>
           )}
         </SecaoPagina>
 

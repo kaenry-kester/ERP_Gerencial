@@ -20,7 +20,7 @@ public class Usuario
     /// <summary>Administrador: acessa tudo e gerencia a empresa e os usuários.</summary>
     public bool Administrador { get; set; }
 
-    /// <summary>Módulos liberados para quem não é administrador (ids de Permissoes.Modulos).</summary>
+    /// <summary>Permissões do funcionário (sempre Permissoes.Funcionario; o administrador não tem lista).</summary>
     public List<string> Permissoes { get; set; } = [];
 
     /// <summary>Usuário desativado pelo administrador não consegue mais entrar.</summary>

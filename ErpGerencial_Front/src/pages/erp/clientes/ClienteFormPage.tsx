@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState, type SubmitEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import CampoSelecao from '../../../components/formulario/CampoSelecao'
-import CampoTexto from '../../../components/formulario/CampoTexto'
 import type { Aviso } from '../../../components/formulario/FaixaAviso'
 import { IconeCheck } from '../../../components/icones/Icones'
 import { IlustracaoClientes } from '../../../components/icones/Ilustracoes'
@@ -30,8 +28,8 @@ import AvisoPagina from '../AvisoPagina'
 import { useErp } from '../contexto'
 import FaixaPagina from '../FaixaPagina'
 import { tem } from '../modulos'
-import SecaoPagina from '../SecaoPagina'
 import SemAcesso from '../SemAcesso'
+import CampoFicha from '../CampoFicha'
 import { envioMensalAPartirDeHoje, formatarCadastro, formatarDataHora, INTERVALO_MAXIMO } from './formatos'
 import '../../../styles/acesso.css'
 import './clientes.css'
@@ -43,6 +41,15 @@ const VAZIO: Valores = {
   nome: '',
   celular: '',
   documento: '',
+  produto: '',
+  rgInscricao: '',
+  dataNascimento: '',
+  pontoReferencia: '',
+  telefoneResidencial: '',
+  telefoneComercial: '',
+  celular2: '',
+  conjuge: '',
+  dataCompra: '',
   cep: '',
   logradouro: '',
   numeroEndereco: '',
@@ -71,19 +78,47 @@ function paraCampoDataHora(iso: string | null) {
 
 const MASCARAS: Partial<Record<Campo, (v: string) => string>> = {
   celular: formatarTelefone,
+  celular2: formatarTelefone,
+  telefoneResidencial: formatarTelefone,
+  telefoneComercial: formatarTelefone,
   documento: formatarDocumento,
   cep: formatarCep,
   uf: (v) => v.replace(/[^a-z]/gi, '').slice(0, 2).toUpperCase(),
   intervalo: (v) => apenasDigitos(v).slice(0, 3),
 }
 
-/** Ordem dos campos, para levar o cursor ao primeiro com erro. */
-const ORDEM: Campo[] = ['nome', 'documento', 'celular', 'cep', 'uf', 'intervalo', 'envio']
+/** Ordem dos campos (a da ficha), para levar o cursor ao primeiro com erro. */
+const ORDEM: Campo[] = [
+  'nome',
+  'documento',
+  'dataNascimento',
+  'uf',
+  'cep',
+  'telefoneResidencial',
+  'telefoneComercial',
+  'celular',
+  'celular2',
+  'dataCompra',
+  'intervalo',
+  'envio',
+]
+
+/** Telefones extras da ficha: opcionais, mas completos quando preenchidos. */
+const TELEFONES_OPCIONAIS = ['telefoneResidencial', 'telefoneComercial', 'celular2'] as const
 
 const paraFormulario = (c: Cliente): Valores => ({
   nome: c.nome,
   celular: formatarTelefone(c.celular),
   documento: formatarDocumento(c.documento ?? ''),
+  produto: c.produto ?? '',
+  rgInscricao: c.rgInscricao ?? '',
+  dataNascimento: c.dataNascimento ?? '',
+  pontoReferencia: c.pontoReferencia ?? '',
+  telefoneResidencial: formatarTelefone(c.telefoneResidencial ?? ''),
+  telefoneComercial: formatarTelefone(c.telefoneComercial ?? ''),
+  celular2: formatarTelefone(c.celular2 ?? ''),
+  conjuge: c.conjuge ?? '',
+  dataCompra: c.dataCompra ?? '',
   cep: formatarCep(c.cep ?? ''),
   logradouro: c.logradouro ?? '',
   numeroEndereco: c.numeroEndereco ?? '',
@@ -99,6 +134,11 @@ const paraFormulario = (c: Cliente): Valores => ({
 const paraApi = ({ intervalo, envio, tipoIntervalo, ...v }: Valores): DadosCliente => ({
   ...v,
   celular: apenasDigitos(v.celular),
+  celular2: apenasDigitos(v.celular2),
+  telefoneResidencial: apenasDigitos(v.telefoneResidencial),
+  telefoneComercial: apenasDigitos(v.telefoneComercial),
+  dataNascimento: v.dataNascimento || null,
+  dataCompra: v.dataCompra || null,
   documento: normalizarCnpj(v.documento),
   cep: apenasDigitos(v.cep),
   tipoIntervalo: tipoIntervalo as TipoIntervalo,
@@ -112,6 +152,7 @@ function validar(v: Valores): Partial<Record<Campo, string>> {
   if (!v.nome.trim()) erros.nome = 'Obrigatório'
   if (!v.celular) erros.celular = 'Obrigatório'
   else if (!telefoneValido(v.celular)) erros.celular = 'Incompleto'
+  for (const c of TELEFONES_OPCIONAIS) if (v[c] && !telefoneValido(v[c])) erros[c] = 'Incompleto'
   const documento = erroDocumento(v.documento)
   if (documento) erros.documento = documento
   const cep = apenasDigitos(v.cep)
@@ -128,7 +169,7 @@ function validar(v: Valores): Partial<Record<Campo, string>> {
 /** Busca do endereço pelo CEP: o que mostrar logo abaixo do campo. */
 type EstadoCep = 'buscando' | 'encontrado' | 'nao-encontrado' | 'sem-conexao' | null
 
-/** Aviso embaixo do título "Endereço" (quando o CEP é encontrado, os campos preenchidos ficam mais escuros). */
+/** Aviso embaixo da ficha (quando o CEP é encontrado, os campos preenchidos ficam mais escuros). */
 const TEXTO_CEP: Record<Exclude<EstadoCep, 'encontrado' | null>, string> = {
   buscando: 'Buscando o endereço...',
   'nao-encontrado': 'CEP não encontrado. Preencha o endereço.',
@@ -173,7 +214,7 @@ export default function ClienteFormPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, sessao.token, permitido])
 
-  // CEP completo: busca o endereço e preenche os campos logo abaixo.
+  // CEP completo: busca o endereço e preenche os campos da ficha.
   const cep = apenasDigitos(valores.cep)
   useEffect(() => {
     if (cep.length !== 8 || cep === cepBuscado.current) return
@@ -283,7 +324,7 @@ export default function ClienteFormPage() {
       : null
 
   return (
-    <div className="pagina tema-clientes cliente-cadastro">
+    <div className="pagina tema-clientes">
       <FaixaPagina
         Ilustracao={IlustracaoClientes}
         titulo={novo ? 'Cadastrar cliente' : 'Editar cliente'}
@@ -291,91 +332,59 @@ export default function ClienteFormPage() {
         voltar={{ para: voltar, rotulo: novo ? 'Clientes' : original!.nome }}
       />
 
-      {/* Tudo numa tela só: campos lado a lado (grade de 12 colunas) e seções compactas */}
-      <form className="pagina-secoes" onSubmit={salvar} noValidate>
-        <SecaoPagina id="cliente-identificacao" numero={1} titulo="Identificação">
-          <div className="erp-form cliente-grade">
-            <CampoTexto {...campo('nome')} rotulo="Nome" maxLength={200} autoComplete="off" className="c5" />
-            <CampoTexto
-              {...campo('documento')}
-              rotulo="CPF/CNPJ"
-              placeholder="000.000.000-00"
-              autoComplete="off"
-              className="c4"
-            />
-            <CampoTexto
-              {...campo('celular')}
-              rotulo="Celular"
-              type="tel"
-              inputMode="numeric"
-              placeholder="(11) 91234-5678"
-              autoComplete="off"
-              className="c3"
-            />
-          </div>
-        </SecaoPagina>
+      {/* Ficha do cliente (como o registro em papel), centralizada e compacta: cabe na tela sem rolar */}
+      <form className="ficha-pagina" onSubmit={salvar} noValidate>
+        <div className="ficha-area">
+          <div className="ficha" role="group" aria-label="Registro de cliente">
+            <CampoFicha {...campo('nome')} rotulo="Nome completo" obrigatorio maxLength={200} className="c6" />
+            <CampoFicha {...campo('documento')} rotulo="CPF / CNPJ" placeholder="000.000.000-00" className="c3" />
+            <CampoFicha {...campo('dataNascimento')} rotulo="Data de nascimento" type="date" className="c3" />
 
-        <SecaoPagina
-          id="cliente-endereco"
-          numero={2}
-          titulo="Endereço"
-          extra={
-            estadoCep &&
-            estadoCep !== 'encontrado' && (
-              <p
-                className={estadoCep === 'nao-encontrado' || estadoCep === 'sem-conexao' ? 'clientes-cep-status erro' : 'clientes-cep-status'}
-                role="status"
-              >
-                {TEXTO_CEP[estadoCep]}
-              </p>
-            )
-          }
-        >
-          <div className="erp-form cliente-grade">
-            <CampoTexto {...campo('cep')} rotulo="CEP" inputMode="numeric" placeholder="00000-000" autoComplete="off" className="c3" />
-            <CampoTexto {...campo('logradouro')} rotulo="Rua" maxLength={150} autoComplete="off" className={colunas('logradouro', 'c7 linha-toda')} />
-            <CampoTexto {...campo('numeroEndereco')} rotulo="Número" maxLength={20} autoComplete="off" className="c2" />
-            <CampoTexto {...campo('complemento')} rotulo="Complemento" maxLength={100} placeholder="Apto, bloco, fundos..." autoComplete="off" className="c3" />
-            <CampoTexto {...campo('bairro')} rotulo="Bairro" maxLength={100} autoComplete="off" className={colunas('bairro', 'c3')} />
-            <CampoTexto {...campo('cidade')} rotulo="Cidade" maxLength={100} autoComplete="off" className={colunas('cidade', 'c4')} />
-            <CampoTexto {...campo('uf')} rotulo="UF" placeholder="SP" autoComplete="off" className={colunas('uf', 'c2')} />
-          </div>
-        </SecaoPagina>
+            <CampoFicha {...campo('logradouro')} rotulo="Endereço" maxLength={150} className={colunas('logradouro', 'c6')} />
+            <CampoFicha {...campo('numeroEndereco')} rotulo="Nº" maxLength={20} className="c2" />
+            <CampoFicha {...campo('bairro')} rotulo="Bairro" maxLength={100} className={colunas('bairro', 'c4')} />
 
-        <SecaoPagina id="cliente-manutencao" numero={3} titulo="Manutenção e envio">
-          <div className="erp-form cliente-grade">
-            <CampoSelecao
-              {...campo('tipoIntervalo')}
-              rotulo="Intervalo de manutenção"
-              opcoes={TIPOS}
-              className="c4"
-            />
+            <CampoFicha {...campo('complemento')} rotulo="Complemento" maxLength={100} placeholder="Apto, bloco, fundos..." className="c4" />
+            <CampoFicha {...campo('cidade')} rotulo="Cidade" maxLength={100} className={colunas('cidade', 'c4')} />
+            <CampoFicha {...campo('uf')} rotulo="Estado" placeholder="SP" className={colunas('uf', 'c1')} />
+            <CampoFicha {...campo('cep')} rotulo="CEP" inputMode="numeric" placeholder="00000-000" className="c3" />
+
+            <CampoFicha {...campo('pontoReferencia')} rotulo="Ponto de referência" maxLength={200} className="c12" />
+
+            <CampoFicha {...campo('telefoneResidencial')} rotulo="Fone residencial" type="tel" inputMode="numeric" className="c3" />
+            <CampoFicha {...campo('telefoneComercial')} rotulo="Fone comercial" type="tel" inputMode="numeric" className="c3" />
+            <CampoFicha {...campo('celular')} rotulo="Celular (WhatsApp)" obrigatorio type="tel" inputMode="numeric" className="c3" />
+            <CampoFicha {...campo('celular2')} rotulo="Celular 2" type="tel" inputMode="numeric" className="c3" />
+
+            <CampoFicha {...campo('conjuge')} rotulo="Cônjuge" maxLength={200} className="c9" />
+            <CampoFicha {...campo('dataCompra')} rotulo="Data da compra" type="date" className="c3" />
+
+            {/* Tópico da ficha: quando a mensagem automática de manutenção sai */}
+            <h2 className="ficha-topico">Manutenção e envio</h2>
+            <CampoFicha {...campo('tipoIntervalo')} rotulo="Intervalo de manutenção" obrigatorio opcoes={TIPOS} className="c4" />
             {mensal ? (
-              <CampoTexto
-                {...campo('intervalo')}
-                rotulo="A cada quantos meses"
-                inputMode="numeric"
-                placeholder="Ex.: 6"
-                autoComplete="off"
-                className="c4"
-              />
+              <CampoFicha {...campo('intervalo')} rotulo="A cada quantos meses" obrigatorio inputMode="numeric" placeholder="Ex.: 6" className="c4" />
             ) : (
-              <CampoTexto {...campo('envio')} rotulo="Data e horário do envio" type="datetime-local" className="c4" />
+              <CampoFicha {...campo('envio')} rotulo="Data e horário do envio" obrigatorio type="datetime-local" className="c4" />
             )}
             {/* O robô envia a mensagem de WhatsApp nesta data */}
-            <p className="clientes-previa c4" aria-live="polite">
-              {previa ? (
-                <>
-                  Envio da mensagem: <strong>{previa}</strong>
-                </>
-              ) : mensal ? (
-                'A mensagem sai às 6h, no mesmo dia do mês, a cada N meses.'
-              ) : (
-                'A mensagem sai na data e hora escolhidas.'
-              )}
-            </p>
+            <div className="ficha-campo ficha-previa c4" aria-live="polite">
+              <span className="ficha-rotulo">Envio da mensagem</span>
+              <span className="ficha-previa-valor">
+                {previa ?? (mensal ? 'Às 6h, a cada N meses' : 'Na data e hora escolhidas')}
+              </span>
+            </div>
           </div>
-        </SecaoPagina>
+
+          <p className="ficha-nota">
+            <span aria-hidden="true">*</span> Obrigatório. O celular (WhatsApp) recebe a mensagem automática.
+            {estadoCep && estadoCep !== 'encontrado' && (
+              <strong className={estadoCep === 'buscando' ? 'ficha-cep' : 'ficha-cep erro'} role="status">
+                {TEXTO_CEP[estadoCep]}
+              </strong>
+            )}
+          </p>
+        </div>
 
         <div className="pagina-barra">
           <button type="submit" className="pagina-botao" disabled={salvando}>

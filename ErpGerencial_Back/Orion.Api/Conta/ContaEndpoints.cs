@@ -114,7 +114,7 @@ public static class ContaEndpoints
         if (await db.Usuarios.AnyAsync(u => u.Email == novo, ct))
             return Results.Conflict(new { erro = "Este e-mail já tem uma conta no Órion", campo = "novoEmail" });
 
-        var verificacao = await VerificacaoLogin.EnviarCodigo(db, email, usuario, null, ct, novo);
+        var verificacao = await VerificacaoLogin.EnviarCodigo(db, email, null, usuario, null, "email", ct, novo);
         return verificacao is null
             ? Results.Problem("Não foi possível enviar o código por e-mail. Tente de novo em instantes.", statusCode: 503)
             : Results.Json(verificacao, statusCode: StatusCodes.Status202Accepted);
@@ -171,7 +171,7 @@ public static class ContaEndpoints
             return Results.Json(new { erro = $"Aguarde {Math.Ceiling(espera.TotalSeconds)} segundos para pedir outro código." },
                 statusCode: StatusCodes.Status429TooManyRequests);
 
-        var verificacao = await VerificacaoLogin.EnviarCodigo(db, email, usuario, desafio, ct);
+        var verificacao = await VerificacaoLogin.EnviarCodigo(db, email, null, usuario, desafio, "email", ct);
         return verificacao is null
             ? Results.Problem("Não foi possível enviar o código por e-mail. Tente de novo em instantes.", statusCode: 503)
             : Results.Ok(verificacao);

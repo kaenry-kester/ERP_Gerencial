@@ -1,12 +1,25 @@
 import type { ComponentType } from 'react'
-import { IconeCaixa, IconeCarteira, IconeClientes, IconeCracha, IconeLoja, IconeUsuario } from '../../components/icones/Icones'
+import {
+  IconeCaixa,
+  IconeCarrinho,
+  IconeCarteira,
+  IconeClientes,
+  IconeCracha,
+  IconeLoja,
+  IconeOrdemServico,
+  IconeRecibo,
+  IconeUsuario,
+} from '../../components/icones/Icones'
 import {
   IlustracaoClientes,
   IlustracaoConta,
+  IlustracaoCupomFiscal,
   IlustracaoEmpresa,
   IlustracaoFinanceiro,
+  IlustracaoOrdemServico,
   IlustracaoProdutos,
   IlustracaoUsuarios,
+  IlustracaoVendas,
 } from '../../components/icones/Ilustracoes'
 import type { Usuario } from '../../services/api'
 
@@ -71,6 +84,34 @@ export const MODULOS_PRINCIPAIS: Modulo[] = [
     Ilustracao: IlustracaoFinanceiro,
     acesso: 'permissao',
   },
+  // Módulos novos (em construção): só o administrador vê por enquanto (o funcionário tem permissões fixas).
+  {
+    id: 'cupom-fiscal',
+    rotulo: 'Cupom fiscal',
+    resumo: 'Emissão e consulta de cupons',
+    descricao: 'Emissão e consulta de cupons fiscais.',
+    Icone: IconeRecibo,
+    Ilustracao: IlustracaoCupomFiscal,
+    acesso: 'permissao',
+  },
+  {
+    id: 'vendas',
+    rotulo: 'Vendas',
+    resumo: 'Pedidos, orçamentos e vendas',
+    descricao: 'Pedidos, orçamentos e vendas.',
+    Icone: IconeCarrinho,
+    Ilustracao: IlustracaoVendas,
+    acesso: 'permissao',
+  },
+  {
+    id: 'ordem-servico',
+    rotulo: 'Número de ordem de serviço',
+    resumo: 'Abertura e acompanhamento das OS',
+    descricao: 'Abertura e acompanhamento das ordens de serviço.',
+    Icone: IconeOrdemServico,
+    Ilustracao: IlustracaoOrdemServico,
+    acesso: 'permissao',
+  },
 ]
 
 /** Preferências (botões do topo): a conta da pessoa, a empresa e quem acessa o sistema. */
@@ -122,27 +163,3 @@ export function podeAcessar(usuario: Usuario, modulo: Modulo) {
 /** Tem a permissão? (administrador tem todas; o servidor confere de novo em cada rota) */
 export const tem = (usuario: Usuario, permissao: string) =>
   usuario.administrador || usuario.permissoes.includes(permissao)
-
-/**
- * Permissões que o administrador marca em "Usuários e permissões", por módulo
- * (ids iguais aos de Auth/Permissoes.cs). A primeira de cada grupo é "ver"; as outras a incluem.
- */
-export const PERMISSOES: { modulo: string; itens: { id: string; rotulo: string }[] }[] = [
-  {
-    modulo: 'produtos',
-    itens: [
-      { id: 'produtos', rotulo: 'Ver produtos' },
-      { id: 'produtos-cadastrar', rotulo: 'Cadastrar produto' },
-      { id: 'produtos-editar', rotulo: 'Editar produtos' },
-    ],
-  },
-  {
-    modulo: 'clientes',
-    itens: [
-      { id: 'clientes', rotulo: 'Ver clientes' },
-      { id: 'clientes-cadastrar', rotulo: 'Cadastrar cliente' },
-      { id: 'clientes-editar', rotulo: 'Editar clientes' },
-    ],
-  },
-  { modulo: 'financeiro', itens: [{ id: 'financeiro', rotulo: 'Ver financeiro' }] },
-]

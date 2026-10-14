@@ -7,9 +7,9 @@ using Orion.Api.Data;
 
 namespace Orion.Api.Usuarios;
 
-public record CriarUsuarioRequest(string Nome, string Email, string Senha, bool Administrador, List<string>? Permissoes);
+public record CriarUsuarioRequest(string Nome, string Email, string? Telefone, string Senha, bool Administrador);
 
-public record EditarUsuarioRequest(string Nome, bool Administrador, List<string>? Permissoes, bool Ativo);
+public record EditarUsuarioRequest(string Nome, string? Telefone, bool Administrador, bool Ativo);
 
 /// <summary>
 /// "Usuários e permissões" (como em Preferências → Usuários do Bling): o administrador
@@ -58,9 +58,10 @@ public static class UsuarioEndpoints
         {
             Nome = req.Nome.Trim(),
             Email = email,
+            Telefone = Validacao.Telefone(req.Telefone),
             EmpresaId = admin.EmpresaId,
             Administrador = req.Administrador,
-            Permissoes = req.Administrador ? [] : Permissoes.Limpar(req.Permissoes),
+            Permissoes = Permissoes.De(req.Administrador),
         };
         novo.SenhaHash = hasher.HashPassword(novo, req.Senha);
         db.Usuarios.Add(novo);
@@ -94,8 +95,9 @@ public static class UsuarioEndpoints
             return Results.Conflict(new { erro = "Você não pode tirar o seu próprio acesso de administrador" });
 
         alvo.Nome = req.Nome.Trim();
+        alvo.Telefone = Validacao.Telefone(req.Telefone);
         alvo.Administrador = req.Administrador;
-        alvo.Permissoes = req.Administrador ? [] : Permissoes.Limpar(req.Permissoes);
+        alvo.Permissoes = Permissoes.De(req.Administrador);
         alvo.Ativo = req.Ativo;
 
         await db.SaveChangesAsync();

@@ -1,8 +1,8 @@
 namespace Orion.Api.Data;
 
 /// <summary>
-/// Código de 6 dígitos enviado por e-mail: no login (depois da senha) ou na troca de e-mail
-/// (enviado ao e-mail novo, para provar que ele é da pessoa). O código em si não é guardado: só o hash.
+/// Código de 6 dígitos: no login (depois da senha, por e-mail ou WhatsApp, a pessoa escolhe) ou na troca de
+/// e-mail (enviado ao e-mail novo, para provar que ele é da pessoa). O código em si não é guardado: só o hash.
 /// </summary>
 public class CodigoLogin
 {
@@ -24,6 +24,9 @@ public class CodigoLogin
 
     /// <summary>Preenchido na troca de e-mail: o e-mail novo, que recebe o código. Vazio no login.</summary>
     public string? NovoEmail { get; set; }
+
+    /// <summary>Por onde o código atual foi enviado: "email" ou "whatsapp" (vazio enquanto a pessoa não escolheu).</summary>
+    public string? Canal { get; set; }
 
     public DateTime? UsadoEm { get; set; }
     public DateTime CriadoEm { get; set; } = DateTime.UtcNow;

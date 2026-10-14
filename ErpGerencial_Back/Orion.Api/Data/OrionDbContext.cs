@@ -7,6 +7,7 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<Empresa> Empresas => Set<Empresa>();
     public DbSet<Produto> Produtos => Set<Produto>();
+    public DbSet<ProdutoImagem> ProdutoImagens => Set<ProdutoImagem>();
     public DbSet<Cliente> Clientes => Set<Cliente>();
     public DbSet<EnvioWhatsapp> EnviosWhatsapp => Set<EnvioWhatsapp>();
     public DbSet<CodigoLogin> CodigosLogin => Set<CodigoLogin>();
@@ -58,6 +59,7 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
             e.Property(p => p.Numero).HasColumnName("numero");
             e.Property(p => p.Nome).HasColumnName("nome").HasMaxLength(200);
             e.Property(p => p.Codigo).HasColumnName("codigo").HasMaxLength(60);
+            e.Property(p => p.CodigoBarras).HasColumnName("codigo_barras").HasMaxLength(50);
             e.Property(p => p.PrecoCusto).HasColumnName("preco_custo").HasPrecision(14, 2);
             e.Property(p => p.PrecoVendaPf).HasColumnName("preco_venda_pf").HasPrecision(14, 2);
             e.Property(p => p.PrecoVendaPj).HasColumnName("preco_venda_pj").HasPrecision(14, 2);
@@ -69,10 +71,25 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
             e.Property(p => p.Observacao).HasColumnName("observacao").HasMaxLength(2000);
             e.Property(p => p.CriadoEm).HasColumnName("criado_em");
             e.Property(p => p.AtualizadoEm).HasColumnName("atualizado_em");
-            // ID sequencial e código não se repetem dentro da mesma empresa.
+            // ID sequencial, código e código de barras não se repetem dentro da mesma empresa.
             e.HasIndex(p => new { p.EmpresaId, p.Numero }).IsUnique();
             e.HasIndex(p => new { p.EmpresaId, p.Codigo }).IsUnique().HasFilter("codigo IS NOT NULL");
+            e.HasIndex(p => new { p.EmpresaId, p.CodigoBarras }).IsUnique().HasFilter("codigo_barras IS NOT NULL");
             e.HasOne(p => p.Empresa).WithMany().HasForeignKey(p => p.EmpresaId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ProdutoImagem>(e =>
+        {
+            e.ToTable("produto_imagens");
+            e.Property(i => i.Id).HasColumnName("id");
+            e.Property(i => i.ProdutoId).HasColumnName("produto_id");
+            e.Property(i => i.Ordem).HasColumnName("ordem");
+            e.Property(i => i.TipoConteudo).HasColumnName("tipo_conteudo").HasMaxLength(20);
+            e.Property(i => i.Dados).HasColumnName("dados");
+            e.Property(i => i.CriadoEm).HasColumnName("criado_em");
+            e.HasIndex(i => new { i.ProdutoId, i.Ordem });
+            // Excluir o produto apaga as imagens dele.
+            e.HasOne(i => i.Produto).WithMany().HasForeignKey(i => i.ProdutoId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Cliente>(e =>
@@ -84,6 +101,15 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
             e.Property(c => c.Nome).HasColumnName("nome").HasMaxLength(200);
             e.Property(c => c.Celular).HasColumnName("celular").HasMaxLength(11);
             e.Property(c => c.Documento).HasColumnName("documento").HasMaxLength(14);
+            e.Property(c => c.Produto).HasColumnName("produto").HasMaxLength(200);
+            e.Property(c => c.RgInscricao).HasColumnName("rg_inscricao").HasMaxLength(30);
+            e.Property(c => c.DataNascimento).HasColumnName("data_nascimento");
+            e.Property(c => c.PontoReferencia).HasColumnName("ponto_referencia").HasMaxLength(200);
+            e.Property(c => c.TelefoneResidencial).HasColumnName("telefone_residencial").HasMaxLength(11);
+            e.Property(c => c.TelefoneComercial).HasColumnName("telefone_comercial").HasMaxLength(11);
+            e.Property(c => c.Celular2).HasColumnName("celular2").HasMaxLength(11);
+            e.Property(c => c.Conjuge).HasColumnName("conjuge").HasMaxLength(200);
+            e.Property(c => c.DataCompra).HasColumnName("data_compra");
             e.Property(c => c.Cep).HasColumnName("cep").HasMaxLength(8);
             e.Property(c => c.Logradouro).HasColumnName("logradouro").HasMaxLength(150);
             e.Property(c => c.NumeroEndereco).HasColumnName("numero_endereco").HasMaxLength(20);
@@ -132,6 +158,7 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
             e.Property(c => c.EnviadoEm).HasColumnName("enviado_em");
             e.Property(c => c.Tentativas).HasColumnName("tentativas");
             e.Property(c => c.NovoEmail).HasColumnName("novo_email").HasMaxLength(254);
+            e.Property(c => c.Canal).HasColumnName("canal").HasMaxLength(10);
             e.Property(c => c.UsadoEm).HasColumnName("usado_em");
             e.Property(c => c.CriadoEm).HasColumnName("criado_em");
             e.HasOne(c => c.Usuario).WithMany().HasForeignKey(c => c.UsuarioId).OnDelete(DeleteBehavior.Cascade);

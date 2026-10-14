@@ -11,6 +11,8 @@ public record UsuarioDto(
     Guid Id,
     string Nome,
     string Email,
+    /// <summary>WhatsApp (só dígitos, com DDD): o código de acesso pode ir para ele.</summary>
+    string? Telefone,
     bool Administrador,
     List<string> Permissoes,
     bool Ativo,
@@ -33,7 +35,7 @@ public static class UsuarioAtual
     }
 
     public static UsuarioDto Dto(Usuario u) =>
-        new(u.Id, u.Nome, u.Email, u.Administrador, u.Permissoes, u.Ativo, u.CriadoEm);
+        new(u.Id, u.Nome, u.Email, u.Telefone, u.Administrador, Permissoes.De(u.Administrador), u.Ativo, u.CriadoEm);
 
     public static SessaoResponse Sessao(Usuario u, TokenService tokens) =>
         new(tokens.Gerar(u), Dto(u), new EmpresaResumo(u.EmpresaId, u.Empresa!.Nome));

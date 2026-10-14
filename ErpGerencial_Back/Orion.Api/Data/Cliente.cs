@@ -19,6 +19,31 @@ public class Cliente
     /// <summary>CPF (11) ou CNPJ (14, pode ter letras) sem pontuação. Opcional.</summary>
     public string? Documento { get; set; }
 
+    // ---------- Campos da ficha "Registro de Cliente" (todos opcionais) ----------
+
+    /// <summary>Produto que o cliente comprou (texto livre; o site sugere os produtos cadastrados).</summary>
+    public string? Produto { get; set; }
+
+    /// <summary>RG (pessoa física) ou inscrição estadual (empresa), como foi digitado.</summary>
+    public string? RgInscricao { get; set; }
+
+    public DateOnly? DataNascimento { get; set; }
+
+    /// <summary>Ponto de referência do endereço (ex.: "ao lado da padaria").</summary>
+    public string? PontoReferencia { get; set; }
+
+    /// <summary>Telefones só com os dígitos (DDD + número).</summary>
+    public string? TelefoneResidencial { get; set; }
+    public string? TelefoneComercial { get; set; }
+
+    /// <summary>Segundo celular (o primeiro, obrigatório, é o que recebe o WhatsApp).</summary>
+    public string? Celular2 { get; set; }
+
+    public string? Conjuge { get; set; }
+
+    /// <summary>Dia da compra do produto.</summary>
+    public DateOnly? DataCompra { get; set; }
+
     /// <summary>CEP só com os 8 dígitos.</summary>
     public string? Cep { get; set; }
     public string? Logradouro { get; set; }

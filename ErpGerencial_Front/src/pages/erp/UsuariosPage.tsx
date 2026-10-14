@@ -8,22 +8,14 @@ import AvisoPagina from './AvisoPagina'
 import CabecalhoModulo from './CabecalhoModulo'
 import FaixaPagina from './FaixaPagina'
 import { useErp } from './contexto'
-import { MODULOS, MODULOS_PRINCIPAIS } from './modulos'
+import { MODULOS } from './modulos'
 import SemAcesso from './SemAcesso'
 
 const MODULO = MODULOS.find((m) => m.id === 'usuarios')!
 
-/** "Administrador", "Acessa 3 módulos"... */
-function resumoAcesso(u: Usuario) {
-  if (u.administrador) return 'Administrador · acessa tudo'
-  const n = u.permissoes.length
-  if (n === 0) return 'Nenhum módulo'
-  // Ex.: "Produtos (edita) e Clientes"
-  const nomes = MODULOS_PRINCIPAIS.filter((m) => u.permissoes.includes(m.id)).map((m) =>
-    u.permissoes.includes(`${m.id}-editar`) ? `${m.rotulo} (edita)` : m.rotulo,
-  )
-  return nomes.join(' e ').replace(/ e (?=.* e )/g, ', ')
-}
+/** Tipo de acesso, como aparece na lista da equipe. */
+const resumoAcesso = (u: Usuario) =>
+  u.administrador ? 'Administrador · acessa tudo' : 'Funcionário · vê produtos e clientes, cadastra clientes'
 
 const iniciais = (nome: string) =>
   nome

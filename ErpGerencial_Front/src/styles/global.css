@@ -40,6 +40,13 @@
   --modulo-clientes-fundo: var(--azul-claro);
   --modulo-financeiro: var(--preto);
   --modulo-financeiro-fundo: #e4e9ec;
+  /* Módulos novos: o fundo é a cor do quadrado da própria ilustração (ela se funde ao cartão) */
+  --modulo-vendas: #6f5a2c;
+  --modulo-vendas-fundo: #dfd5b4;
+  --modulo-cupom-fiscal: #1b6d8c;
+  --modulo-cupom-fiscal-fundo: #98bed4;
+  --modulo-ordem-servico: #2e6b47;
+  --modulo-ordem-servico-fundo: #c3e8c8;
 
   /* Estrutura (neutros frios, combinando com preto e azul) */
   --cinza-escuro: #1c2329;
@@ -186,6 +193,24 @@ a {
   --tema: var(--modulo-financeiro);
   --tema-texto: var(--preto);
   --tema-fundo: var(--modulo-financeiro-fundo);
+}
+
+.tema-vendas {
+  --tema: var(--modulo-vendas);
+  --tema-texto: #4e3f1d;
+  --tema-fundo: var(--modulo-vendas-fundo);
+}
+
+.tema-cupom-fiscal {
+  --tema: var(--modulo-cupom-fiscal);
+  --tema-texto: var(--azul-escuro);
+  --tema-fundo: var(--modulo-cupom-fiscal-fundo);
+}
+
+.tema-ordem-servico {
+  --tema: var(--modulo-ordem-servico);
+  --tema-texto: #1f4a31;
+  --tema-fundo: var(--modulo-ordem-servico-fundo);
 }
 
 /* Ilustrações em imagem: encaixadas no quadrado do desenho, sem distorcer */

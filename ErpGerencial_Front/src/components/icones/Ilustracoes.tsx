@@ -1,5 +1,6 @@
 // Ilustrações coloridas: botões grandes da tela inicial, faixas das páginas e telas de acesso.
-// Produtos, Clientes, Financeiro, Entrar e Cadastro são imagens (public/imgs/ilustracoes);
+// Produtos, Clientes, Financeiro, Vendas, Cupom fiscal, Ordem de serviço, Entrar e Cadastro são imagens
+// (public/imgs/ilustracoes);
 // as outras ainda são desenhadas aqui em código (SVG).
 
 type Props = {
@@ -47,6 +48,21 @@ export function IlustracaoClientes({ tamanho = 112 }: Props) {
 /** Nota de dinheiro e moedas (Financeiro). */
 export function IlustracaoFinanceiro({ tamanho = 112 }: Props) {
   return <Imagem arquivo="financeiro" tamanho={tamanho} />
+}
+
+/** Carrinho de compras (Vendas). */
+export function IlustracaoVendas({ tamanho = 112 }: Props) {
+  return <Imagem arquivo="vendas" tamanho={tamanho} />
+}
+
+/** Cupom com cifrão (Cupom fiscal). */
+export function IlustracaoCupomFiscal({ tamanho = 112 }: Props) {
+  return <Imagem arquivo="cupom-fiscal" tamanho={tamanho} />
+}
+
+/** Documento com lupa (Número de ordem de serviço). */
+export function IlustracaoOrdemServico({ tamanho = 112 }: Props) {
+  return <Imagem arquivo="ordem-servico" tamanho={tamanho} />
 }
 
 /** Porta aberta com seta e cadeado (Entrar). */

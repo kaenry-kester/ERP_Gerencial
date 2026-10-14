@@ -22,21 +22,41 @@ public record EnvioDto(
 public record ConfiguracaoWhatsappDto(string? Remetente, string? Mensagem, List<EnvioDto> Envios);
 
 /// <summary>
-/// Mensagem automática da empresa (WhatsApp): a mensagem padrão, o celular que envia
-/// e o histórico dos últimos envios. Quem pode editar clientes pode mexer aqui.
+/// Mensagem automática da empresa (WhatsApp): a mensagem padrão, o número remetente e os últimos
+/// clientes que receberam a mensagem. Quem pode editar clientes pode mexer aqui; o histórico de um
+/// cliente (GET /api/clientes/{id}/envios) abre para quem pode ver clientes.
 /// Quem envia de fato é o robô em Python (ErpGerencial_Automacao/lembretes.py), que lê esta
 /// configuração no banco e grava cada envio em envios_whatsapp.
 /// </summary>
 public static class WhatsAppEndpoints
 {
     private const int TamanhoMaximo = 1000;
-    private const int UltimosEnvios = 30;
+    /// <summary>"Últimos envios": os 15 clientes que receberam a mensagem mais recentemente (um envio por cliente).</summary>
+    private const int UltimosClientes = 15;
 
     public static void MapWhatsAppEndpoints(this WebApplication app)
     {
         var grupo = app.MapGroup("/api/whatsapp").RequireAuthorization();
         grupo.MapGet("/", Obter);
         grupo.MapPut("/", Salvar);
+        app.MapGet("/api/clientes/{clienteId:guid}/envios", EnviosDoCliente).RequireAuthorization();
+    }
+
+    /// <summary>Todo o histórico de envios da mensagem automática para um cliente, do mais novo ao mais antigo.</summary>
+    private static async Task<IResult> EnviosDoCliente(Guid clienteId, ClaimsPrincipal user, OrionDbContext db)
+    {
+        var (usuario, negado) = await Permissoes.Exigir(user, db, Permissoes.Clientes);
+        if (usuario is null) return negado!;
+        if (!await db.Clientes.AnyAsync(c => c.Id == clienteId && c.EmpresaId == usuario.EmpresaId))
+            return Results.NotFound();
+
+        var envios = await db.EnviosWhatsapp
+            .Where(w => w.ClienteId == clienteId && w.EmpresaId == usuario.EmpresaId)
+            .OrderByDescending(w => w.CriadoEm)
+            .Select(w => new EnvioDto(w.Id, w.ClienteId, w.Cliente!.Nome, w.Telefone, w.DataReferencia,
+                w.Tipo, w.Mensagem, w.Status, w.Erro, w.CriadoEm))
+            .ToListAsync();
+        return Results.Ok(envios);
     }
 
     private static async Task<IResult> Obter(ClaimsPrincipal user, OrionDbContext db)
@@ -71,10 +91,12 @@ public static class WhatsAppEndpoints
 
     private static async Task<ConfiguracaoWhatsappDto> Dto(Empresa empresa, OrionDbContext db)
     {
-        var envios = await db.EnviosWhatsapp
-            .Where(w => w.EmpresaId == empresa.Id)
+        // O envio mais recente de cada cliente que recebeu a mensagem; os 15 mais novos.
+        var enviados = db.EnviosWhatsapp.Where(w => w.EmpresaId == empresa.Id && w.Status == "enviado");
+        var envios = await enviados
+            .Where(w => !enviados.Any(outro => outro.ClienteId == w.ClienteId && outro.CriadoEm > w.CriadoEm))
             .OrderByDescending(w => w.CriadoEm)
-            .Take(UltimosEnvios)
+            .Take(UltimosClientes)
             .Select(w => new EnvioDto(w.Id, w.ClienteId, w.Cliente!.Nome, w.Telefone, w.DataReferencia,
                 w.Tipo, w.Mensagem, w.Status, w.Erro, w.CriadoEm))
             .ToListAsync();

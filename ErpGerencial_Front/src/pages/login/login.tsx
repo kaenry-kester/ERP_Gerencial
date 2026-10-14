@@ -3,19 +3,21 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import CampoSenha from '../../components/formulario/CampoSenha'
 import CampoTexto from '../../components/formulario/CampoTexto'
 import FaixaAviso, { type Aviso } from '../../components/formulario/FaixaAviso'
-import { IconeCadastro, IconeCheck, IconeLogin, IconeVoltar } from '../../components/icones/Icones'
+import { IconeCadastro, IconeCheck, IconeEmail, IconeLogin, IconeMensagem, IconeVoltar } from '../../components/icones/Icones'
 import { IlustracaoConta, IlustracaoEntrar } from '../../components/icones/Ilustracoes'
 import {
+  enviarCodigo,
   entrar,
   ErroApi,
   esquecerLembrado,
   lerLembrado,
   mensagemDe,
-  precisaDeCodigo,
-  reenviarCodigo,
+  precisaEscolherCanal,
   salvarLembrado,
   salvarSessao,
   verificarCodigo,
+  type CanalCodigo,
+  type EscolhaCanal,
   type Verificacao,
 } from '../../services/api'
 import { emailValido } from '../../utils/validacao'
@@ -43,10 +45,13 @@ function validar(email: string, senha: string): Erros {
 
 /*
   Login em duas etapas (segurança):
-  1) e-mail e senha → a API envia um código de 6 dígitos para o e-mail;
+  1) e-mail e senha → a pessoa escolhe onde receber o código de 6 dígitos: e-mail ou celular (WhatsApp, pelo
+     número remetente da empresa). Sem celular cadastrado, essa opção aparece desativada, com o motivo;
   2) a pessoa digita o código. "Lembrar de quem sou" faz este navegador não pedir
      o código por 30 dias (e já deixa o e-mail preenchido).
 */
+
+const NOME_CANAL: Record<CanalCodigo, string> = { email: 'e-mail', whatsapp: 'celular (WhatsApp)' }
 export default function LoginPage() {
   const navigate = useNavigate()
   // Aviso enviado por outra tela (ex.: sessão expirada)
@@ -58,7 +63,9 @@ export default function LoginPage() {
   const [aviso, setAviso] = useState<Aviso>(avisoInicial)
   const [enviando, setEnviando] = useState(false)
 
-  // 2ª etapa
+  // Escolha do canal (e-mail ou WhatsApp) e 2ª etapa
+  const [escolha, setEscolha] = useState<EscolhaCanal | null>(null)
+  const [enviandoCanal, setEnviandoCanal] = useState<CanalCodigo | null>(null)
   const [verificacao, setVerificacao] = useState<Verificacao | null>(null)
   const [codigo, setCodigo] = useState('')
   const [erroCodigo, setErroCodigo] = useState<string>()
@@ -85,12 +92,16 @@ export default function LoginPage() {
     setCodigo('')
     setErroCodigo(undefined)
     setEsperaReenvio(v.reenviarEmSegundos)
-    setAviso({ tipo: 'ok', texto: `Enviamos um código de 6 dígitos para ${v.email}.` })
+    setAviso({
+      tipo: 'ok',
+      texto: `Enviamos um código de 6 dígitos para ${v.canal === 'whatsapp' ? 'o celular ' : ''}${v.destino}.`,
+    })
     requestAnimationFrame(() => document.getElementById('codigo')?.focus())
   }
 
   const voltarParaSenha = (novoAviso: Aviso = null) => {
     setVerificacao(null)
+    setEscolha(null)
     setSenha('')
     setEnviado(false)
     setAviso(novoAviso)
@@ -114,8 +125,8 @@ export default function LoginPage() {
     setAviso(null)
     try {
       const resposta = await entrar({ email, senha })
-      if (precisaDeCodigo(resposta)) {
-        iniciarVerificacao(resposta)
+      if (precisaEscolherCanal(resposta)) {
+        setEscolha(resposta)
         setEnviando(false)
         return
       }
@@ -173,17 +184,27 @@ export default function LoginPage() {
     if (digitos.length === 6) confirmarCodigo(digitos)
   }
 
-  const reenviar = async () => {
-    if (!verificacao || esperaReenvio > 0) return
+  /** Envia o código pelo canal: a escolha inicial, o "Reenviar código" (sem canal) ou a troca de canal. */
+  const enviarPor = async (desafioId: string, canal?: CanalCodigo) => {
+    setEnviandoCanal(canal ?? verificacao?.canal ?? 'email')
     setAviso(null)
     try {
-      iniciarVerificacao(await reenviarCodigo(verificacao.desafioId))
+      iniciarVerificacao(await enviarCodigo(desafioId, canal))
     } catch (erro) {
       const texto = mensagemDe(erro)
       if (texto.includes('Entre de novo')) voltarParaSenha({ tipo: 'erro', texto })
       else setAviso({ tipo: 'erro', texto })
+    } finally {
+      setEnviandoCanal(null)
     }
   }
+
+  const reenviar = () => {
+    if (verificacao && esperaReenvio <= 0) enviarPor(verificacao.desafioId)
+  }
+  // Na tela do código dá para trocar de canal (o celular só quando ele pode ser usado).
+  const outroCanal: CanalCodigo | null =
+    escolha && verificacao ? (verificacao.canal === 'whatsapp' ? 'email' : escolha.whatsapp ? 'whatsapp' : null) : null
 
   const esquecer = () => {
     esquecerLembrado()
@@ -198,20 +219,22 @@ export default function LoginPage() {
         <Link to="/" className="tela-logo-link" aria-label="Órion — voltar ao início">
           <img src="/imgs/logo-orion.png" alt="Órion" className="tela-logo" />
         </Link>
-        <h1 className="tela-titulo">{verificacao ? 'Confirme que é você' : 'Acesse sua conta'}</h1>
+        <h1 className="tela-titulo">{verificacao || escolha ? 'Confirme que é você' : 'Acesse sua conta'}</h1>
         <p className="tela-texto">
           {verificacao
-            ? 'Para proteger sua conta, pedimos um código enviado ao seu e-mail.'
-            : 'Seus produtos e clientes estão a um clique de distância.'}
+            ? `Para proteger sua conta, pedimos um código enviado ao seu ${NOME_CANAL[verificacao.canal]}.`
+            : escolha
+              ? 'Para proteger sua conta, enviamos um código de 6 números. Escolha onde quer receber.'
+              : 'Seus produtos e clientes estão a um clique de distância.'}
         </p>
 
         {/* Ilustração do painel (some no celular, onde o painel vira uma faixa) */}
         <div className="tela-painel-arte" aria-hidden="true">
-          {verificacao ? <IlustracaoConta tamanho={200} /> : <IlustracaoEntrar tamanho={200} />}
+          {verificacao || escolha ? <IlustracaoConta tamanho={200} /> : <IlustracaoEntrar tamanho={200} />}
         </div>
 
         {/* Voltar no canto inferior esquerdo do painel (no celular, só a seta, no canto esquerdo da faixa) */}
-        {verificacao ? (
+        {verificacao || escolha ? (
           <button
             type="button"
             className="ghost-button botao-voltar botao-voltar-painel"
@@ -232,7 +255,13 @@ export default function LoginPage() {
       <section className="tela-area" aria-labelledby="login-titulo">
         <FaixaAviso
           id="login-titulo"
-          titulo={verificacao ? 'Digite o código enviado para o seu e-mail:' : 'Entre com seus dados para acessar o sistema:'}
+          titulo={
+            verificacao
+              ? `Digite o código enviado para o seu ${NOME_CANAL[verificacao.canal]}:`
+              : escolha
+                ? 'Onde você quer receber o código?'
+                : 'Entre com seus dados para acessar o sistema:'
+          }
           aviso={aviso}
         />
 
@@ -275,9 +304,48 @@ export default function LoginPage() {
             </form>
 
             <div className="login-codigo-acoes">
-              <button type="button" className="login-link" onClick={reenviar} disabled={esperaReenvio > 0}>
+              <button type="button" className="login-link" onClick={reenviar} disabled={esperaReenvio > 0 || !!enviandoCanal}>
                 {esperaReenvio > 0 ? `Reenviar código em ${esperaReenvio}s` : 'Reenviar código'}
               </button>
+              {outroCanal && (
+                <button
+                  type="button"
+                  className="login-link"
+                  onClick={() => enviarPor(verificacao.desafioId, outroCanal)}
+                  disabled={esperaReenvio > 0 || !!enviandoCanal}
+                >
+                  {outroCanal === 'whatsapp' ? 'Receber no celular' : 'Receber por e-mail'}
+                </button>
+              )}
+              <button type="button" className="login-link" onClick={() => voltarParaSenha()}>
+                Usar outra conta
+              </button>
+            </div>
+          </div>
+        ) : escolha ? (
+          <div className="login-conteudo">
+            <div className="login-canais">
+              {(['email', 'whatsapp'] as const).map((canal) => (
+                <button
+                  key={canal}
+                  type="button"
+                  className="login-canal"
+                  onClick={() => enviarPor(escolha.desafioId, canal)}
+                  disabled={!!enviandoCanal || (canal === 'whatsapp' && !escolha.whatsapp)}
+                >
+                  {canal === 'whatsapp' ? <IconeMensagem tamanho={30} /> : <IconeEmail tamanho={30} />}
+                  <span className="login-canal-textos">
+                    <span className="login-canal-titulo">
+                      {enviandoCanal === canal ? 'Enviando...' : canal === 'whatsapp' ? 'Celular (WhatsApp)' : 'E-mail'}
+                    </span>
+                    <span className="login-canal-destino">
+                      {canal === 'email' ? escolha.email : (escolha.whatsapp ?? escolha.semWhatsapp)}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="login-codigo-acoes">
               <button type="button" className="login-link" onClick={() => voltarParaSenha()}>
                 Usar outra conta
               </button>

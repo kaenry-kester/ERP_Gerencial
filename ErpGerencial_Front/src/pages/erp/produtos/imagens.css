@@ -1,0 +1,232 @@
+/* Galeria de imagens do produto (cadastro/edição e página do produto). Cores do tema da página (marrom/creme). */
+
+.imagens {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.imagens-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: 4px;
+  transition: background-color 0.25s ease;
+}
+
+/* Fotos sendo arrastadas do computador por cima da galeria */
+.imagens-grade.recebendo {
+  background: var(--pg-suave, var(--creme));
+}
+
+.imagens-item {
+  position: relative;
+  aspect-ratio: 1;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--pg-zebra, #fbf8ef);
+}
+
+.imagens-item:not(.adicionar) {
+  cursor: grab;
+}
+
+.imagens-item:not(.adicionar):active {
+  cursor: grabbing;
+}
+
+/* Produto inteiro à vista, sem cortar */
+.imagens-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+}
+
+/* A capa ganha um fundo creme mais forte, além do selo */
+.imagens-item.capa {
+  background: var(--pg-suave, var(--creme));
+}
+
+.imagens-item.arrastando {
+  opacity: 0.4;
+}
+
+.imagens-capa {
+  position: absolute;
+  top: 0.45rem;
+  left: 0.45rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 2px;
+  background: var(--pg-cor, var(--marrom));
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+/* Mover para trás / para frente / remover, no pé da imagem */
+.imagens-acoes {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 3px;
+  padding: 0.4rem;
+}
+
+.imagens-acoes button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--pg-titulo, var(--marrom-escuro));
+  cursor: pointer;
+  transition: background-color 0.25s ease;
+}
+
+.imagens-acoes button:hover:not(:disabled) {
+  background: #fff;
+}
+
+.imagens-acoes button.remover {
+  color: var(--erro);
+}
+
+.imagens-acoes button:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
+/* "Adicionar imagem": do tamanho de uma imagem, arredondado, borda tracejada e sem fundo */
+.imagens-item.adicionar {
+  border-radius: 14px;
+  background: none;
+}
+
+.imagens-item.adicionar button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 100%;
+  height: 100%;
+  padding: 0.75rem;
+  border: 2px dashed var(--pg-cor, var(--marrom));
+  border-radius: 14px;
+  background: none;
+  text-align: center;
+  color: var(--pg-titulo, var(--marrom-escuro));
+  cursor: pointer;
+  transition: border-color 0.25s ease, background-color 0.25s ease;
+}
+
+.imagens-item.adicionar button:hover:not(:disabled) {
+  border-color: var(--pg-titulo, var(--marrom-escuro));
+  background: rgba(138, 102, 59, 0.05);
+}
+
+.imagens-item.adicionar button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.imagens-adicionar-titulo {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.imagens-adicionar-dica {
+  font-size: 0.82rem;
+  color: var(--texto-suave);
+}
+
+.imagens-rodape {
+  font-size: 0.86rem;
+  color: var(--texto-suave);
+}
+
+.imagens-erros {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--erro);
+}
+
+/* Página do produto: só as imagens, sem botões */
+.imagens-grade.leitura .imagens-item {
+  cursor: default;
+}
+
+@media (max-width: 600px) {
+  .imagens-grade {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---------- Galeria dentro da ficha do produto: compacta, para o cadastro caber na tela ---------- */
+.ficha-imagens .imagens {
+  gap: 0.3rem;
+  padding-block: 0.25rem 0;
+}
+
+.ficha-imagens .imagens-grade {
+  grid-template-columns: repeat(auto-fill, 84px);
+  gap: 0.5rem;
+}
+
+.ficha-imagens .imagens-capa {
+  top: 0.25rem;
+  left: 0.25rem;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.6rem;
+}
+
+.ficha-imagens .imagens-acoes {
+  gap: 2px;
+  padding: 0.2rem;
+}
+
+.ficha-imagens .imagens-acoes button {
+  width: 24px;
+  height: 24px;
+}
+
+.ficha-imagens .imagens-acoes svg {
+  width: 14px;
+  height: 14px;
+}
+
+.ficha-imagens .imagens-item.adicionar,
+.ficha-imagens .imagens-item.adicionar button {
+  border-radius: 10px;
+}
+
+.ficha-imagens .imagens-adicionar-titulo {
+  font-size: 0.78rem;
+  line-height: 1.2;
+}
+
+.ficha-imagens .imagens-adicionar-dica {
+  display: none;
+}
+
+.ficha-imagens .imagens-rodape {
+  font-size: 0.72rem;
+}

@@ -1,21 +1,25 @@
 import { useEffect, useState, type SubmitEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import CampoArea from '../../../components/formulario/CampoArea'
-import CampoTexto from '../../../components/formulario/CampoTexto'
 import type { Aviso } from '../../../components/formulario/FaixaAviso'
 import { IconeCheck } from '../../../components/icones/Icones'
 import { IlustracaoProdutos } from '../../../components/icones/Ilustracoes'
+import { useLeitorCodigoBarras, type Leitura } from '../../../hooks/useLeitorCodigoBarras'
 import { useSessaoExpirada } from '../../../hooks/useSessaoExpirada'
 import {
   criarProduto,
   editarProduto,
+  enviarImagemProduto,
   ErroApi,
+  excluirImagemProduto,
   mensagemDe,
   obterProduto,
+  ordenarImagensProduto,
+  urlImagemProduto,
   type DadosProduto,
   type Produto,
 } from '../../../services/api'
 import {
+  erroCodigoBarras,
   formatarMoeda,
   formatarQuantidade,
   mascaraMoeda,
@@ -28,12 +32,14 @@ import { useErp } from '../contexto'
 import { tem } from '../modulos'
 import SemAcesso from '../SemAcesso'
 import FaixaPagina from '../FaixaPagina'
-import SecaoPagina from '../SecaoPagina'
+import CampoFicha from '../CampoFicha'
+import ImagensProduto, { type ImagemProduto } from './ImagensProduto'
 import '../../../styles/acesso.css'
 
 type Campo =
   | 'nome'
   | 'codigo'
+  | 'codigoBarras'
   | 'precoCusto'
   | 'precoVendaPf'
   | 'precoVendaPj'
@@ -48,6 +54,7 @@ type Valores = Record<Campo, string>
 const VAZIO: Valores = {
   nome: '',
   codigo: '',
+  codigoBarras: '',
   precoCusto: '',
   precoVendaPf: '',
   precoVendaPj: '',
@@ -68,9 +75,16 @@ const MASCARAS: Partial<Record<Campo, (v: string) => string>> = {
 
 const VOLTAGENS = ['110V', '127V', '220V', 'Bivolt', '12V', '24V', 'Não se aplica']
 
+/** Opções da voltagem: vazio, as comuns e, se o produto já tinha outra (digitada antes), ela também. */
+const opcoesVoltagem = (atual: string) => [
+  { valor: '', rotulo: '—' },
+  ...[...(atual && !VOLTAGENS.includes(atual) ? [atual] : []), ...VOLTAGENS].map((v) => ({ valor: v, rotulo: v })),
+]
+
 const paraFormulario = (p: Produto): Valores => ({
   nome: p.nome,
   codigo: p.codigo ?? '',
+  codigoBarras: p.codigoBarras ?? '',
   precoCusto: formatarMoeda(p.precoCusto),
   precoVendaPf: formatarMoeda(p.precoVendaPf),
   precoVendaPj: formatarMoeda(p.precoVendaPj),
@@ -103,6 +117,27 @@ export default function ProdutoFormPage() {
   const [salvando, setSalvando] = useState(false)
   const [erroServidor, setErroServidor] = useState<Partial<Record<Campo, string>>>({})
   const [aviso, setAviso] = useState<Aviso>(null)
+  const [lido, setLido] = useState(false)
+  const [imagens, setImagens] = useState<ImagemProduto[]>([])
+  const [erroImagens, setErroImagens] = useState<string>()
+
+  // Leitor de código de barras: em qualquer lugar da página, a leitura vai para o campo "Código de barras".
+  useLeitorCodigoBarras('produto-codigoBarras', ({ codigo, idAlvo, valorAntes }: Leitura) => {
+    setValores((atual) => {
+      const novos = { ...atual, codigoBarras: codigo }
+      // Se o cursor estava em outro campo, os números foram digitados nele: volta ao que era antes.
+      const outro = idAlvo?.replace(/^produto-/, '') as Campo | undefined
+      if (outro && outro !== 'codigoBarras' && outro in atual && valorAntes !== null) novos[outro] = valorAntes
+      return novos
+    })
+    setLido(true)
+    setErroServidor({})
+    const erro = erroCodigoBarras(codigo)
+    setAviso(erro ? { tipo: 'erro', texto: `Código de barras ${codigo}: ${erro.toLowerCase()}` } : { tipo: 'ok', texto: `Código de barras lido: ${codigo}` })
+    const campoBarras = document.getElementById('produto-codigoBarras')
+    campoBarras?.focus()
+    campoBarras?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  })
 
   const permitido = tem(sessao.usuario, novo ? 'produtos-cadastrar' : 'produtos-editar')
 
@@ -114,6 +149,7 @@ export default function ProdutoFormPage() {
         if (!ativo) return
         setOriginal(p)
         setValores(paraFormulario(p))
+        setImagens(p.imagens.map((idImagem) => ({ chave: idImagem, id: idImagem, url: urlImagemProduto(idImagem) })))
       })
       .catch((e) => ativo && !sessaoExpirada(e) && setAviso({ tipo: 'erro', texto: mensagemDe(e) }))
     return () => {
@@ -131,9 +167,11 @@ export default function ProdutoFormPage() {
     )
   }
 
+  const erroBarras = enviado || lido ? erroCodigoBarras(valores.codigoBarras) : undefined
   const erros: Partial<Record<Campo, string>> = {
     ...erroServidor,
     ...(enviado && !valores.nome.trim() ? { nome: 'Obrigatório' } : {}),
+    ...(erroBarras ? { codigoBarras: erroBarras } : {}),
   }
 
   const campo = (c: Campo) => ({
@@ -147,6 +185,41 @@ export default function ProdutoFormPage() {
     },
   })
 
+  /**
+   * Depois de salvar o produto: apaga as imagens que saíram, envia as novas (na ordem da galeria) e,
+   * se a ordem do servidor ficou diferente da tela, grava a ordem certa (a primeira é a capa).
+   */
+  const salvarImagens = async (produtoId: string, noServidor: string[]) => {
+    const ficaram = new Set(imagens.flatMap((i) => (i.id ? [i.id] : [])))
+    let servidor = [...noServidor]
+    try {
+      for (const idImagem of noServidor.filter((x) => !ficaram.has(x))) {
+        await excluirImagemProduto(sessao.token, produtoId, idImagem).catch((erro) => {
+          if (!(erro instanceof ErroApi && erro.status === 404)) throw erro // 404: já tinha saído
+        })
+        servidor = servidor.filter((x) => x !== idImagem)
+      }
+      const ids: string[] = []
+      for (const imagem of imagens) {
+        if (imagem.id) {
+          ids.push(imagem.id)
+          continue
+        }
+        const { id: novoId } = await enviarImagemProduto(sessao.token, produtoId, imagem.arquivo!)
+        ids.push(novoId)
+        servidor.push(novoId)
+        // Já marca como enviada: se algo falhar depois, salvar de novo não manda esta outra vez.
+        setImagens((atual) => atual.map((i) => (i.chave === imagem.chave ? { ...i, id: novoId } : i)))
+      }
+      if (ids.join() !== servidor.join()) {
+        await ordenarImagensProduto(sessao.token, produtoId, ids)
+        servidor = ids
+      }
+    } finally {
+      setOriginal((o) => o && { ...o, imagens: servidor })
+    }
+  }
+
   const salvar = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (salvando) return
@@ -155,21 +228,44 @@ export default function ProdutoFormPage() {
       document.getElementById('produto-nome')?.focus()
       return
     }
+    if (erroCodigoBarras(valores.codigoBarras)) {
+      document.getElementById('produto-codigoBarras')?.focus()
+      return
+    }
     setSalvando(true)
     setAviso(null)
     try {
       if (novo) {
         const criado = await criarProduto(sessao.token, paraApi(valores))
+        try {
+          await salvarImagens(criado.id, [])
+        } catch (erro) {
+          // O produto já existe: abre a página dele contando o que faltou (as imagens dá para mandar editando).
+          if (sessaoExpirada(erro)) return
+          navigate(`/app/produtos/${criado.id}`, {
+            state: {
+              aviso: {
+                tipo: 'erro',
+                texto: `Produto cadastrado (ID ${criado.numero}), mas nem todas as imagens foram salvas: ${mensagemDe(erro)}`,
+              },
+            },
+          })
+          return
+        }
         navigate('/app/produtos', {
           state: { aviso: { tipo: 'ok', texto: `Produto cadastrado (ID ${criado.numero}).` } },
         })
       } else {
         await editarProduto(sessao.token, id!, paraApi(valores))
+        await salvarImagens(id!, original!.imagens)
         navigate(`/app/produtos/${id}`, { state: { aviso: { tipo: 'ok', texto: 'Produto atualizado.' } } })
       }
     } catch (erro) {
       if (sessaoExpirada(erro)) return
-      if (erro instanceof ErroApi && erro.campo) {
+      if (erro instanceof ErroApi && erro.campo === 'imagens') {
+        setErroImagens(erro.message)
+        document.getElementById('produto-imagens-celula')?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      } else if (erro instanceof ErroApi && erro.campo) {
         const c = erro.campo as Campo
         setErroServidor({ [c]: erro.message })
         document.getElementById(`produto-${c}`)?.focus()
@@ -186,49 +282,53 @@ export default function ProdutoFormPage() {
       <FaixaPagina
         Ilustracao={IlustracaoProdutos}
         titulo={novo ? 'Cadastrar produto' : 'Editar produto'}
-        subtitulo={novo ? 'O ID é gerado automaticamente.' : `ID ${original!.numero}`}
+        subtitulo={novo ? undefined : `ID ${original!.numero}`}
         voltar={{ para: voltar, rotulo: novo ? 'Produtos' : original!.nome }}
       />
 
-      <form className="pagina-secoes" onSubmit={salvar} noValidate>
-        <SecaoPagina id="identificacao" numero={1} titulo="Identificação">
-          <div className="erp-form">
-            <CampoTexto {...campo('nome')} rotulo="Nome" maxLength={200} className="largo" autoComplete="off" />
-            <CampoTexto {...campo('codigo')} rotulo="Código do produto" maxLength={60} autoComplete="off" />
-          </div>
-        </SecaoPagina>
+      {/* Ficha do produto (mesmo visual da ficha do cliente), centralizada e compacta: cabe na tela sem rolar */}
+      <form className="ficha-pagina" onSubmit={salvar} noValidate>
+        <div className="ficha-area">
+          <div className="ficha" role="group" aria-label="Cadastro de produto">
+            <CampoFicha {...campo('nome')} rotulo="Nome do produto" obrigatorio maxLength={200} className="c6" />
+            <CampoFicha {...campo('codigo')} rotulo="Código do produto" maxLength={60} className="c3" />
+            <CampoFicha
+              {...campo('codigoBarras')}
+              rotulo="Código de barras"
+              maxLength={50}
+              className="c3"
+            />
 
-        <SecaoPagina id="precos" numero={2} titulo="Preços">
-          <div className="erp-form tres">
-            <CampoTexto {...campo('precoCusto')} rotulo="Custo" inputMode="numeric" placeholder="R$ 0,00" />
-            <CampoTexto {...campo('precoVendaPf')} rotulo="Venda pessoa física" inputMode="numeric" placeholder="R$ 0,00" />
-            <CampoTexto {...campo('precoVendaPj')} rotulo="Venda pessoa jurídica" inputMode="numeric" placeholder="R$ 0,00" />
-          </div>
-        </SecaoPagina>
+            <h2 className="ficha-topico">Preços e estoque</h2>
+            <CampoFicha {...campo('precoCusto')} rotulo="Custo" inputMode="numeric" placeholder="R$ 0,00" className="c3" />
+            <CampoFicha {...campo('precoVendaPf')} rotulo="Venda pessoa física" inputMode="numeric" placeholder="R$ 0,00" className="c3" />
+            <CampoFicha {...campo('precoVendaPj')} rotulo="Venda pessoa jurídica" inputMode="numeric" placeholder="R$ 0,00" className="c3" />
+            <CampoFicha {...campo('quantidade')} rotulo="Quantidade em estoque" inputMode="decimal" placeholder="0" className="c3" />
 
-        <SecaoPagina id="estoque" numero={3} titulo="Estoque">
-          <div className="erp-form">
-            <CampoTexto {...campo('quantidade')} rotulo="Quantidade" inputMode="decimal" placeholder="0" />
-          </div>
-        </SecaoPagina>
+            <h2 className="ficha-topico">Características</h2>
+            <CampoFicha {...campo('marca')} rotulo="Marca" maxLength={80} className="c3" />
+            <CampoFicha {...campo('modelo')} rotulo="Modelo" maxLength={80} className="c3" />
+            <CampoFicha {...campo('cor')} rotulo="Cor" maxLength={50} className="c3" />
+            <CampoFicha {...campo('voltagem')} rotulo="Voltagem" opcoes={opcoesVoltagem(valores.voltagem)} className="c3" />
+            <CampoFicha {...campo('observacao')} rotulo="Observação" linhas={2} maxLength={2000} className="c12" />
 
-        <SecaoPagina id="caracteristicas" numero={4} titulo="Características">
-          <div className="erp-form">
-            <CampoTexto {...campo('marca')} rotulo="Marca" maxLength={80} autoComplete="off" />
-            <CampoTexto {...campo('modelo')} rotulo="Modelo" maxLength={80} autoComplete="off" />
-            <CampoTexto {...campo('cor')} rotulo="Cor" maxLength={50} autoComplete="off" />
-            <CampoTexto {...campo('voltagem')} rotulo="Voltagem" maxLength={30} lista="voltagens" autoComplete="off" />
-            <datalist id="voltagens">
-              {VOLTAGENS.map((v) => (
-                <option key={v} value={v} />
-              ))}
-            </datalist>
+            <h2 className="ficha-topico">Imagens</h2>
+            <div id="produto-imagens-celula" className="ficha-campo ficha-imagens c12">
+              <ImagensProduto
+                imagens={imagens}
+                alterar={(atualizar) => {
+                  setImagens(atualizar)
+                  setErroImagens(undefined)
+                }}
+                erro={erroImagens}
+                desabilitado={salvando}
+              />
+            </div>
           </div>
-        </SecaoPagina>
-
-        <SecaoPagina id="observacao" numero={5} titulo="Observação">
-          <CampoArea {...campo('observacao')} rotulo="Observação" maxLength={2000} />
-        </SecaoPagina>
+          <p className="ficha-nota">
+            <span aria-hidden="true">*</span> Obrigatório.
+          </p>
+        </div>
 
         <div className="pagina-barra">
           <button type="submit" className="pagina-botao" disabled={salvando}>

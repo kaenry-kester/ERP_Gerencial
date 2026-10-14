@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { Aviso } from '../../../components/formulario/FaixaAviso'
-import { IconeBusca, IconeMais } from '../../../components/icones/Icones'
+import { IconeBusca, IconeCaixa, IconeMais } from '../../../components/icones/Icones'
 import { IlustracaoProdutos } from '../../../components/icones/Ilustracoes'
 import { useSessaoExpirada } from '../../../hooks/useSessaoExpirada'
-import { listarProdutos, mensagemDe, type ListaProdutos } from '../../../services/api'
+import { listarProdutos, mensagemDe, urlImagemProduto, type ListaProdutos } from '../../../services/api'
 import { formatarMoeda, formatarQuantidade } from '../../../utils/validacao'
 import AvisoPagina from '../AvisoPagina'
 import CabecalhoModulo from '../CabecalhoModulo'
@@ -87,7 +87,7 @@ export default function ProdutosPage() {
           <input
             id="produtos-busca"
             type="search"
-            placeholder="Nome, código, marca ou modelo"
+            placeholder="Nome, código, marca, modelo ou código de barras"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
           />
@@ -117,11 +117,14 @@ export default function ProdutosPage() {
 
         {lista && lista.itens.length > 0 && (
           <>
-            {/* Cor, voltagem e observação aparecem só nos detalhes; em telas estreitas cada linha vira um cartão */}
+            {/* Capa pequena primeiro; cor, voltagem e observação só nos detalhes. Em telas estreitas cada linha vira um cartão */}
             <div className="lista-tabela-area">
               <table className="lista-tabela">
                 <thead>
                   <tr>
+                    <th scope="col" className="lista-capa">
+                      <span className="sr-only">Imagem de capa</span>
+                    </th>
                     <th scope="col" className="lista-id">ID</th>
                     <th scope="col">Produto</th>
                     <th scope="col">Código</th>
@@ -137,6 +140,17 @@ export default function ProdutosPage() {
                   {lista.itens.map((p) => (
                     // A linha inteira abre o produto; o link no nome é o acesso pelo teclado.
                     <tr key={p.id} onClick={() => navigate(`/app/produtos/${p.id}`)}>
+                      <td className="lista-capa">
+                        {p.imagens?.length ? (
+                          <span className="lista-capa-imagem">
+                            <img src={urlImagemProduto(p.imagens[0])} alt="" loading="lazy" decoding="async" />
+                          </span>
+                        ) : (
+                          <span className="lista-capa-imagem vazia" title="Sem imagem">
+                            <IconeCaixa tamanho={18} />
+                          </span>
+                        )}
+                      </td>
                       <td className="lista-id" data-rotulo="ID">{p.numero}</td>
                       <td className="lista-principal quebra">
                         <Link to={`/app/produtos/${p.id}`} className="lista-nome">

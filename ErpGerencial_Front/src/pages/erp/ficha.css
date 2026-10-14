@@ -1,0 +1,164 @@
+/* ---------- Ficha de cadastro (clientes e produtos) ----------
+   Inspirada no registro em papel: grade de células separadas por linhas finas, rótulo pequeno no canto
+   de cima de cada célula e o campo sem borda (exceção pedida às regras "sem bordas"). Centralizada e
+   compacta, para o cadastro inteiro caber numa tela de notebook sem rolar. As cores vêm do tema da página
+   (.pagina.tema-clientes azul; .pagina.tema-produtos marrom e creme). */
+
+.ficha-pagina {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.ficha-area {
+  width: min(1060px, 100% - 2 * var(--erp-lado));
+  margin: clamp(0.25rem, 1vh, 1.25rem) auto;
+}
+
+.ficha {
+  --ficha-linha: #b7c5ce;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  border-top: 1px solid var(--ficha-linha);
+  border-left: 1px solid var(--ficha-linha);
+  background: #fff;
+}
+
+.tema-produtos .ficha {
+  --ficha-linha: #d2c39d;
+}
+
+.ficha > .c1 { grid-column: span 1; }
+.ficha > .c2 { grid-column: span 2; }
+.ficha > .c3 { grid-column: span 3; }
+.ficha > .c4 { grid-column: span 4; }
+.ficha > .c6 { grid-column: span 6; }
+.ficha > .c9 { grid-column: span 9; }
+.ficha > .c12 { grid-column: span 12; }
+
+.ficha-campo {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0.18rem 0.65rem 0.15rem;
+  border-right: 1px solid var(--ficha-linha);
+  border-bottom: 1px solid var(--ficha-linha);
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+/* Célula em uso: fundo claro do tema e uma linha na cor do tema embaixo */
+.ficha-campo:focus-within {
+  background: var(--pg-lado, var(--azul-claro));
+  box-shadow: inset 0 -2px 0 var(--pg-cor, var(--azul));
+}
+
+.ficha-campo.com-erro {
+  background: var(--erro-fundo);
+}
+
+.ficha-cabecalho {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.ficha-rotulo {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  color: var(--texto-suave);
+}
+
+.ficha-obrigatorio,
+.ficha-nota > span {
+  color: var(--erro);
+}
+
+.ficha-erro {
+  flex-shrink: 0;
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--erro);
+}
+
+.ficha-campo :is(input, select, textarea) {
+  width: 100%;
+  min-height: 1.3rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 0.92rem;
+  line-height: 1.3;
+  color: var(--texto);
+}
+
+.ficha-campo :is(input, select, textarea):focus {
+  outline: none;
+}
+
+.ficha-campo select {
+  cursor: pointer;
+}
+
+.ficha-campo textarea {
+  resize: none;
+}
+
+.ficha-campo :is(input, textarea)::placeholder {
+  color: #9aa6ae;
+}
+
+/* Campos com sugestões (ex.: Voltagem): sem a setinha do navegador; as sugestões aparecem ao digitar */
+.ficha-campo input[list]::-webkit-calendar-picker-indicator {
+  display: none !important;
+}
+
+/* Tópico dentro da ficha (ex.: "Manutenção e envio", "Preços e estoque"): uma faixa de ponta a ponta */
+.ficha-topico {
+  grid-column: 1 / -1;
+  padding: 0.3rem 0.75rem;
+  border-right: 1px solid var(--ficha-linha);
+  border-bottom: 1px solid var(--ficha-linha);
+  background: var(--pg-lado, var(--azul-claro));
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pg-titulo, var(--azul-escuro));
+}
+
+.ficha-nota {
+  margin-top: 0.35rem;
+  font-size: 0.82rem;
+  color: var(--texto-suave);
+}
+
+/* Tablets: 6 colunas (os campos longos ocupam a linha toda) */
+@media (max-width: 1100px) {
+  .ficha {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .ficha > :is(.c6, .c9, .c12) { grid-column: span 6; }
+  .ficha > :is(.c3, .c4) { grid-column: span 3; }
+  .ficha > :is(.c1, .c2) { grid-column: span 3; }
+}
+
+/* Celular: um campo por linha */
+@media (max-width: 600px) {
+  .ficha {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ficha > [class*='c'] { grid-column: auto; }
+}

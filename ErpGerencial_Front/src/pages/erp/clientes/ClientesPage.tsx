@@ -4,14 +4,7 @@ import type { Aviso } from '../../../components/formulario/FaixaAviso'
 import { IconeBusca, IconeMais, IconeMensagem } from '../../../components/icones/Icones'
 import { IlustracaoClientes } from '../../../components/icones/Ilustracoes'
 import { useSessaoExpirada } from '../../../hooks/useSessaoExpirada'
-import {
-  listarClientes,
-  mensagemDe,
-  obterWhatsapp,
-  salvarWhatsapp,
-  type ConfiguracaoWhatsapp,
-  type ListaClientes,
-} from '../../../services/api'
+import { listarClientes, mensagemDe, type ListaClientes } from '../../../services/api'
 import { formatarDocumento, formatarTelefone } from '../../../utils/validacao'
 import AvisoPagina from '../AvisoPagina'
 import CabecalhoModulo from '../CabecalhoModulo'
@@ -20,7 +13,6 @@ import FaixaPagina from '../FaixaPagina'
 import { MODULOS, podeAcessar, tem } from '../modulos'
 import SemAcesso from '../SemAcesso'
 import { descreverIntervalo, formatarCadastro, formatarDataHora, resumoEndereco, situacaoManutencao } from './formatos'
-import MensagemDialogo from './MensagemDialogo'
 import './clientes.css'
 
 const MODULO = MODULOS.find((m) => m.id === 'clientes')!
@@ -38,37 +30,6 @@ export default function ClientesPage() {
   const [lista, setLista] = useState<ListaClientes | null>(null)
   const [aviso, setAviso] = useState<Aviso>((useLocation().state as { aviso?: Aviso } | null)?.aviso ?? null)
   const podeVer = podeAcessar(sessao.usuario, MODULO)
-  const podeEditar = tem(sessao.usuario, 'clientes-editar')
-  // Mensagem padrão (a mesma para todos os clientes), editada aqui numa caixa grande
-  const [whatsapp, setWhatsapp] = useState<ConfiguracaoWhatsapp | null>(null)
-  const [mensagemAberta, setMensagemAberta] = useState(false)
-  const [salvandoMensagem, setSalvandoMensagem] = useState(false)
-
-  useEffect(() => {
-    if (!podeEditar) return
-    let ativo = true
-    obterWhatsapp(sessao.token)
-      .then((c) => ativo && setWhatsapp(c))
-      .catch((e) => ativo && !sessaoExpirada(e) && setAviso({ tipo: 'erro', texto: mensagemDe(e) }))
-    return () => {
-      ativo = false
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessao.token, podeEditar])
-
-  const salvarMensagemPadrao = async (mensagem: string) => {
-    if (!whatsapp) return
-    setSalvandoMensagem(true)
-    try {
-      setWhatsapp(await salvarWhatsapp(sessao.token, { remetente: whatsapp.remetente ?? '', mensagem }))
-      setMensagemAberta(false)
-      setAviso(null)
-    } catch (erro) {
-      if (!sessaoExpirada(erro)) setAviso({ tipo: 'erro', texto: mensagemDe(erro) })
-    } finally {
-      setSalvandoMensagem(false)
-    }
-  }
 
   // Busca enquanto digita, esperando a pessoa parar por um instante
   useEffect(() => {
@@ -146,38 +107,12 @@ export default function ClientesPage() {
             onChange={(e) => setBusca(e.target.value)}
           />
         </div>
-        {whatsapp && (
-          <button
-            type="button"
-            id="clientes-mensagem-padrao"
-            className={whatsapp.mensagem ? 'campo-botao preenchido' : 'campo-botao'}
-            onClick={() => setMensagemAberta(true)}
-          >
-            <span className="campo-botao-textos">
-              <span className="campo-botao-rotulo">Mensagem padrão (para todos)</span>
-              <span className="campo-botao-valor">{whatsapp.mensagem || 'Clique para digitar'}</span>
-            </span>
-            <IconeMensagem tamanho={20} />
-          </button>
-        )}
         {lista && (
           <p className="lista-contagem" role="status">
             <strong>{total}</strong> {total === 1 ? 'cliente' : 'clientes'}
           </p>
         )}
       </div>
-
-      {whatsapp && (
-        <MensagemDialogo
-          aberto={mensagemAberta}
-          titulo="Mensagem padrão"
-          dica="Enviada pelo WhatsApp a cada cliente na data e horário do envio (menos quem tem mensagem personalizada)."
-          valor={whatsapp.mensagem ?? ''}
-          salvando={salvandoMensagem}
-          onFechar={() => setMensagemAberta(false)}
-          onSalvar={salvarMensagemPadrao}
-        />
-      )}
 
       <div className="lista-corpo">
         {aviso && <AvisoPagina aviso={aviso} />}

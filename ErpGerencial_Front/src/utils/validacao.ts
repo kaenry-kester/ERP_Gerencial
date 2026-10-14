@@ -171,3 +171,17 @@ export function mascaraQuantidade(valor: string) {
 /** "1,5" → 1.5 ("" → null) */
 export const quantidadeParaNumero = (valor: string): number | null =>
   valor.trim() ? Number(valor.replace(',', '.')) || 0 : null
+
+// ---------- Código de barras (cadastro de produto) ----------
+
+/**
+ * EAN-8, UPC-A (12), EAN-13 e GTIN-14 terminam num dígito verificador: se não bater, a leitura saiu errada.
+ * Outros formatos (com letras ou outro tamanho) são aceitos como estão. Vazio é aceito (o campo é opcional).
+ */
+export function erroCodigoBarras(valor: string): string | undefined {
+  const c = valor.trim()
+  if (!/^\d+$/.test(c) || ![8, 12, 13, 14].includes(c.length)) return undefined
+  let soma = 0
+  for (let i = c.length - 2; i >= 0; i--) soma += Number(c[i]) * ((c.length - 2 - i) % 2 === 0 ? 3 : 1)
+  return (10 - (soma % 10)) % 10 === Number(c[c.length - 1]) ? undefined : 'Código inválido (confira a leitura)'
+}

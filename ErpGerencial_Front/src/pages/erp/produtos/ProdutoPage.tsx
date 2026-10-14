@@ -4,13 +4,14 @@ import type { Aviso } from '../../../components/formulario/FaixaAviso'
 import { IconeLapis, IconeLixeira, IconeVoltar } from '../../../components/icones/Icones'
 import { IlustracaoProdutos } from '../../../components/icones/Ilustracoes'
 import { useSessaoExpirada } from '../../../hooks/useSessaoExpirada'
-import { excluirProduto, mensagemDe, obterProduto, type Produto } from '../../../services/api'
+import { excluirProduto, mensagemDe, obterProduto, urlImagemProduto, type Produto } from '../../../services/api'
 import { formatarMoeda, formatarQuantidade } from '../../../utils/validacao'
 import AvisoPagina from '../AvisoPagina'
 import { useErp } from '../contexto'
 import { tem } from '../modulos'
 import SemAcesso from '../SemAcesso'
 import FaixaPagina from '../FaixaPagina'
+import './imagens.css'
 
 const data = (iso: string) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
 
@@ -72,6 +73,13 @@ export default function ProdutoPage() {
 
   const grupos: { titulo: string; itens: [string, string][] }[] = [
     {
+      titulo: 'Identificação',
+      itens: [
+        ['Código do produto', produto.codigo ?? '—'],
+        ['Código de barras', produto.codigoBarras ?? '—'],
+      ],
+    },
+    {
       titulo: 'Preços',
       itens: [
         ['Custo', formatarMoeda(produto.precoCusto)],
@@ -128,6 +136,20 @@ export default function ProdutoPage() {
 
       <div className="pagina-corpo">
         {aviso && <AvisoPagina aviso={aviso} />}
+
+        {produto.imagens.length > 0 && (
+          <section className="detalhe-grupo" aria-label="Imagens">
+            <h2 className="detalhe-titulo">Imagens</h2>
+            <ul className="imagens-grade leitura">
+              {produto.imagens.map((idImagem, i) => (
+                <li key={idImagem} className={i === 0 ? 'imagens-item capa' : 'imagens-item'}>
+                  <img src={urlImagemProduto(idImagem)} alt={i === 0 ? 'Capa do produto' : `Imagem ${i + 1}`} />
+                  {i === 0 && <span className="imagens-capa">Capa</span>}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {grupos.map((g) => (
           <section key={g.titulo} className="detalhe-grupo" aria-label={g.titulo}>

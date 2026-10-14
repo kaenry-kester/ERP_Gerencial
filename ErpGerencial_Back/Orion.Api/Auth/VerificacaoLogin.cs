@@ -3,17 +3,27 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Orion.Api.Data;
+using Orion.Api.WhatsApp;
 
 namespace Orion.Api.Auth;
 
-/// <summary>Resposta do login quando falta o código: a tela pede os 6 dígitos enviados por e-mail.</summary>
-public record VerificacaoResponse(Guid DesafioId, string Email, DateTime ExpiraEm, int ReenviarEmSegundos);
+/// <summary>
+/// Código enviado: a tela pede os 6 dígitos. Canal: "email" ou "whatsapp"; Destino: para onde foi, com parte escondida.
+/// </summary>
+public record VerificacaoResponse(Guid DesafioId, string Canal, string Destino, DateTime ExpiraEm, int ReenviarEmSegundos);
+
+/// <summary>
+/// Senha certa: a pessoa escolhe por onde receber o código (com parte escondida). Whatsapp vazio quando o celular
+/// não pode ser usado; SemWhatsapp explica o porquê (a tela mostra a opção desativada com esse texto).
+/// </summary>
+public record EscolhaCanalResponse(Guid DesafioId, string Email, string? Whatsapp, string? SemWhatsapp);
 
 /// <summary>Login concluído; Dispositivo vem preenchido quando a pessoa marcou "Lembrar de quem sou".</summary>
 public record LoginVerificadoResponse(string Token, UsuarioDto Usuario, EmpresaResumo? Empresa, string? Dispositivo);
 
 /// <summary>
-/// Verificação em duas etapas por e-mail: senha certa → código de 6 dígitos no e-mail → login.
+/// Verificação em duas etapas: senha certa → código de 6 dígitos no e-mail ou no WhatsApp (a pessoa escolhe;
+/// o WhatsApp sai pelo número remetente da empresa) → login.
 /// "Lembrar de quem sou" guarda um token no navegador que dispensa o código por 30 dias.
 /// </summary>
 public static class VerificacaoLogin
@@ -43,34 +53,81 @@ public static class VerificacaoLogin
         return email[..visivel] + new string('•', Math.Max(3, arroba - visivel)) + email[arroba..];
     }
 
+    /// <summary>"16991039268" → "(16) •••••-9268"</summary>
+    public static string MascararTelefone(string telefone) =>
+        telefone.Length >= 10 ? $"({telefone[..2]}) {new string('•', telefone.Length - 6)}-{telefone[^4..]}" : telefone;
+
+    /// <summary>Dá para mandar o código pelo WhatsApp: a pessoa tem WhatsApp e a empresa tem número remetente.</summary>
+    public static bool PodeUsarWhatsapp(Usuario usuario) => MotivoSemWhatsapp(usuario) is null;
+
+    /// <summary>Por que o código não pode ir pelo celular (null quando pode).</summary>
+    public static string? MotivoSemWhatsapp(Usuario usuario) =>
+        string.IsNullOrEmpty(usuario.Telefone) ? "Cadastre seu celular em Minha conta para receber por aqui."
+        : string.IsNullOrEmpty(usuario.Empresa?.WhatsappRemetente) ? "A empresa ainda não configurou o número remetente."
+        : null;
+
     /// <summary>
-    /// Cria (ou renova) o desafio, gera um código novo e envia por e-mail.
-    /// Com novoEmail (troca de e-mail), o código vai para o e-mail novo.
+    /// Depois da senha: cria o desafio ainda sem código (ele é gerado e enviado quando a pessoa escolhe
+    /// e-mail ou celular).
+    /// </summary>
+    public static async Task<EscolhaCanalResponse> NovaEscolha(OrionDbContext db, Usuario usuario, CancellationToken ct)
+    {
+        var desafio = new CodigoLogin
+        {
+            UsuarioId = usuario.Id,
+            CodigoHash = "",
+            ExpiraEm = DateTime.UtcNow + ValidadeCodigo,
+            // Nada enviado ainda: o primeiro envio não precisa esperar o intervalo de reenvio.
+            EnviadoEm = DateTime.UnixEpoch,
+        };
+        db.CodigosLogin.Add(desafio);
+        await db.SaveChangesAsync(ct);
+        var motivo = MotivoSemWhatsapp(usuario);
+        return new EscolhaCanalResponse(desafio.Id, MascararEmail(usuario.Email),
+            motivo is null ? MascararTelefone(usuario.Telefone!) : null, motivo);
+    }
+
+    /// <summary>
+    /// Cria (ou renova) o desafio, gera um código novo e envia pelo canal ("email" ou "whatsapp").
+    /// Com novoEmail (troca de e-mail), o código vai para o e-mail novo. Null quando o envio falha.
+    /// O usuário precisa vir com a Empresa carregada para o canal WhatsApp.
     /// </summary>
     public static async Task<VerificacaoResponse?> EnviarCodigo(
-        OrionDbContext db, EmailService email, Usuario usuario, CodigoLogin? existente, CancellationToken ct,
-        string? novoEmail = null)
+        OrionDbContext db, EmailService email, WhatsAppService? whatsapp, Usuario usuario, CodigoLogin? existente,
+        string canal, CancellationToken ct, string? novoEmail = null)
     {
         var desafio = existente ?? new CodigoLogin { UsuarioId = usuario.Id, CodigoHash = "", NovoEmail = novoEmail };
-        var destino = desafio.NovoEmail ?? usuario.Email;
         var codigo = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
         desafio.CodigoHash = HashCodigo(desafio.Id, codigo);
         desafio.ExpiraEm = DateTime.UtcNow + ValidadeCodigo;
         desafio.EnviadoEm = DateTime.UtcNow;
         desafio.Tentativas = 0;
+        desafio.Canal = canal;
         if (existente is null) db.CodigosLogin.Add(desafio);
 
-        var trocaDeEmail = desafio.NovoEmail is not null;
-        var (html, texto) = MensagemCodigo(usuario.Nome, codigo, trocaDeEmail);
-        var assunto = trocaDeEmail
-            ? $"{codigo} é o código para confirmar seu novo e-mail no Órion"
-            : $"{codigo} é o seu código de acesso ao Órion";
-        if (!await email.Enviar(destino, assunto, html, texto, ct))
-            return null;
+        string destino;
+        if (canal == "whatsapp")
+        {
+            if (whatsapp is null || !PodeUsarWhatsapp(usuario)) return null;
+            var texto = $"*{codigo}* é o seu código de acesso ao Órion. Ele vale por 10 minutos.\n\n"
+                        + "Não compartilhe este código com ninguém. Se não foi você que tentou entrar, troque sua senha.";
+            if (!await whatsapp.Enviar(usuario.Empresa!.WhatsappRemetente!, usuario.Telefone!, texto, ct)) return null;
+            destino = MascararTelefone(usuario.Telefone!);
+        }
+        else
+        {
+            var para = desafio.NovoEmail ?? usuario.Email;
+            var trocaDeEmail = desafio.NovoEmail is not null;
+            var (html, texto) = MensagemCodigo(usuario.Nome, codigo, trocaDeEmail);
+            var assunto = trocaDeEmail
+                ? $"{codigo} é o código para confirmar seu novo e-mail no Órion"
+                : $"{codigo} é o seu código de acesso ao Órion";
+            if (!await email.Enviar(para, assunto, html, texto, ct)) return null;
+            destino = MascararEmail(para);
+        }
 
         await db.SaveChangesAsync(ct);
-        return new VerificacaoResponse(desafio.Id, MascararEmail(destino), desafio.ExpiraEm,
-            (int)IntervaloReenvio.TotalSeconds);
+        return new VerificacaoResponse(desafio.Id, canal, destino, desafio.ExpiraEm, (int)IntervaloReenvio.TotalSeconds);
     }
 
     /// <summary>O token do navegador é um dispositivo lembrado (e ainda válido) desta pessoa?</summary>

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Orion.Api.Data;
+using Orion.Api.WhatsApp;
 
 namespace Orion.Api.Auth;
 
@@ -10,7 +11,8 @@ public record CadastroRequest(string Nome, string Email, string Telefone, string
 /// <summary>Dispositivo: token do "Lembrar de quem sou", quando o navegador tem um.</summary>
 public record LoginRequest(string Email, string Senha, string? Dispositivo);
 public record VerificarCodigoRequest(Guid DesafioId, string Codigo, bool Lembrar);
-public record ReenviarCodigoRequest(Guid DesafioId);
+/// <summary>Canal: "email" ou "whatsapp"; vazio no "Reenviar código" = o mesmo da última vez.</summary>
+public record EnviarCodigoRequest(Guid DesafioId, string? Canal);
 
 public static class AuthEndpoints
 {
@@ -22,7 +24,7 @@ public static class AuthEndpoints
         grupo.MapPost("/cadastro", Cadastrar);
         grupo.MapPost("/login", Entrar).RequireRateLimiting(Politicas.Login);
         grupo.MapPost("/login/verificar", VerificarCodigo).RequireRateLimiting(Politicas.Codigo);
-        grupo.MapPost("/login/reenviar", ReenviarCodigo).RequireRateLimiting(Politicas.Codigo);
+        grupo.MapPost("/login/enviar", EnviarCodigo).RequireRateLimiting(Politicas.Codigo);
         grupo.MapGet("/eu", Eu).RequireAuthorization();
     }
 
@@ -65,8 +67,8 @@ public static class AuthEndpoints
     }
 
     /// <summary>
-    /// 1ª etapa: confere a senha. No navegador lembrado, entra direto; nos outros,
-    /// envia o código por e-mail e responde 202 com o desafio (a tela pede o código).
+    /// 1ª etapa: confere a senha. No navegador lembrado, entra direto. Nos outros, responde 202 com a escolha
+    /// do canal (e-mail ou celular/WhatsApp); o código só é enviado depois da escolha (POST /login/enviar).
     /// </summary>
     private static async Task<IResult> Entrar(
         LoginRequest req, OrionDbContext db, IPasswordHasher<Usuario> hasher, TokenService tokens,
@@ -90,10 +92,7 @@ public static class AuthEndpoints
             return Results.Ok(UsuarioAtual.Sessao(usuario, tokens));
         }
 
-        var verificacao = await VerificacaoLogin.EnviarCodigo(db, servicoEmail, usuario, null, ct);
-        return verificacao is null
-            ? FalhaNoEnvio()
-            : Results.Json(verificacao, statusCode: StatusCodes.Status202Accepted);
+        return Results.Json(await VerificacaoLogin.NovaEscolha(db, usuario, ct), statusCode: StatusCodes.Status202Accepted);
     }
 
     /// <summary>2ª etapa: confere o código do e-mail e conclui o login.</summary>
@@ -134,11 +133,15 @@ public static class AuthEndpoints
         return Results.Ok(new LoginVerificadoResponse(sessao.Token, sessao.Usuario, sessao.Empresa, dispositivo));
     }
 
-    /// <summary>Envia um código novo para o mesmo desafio (no máximo um a cada 60 segundos).</summary>
-    private static async Task<IResult> ReenviarCodigo(
-        ReenviarCodigoRequest req, OrionDbContext db, EmailService email, CancellationToken ct)
+    /// <summary>
+    /// Envia o código pelo canal escolhido: o primeiro envio, o "Reenviar código" e a troca de canal
+    /// (no máximo um envio a cada 60 segundos por desafio).
+    /// </summary>
+    private static async Task<IResult> EnviarCodigo(
+        EnviarCodigoRequest req, OrionDbContext db, EmailService email, WhatsAppService whatsapp, CancellationToken ct)
     {
-        var desafio = await db.CodigosLogin.Include(c => c.Usuario)
+        var desafio = await db.CodigosLogin
+            .Include(c => c.Usuario).ThenInclude(u => u!.Empresa)
             .SingleOrDefaultAsync(c => c.Id == req.DesafioId, ct);
         if (desafio is null || desafio.UsadoEm is not null || desafio.NovoEmail is not null
             || desafio.Usuario is not { Ativo: true })
@@ -149,15 +152,27 @@ public static class AuthEndpoints
             return Results.Json(new { erro = $"Aguarde {Math.Ceiling(espera.TotalSeconds)} segundos para pedir outro código." },
                 statusCode: StatusCodes.Status429TooManyRequests);
 
-        var verificacao = await VerificacaoLogin.EnviarCodigo(db, email, desafio.Usuario, desafio, ct);
-        return verificacao is null ? FalhaNoEnvio() : Results.Ok(verificacao);
+        var canal = req.Canal ?? desafio.Canal ?? "email";
+        if (canal is not ("email" or "whatsapp"))
+            return Results.BadRequest(new { erro = "Escolha e-mail ou WhatsApp.", campo = "canal" });
+        if (canal == "whatsapp" && VerificacaoLogin.MotivoSemWhatsapp(desafio.Usuario) is { } motivo)
+            return Results.BadRequest(new { erro = $"{motivo} Receba por e-mail.", campo = "canal" });
+
+        var verificacao = await VerificacaoLogin.EnviarCodigo(db, email, whatsapp, desafio.Usuario, desafio, canal, ct);
+        return verificacao is null ? FalhaNoEnvio(canal) : Results.Ok(verificacao);
     }
 
     private static IResult CodigoInvalido(string mensagem) =>
         Results.BadRequest(new { erro = mensagem, campo = "codigo" });
 
-    private static IResult FalhaNoEnvio() =>
-        Results.Problem("Não foi possível enviar o código por e-mail. Tente de novo em instantes.", statusCode: 503);
+    // 424 (não 5xx, que o site trata como "servidor fora do ar"): a tela mostra a mensagem e oferece o outro canal.
+    private static IResult FalhaNoEnvio(string canal) => Results.Json(new
+    {
+        erro = canal == "whatsapp"
+            ? "Não foi possível enviar pelo WhatsApp agora (o número da empresa pode estar desconectado). Receba por e-mail."
+            : "Não foi possível enviar o código por e-mail. Tente de novo em instantes.",
+        campo = "canal",
+    }, statusCode: StatusCodes.Status424FailedDependency);
 
     /// <summary>Sessão atualizada (empresa, administrador e permissões podem ter mudado).</summary>
     private static async Task<IResult> Eu(ClaimsPrincipal user, OrionDbContext db, TokenService tokens)
