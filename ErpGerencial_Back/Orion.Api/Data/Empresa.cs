@@ -21,6 +21,11 @@ public class Empresa
     /// <summary>Só dígitos, com DDD.</summary>
     public string? Telefone { get; set; }
 
+    /// <summary>Rua, número e bairro (impresso no cupom e no recibo).</summary>
+    public string? Endereco { get; set; }
+    public string? Cidade { get; set; }
+    public string? Uf { get; set; }
+
     public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
 
     // ----- Mensagem automática (WhatsApp) -----

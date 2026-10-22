@@ -28,6 +28,10 @@ export type Empresa = EmpresaResumo & {
   documento: string | null
   email: string | null
   telefone: string | null
+  /** Rua, número e bairro (impresso no cupom e no recibo). */
+  endereco: string | null
+  cidade: string | null
+  uf: string | null
   criadoEm: string
 }
 
@@ -146,6 +150,9 @@ export type DadosEmpresa = {
   documento: string
   email: string
   telefone: string
+  endereco: string
+  cidade: string
+  uf: string
 }
 
 export const editarEmpresa = (token: string, dados: DadosEmpresa) =>
@@ -463,6 +470,212 @@ export const excluirImagemMensagem = (token: string, clienteId?: string) =>
 /** Todo o histórico de envios da mensagem automática para um cliente (mais novos primeiro). */
 export const listarEnviosCliente = (token: string, clienteId: string) =>
   requisicao<EnvioWhatsapp[]>('GET', `/api/clientes/${clienteId}/envios`, { token })
+
+// ---------- Cupons e recibos (não fiscais) ----------
+
+export type FormaPagamento = 'dinheiro' | 'pix' | 'cartao-credito' | 'cartao-debito' | 'boleto' | 'transferencia' | 'outro'
+
+export const FORMAS_PAGAMENTO: { valor: FormaPagamento; rotulo: string }[] = [
+  { valor: 'dinheiro', rotulo: 'Dinheiro' },
+  { valor: 'pix', rotulo: 'Pix' },
+  { valor: 'cartao-credito', rotulo: 'Cartão de crédito' },
+  { valor: 'cartao-debito', rotulo: 'Cartão de débito' },
+  { valor: 'boleto', rotulo: 'Boleto' },
+  { valor: 'transferencia', rotulo: 'Transferência' },
+  { valor: 'outro', rotulo: 'Outro' },
+]
+
+export const rotuloPagamento = (forma: string) => FORMAS_PAGAMENTO.find((f) => f.valor === forma)?.rotulo ?? forma
+
+export type CupomItem = {
+  id: string
+  /** Produto do cadastro; null no item avulso. */
+  produtoId: string | null
+  descricao: string
+  codigo: string | null
+  codigoBarras: string | null
+  quantidade: number
+  valorUnitario: number
+  total: number
+}
+
+/** Cupom de venda / recibo. Emitente e cliente são copiados na emissão (a reimpressão sai igual). */
+export type Cupom = {
+  id: string
+  /** Nº sequencial dentro da empresa. */
+  numero: number
+  emitenteNome: string
+  emitenteRazaoSocial: string | null
+  emitenteDocumento: string | null
+  emitenteEndereco: string | null
+  emitenteCidade: string | null
+  emitenteUf: string | null
+  emitenteTelefone: string | null
+  clienteId: string | null
+  clienteNome: string | null
+  clienteDocumento: string | null
+  clienteEndereco: string | null
+  itens: CupomItem[]
+  subtotal: number
+  desconto: number
+  total: number
+  formaPagamento: FormaPagamento
+  /** Quanto foi pago na 1ª forma (null nos cupons antigos: o total). */
+  valorPagamento1: number | null
+  /** 2ª forma (venda paga em duas partes). */
+  formaPagamento2: FormaPagamento | null
+  valorPagamento2: number | null
+  /** Total pago (soma das formas). */
+  valorRecebido: number | null
+  troco: number | null
+  /** "Correspondente a" do recibo. */
+  referente: string | null
+  observacao: string | null
+  emitidoPor: string
+  vendedorNome: string | null
+  emitidoEm: string
+  canceladoEm: string | null
+  motivoCancelamento: string | null
+}
+
+export type DadosCupom = {
+  clienteId: string | null
+  clienteNome: string | null
+  clienteDocumento: string | null
+  clienteEndereco: string | null
+  itens: { produtoId: string | null; descricao: string | null; quantidade: number; valorUnitario: number }[]
+  /** Valor do recibo avulso (sem itens). */
+  valor: number | null
+  desconto: number | null
+  formaPagamento: FormaPagamento
+  valorRecebido: number | null
+  referente: string | null
+  observacao: string | null
+  valorPagamento1?: number | null
+  formaPagamento2?: FormaPagamento | null
+  valorPagamento2?: number | null
+  /** Vendedor (usuário da empresa); sem ele, quem está emitindo. */
+  vendedorId?: string | null
+}
+
+export type ListaCupons = { itens: Cupom[]; total: number; pagina: number; tamanhoPagina: number }
+
+/** Filtros do Financeiro (datas "2026-10-21", no horário de Brasília). */
+export type FiltrosVendas = { de?: string; ate?: string; forma?: string; vendedorId?: string; situacao?: string }
+
+const parametros = (valores: Record<string, string | number | undefined>) =>
+  new URLSearchParams(
+    Object.entries(valores)
+      .filter(([, v]) => v !== undefined && v !== '')
+      .map(([k, v]) => [k, String(v)]),
+  )
+
+export const listarCupons = (token: string, busca = '', pagina = 1, filtros: FiltrosVendas = {}) =>
+  requisicao<ListaCupons>('GET', `/api/cupons?${parametros({ busca: busca.trim(), pagina, ...filtros })}`, { token })
+
+export const obterCupom = (token: string, id: string) => requisicao<Cupom>('GET', `/api/cupons/${id}`, { token })
+
+export const emitirCupom = (token: string, dados: DadosCupom) =>
+  requisicao<Cupom>('POST', '/api/cupons', { corpo: dados, token })
+
+export const cancelarCupom = (token: string, id: string, motivo: string) =>
+  requisicao<Cupom>('POST', `/api/cupons/${id}/cancelar`, { corpo: { motivo }, token })
+
+// ---------- Financeiro ----------
+
+export type TotaisVendas = {
+  faturamento: number
+  vendas: number
+  ticketMedio: number
+  itensVendidos: number
+  descontos: number
+  custo: number
+  /** Faturamento menos o custo dos produtos (preço de custo na hora da venda). */
+  lucroBruto: number
+  cancelados: number
+  valorCancelado: number
+}
+
+export type FatiaVendas = { chave: string; nome: string; valor: number; quantidade: number }
+
+export type ResumoFinanceiro = {
+  de: string
+  ate: string
+  /** "dia" (até 3 meses) ou "mes". */
+  agrupamento: 'dia' | 'mes'
+  totais: TotaisVendas
+  /** O período anterior do mesmo tamanho (para comparar). */
+  anterior: TotaisVendas
+  noTempo: { periodo: string; faturamento: number; vendas: number }[]
+  formasPagamento: FatiaVendas[]
+  produtos: FatiaVendas[]
+  clientes: FatiaVendas[]
+  vendedores: FatiaVendas[]
+  /** 0 = domingo. */
+  diasSemana: number[]
+  horas: number[]
+  anos: number[]
+  equipe: FatiaVendas[]
+}
+
+export const obterResumoFinanceiro = (token: string, filtros: FiltrosVendas) =>
+  requisicao<ResumoFinanceiro>('GET', `/api/financeiro/resumo?${parametros(filtros)}`, { token })
+
+// ---------- Histórico dos clientes ("Número de ordem de serviço") ----------
+
+export type ClienteHistoricoResumo = {
+  id: string
+  numero: number
+  nome: string
+  celular: string
+  documento: string | null
+  compras: number
+  totalGasto: number
+  mensagens: number
+  ultimaAtividade: string
+}
+
+export type ListaClientesHistorico = { itens: ClienteHistoricoResumo[]; total: number; pagina: number; tamanhoPagina: number }
+
+export type EventoHistorico = {
+  tipo: 'venda' | 'cancelamento' | 'mensagem' | 'cadastro'
+  data: string
+  titulo: string
+  detalhe: string | null
+  valor: number | null
+  cupomId: string | null
+  /** Venda: "cancelado"; mensagem: enviado, teste ou erro. */
+  status: string | null
+  itens: { descricao: string; codigo: string | null; codigoBarras: string | null; quantidade: number; valorUnitario: number; total: number }[]
+}
+
+export type HistoricoCliente = {
+  id: string
+  numero: number
+  nome: string
+  celular: string
+  documento: string | null
+  endereco: string | null
+  proximoEnvio: string | null
+  criadoEm: string
+  resumo: {
+    compras: number
+    totalGasto: number
+    ticketMedio: number
+    itensComprados: number
+    mensagensEnviadas: number
+    mensagensComErro: number
+    primeiraCompra: string | null
+    ultimaCompra: string | null
+  }
+  eventos: EventoHistorico[]
+}
+
+export const listarHistoricoClientes = (token: string, busca = '', pagina = 1) =>
+  requisicao<ListaClientesHistorico>('GET', `/api/historico/clientes?${parametros({ busca: busca.trim(), pagina })}`, { token })
+
+export const obterHistoricoCliente = (token: string, id: string) =>
+  requisicao<HistoricoCliente>('GET', `/api/historico/clientes/${id}`, { token })
 
 // ---------- Minha conta ----------
 

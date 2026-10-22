@@ -21,6 +21,7 @@ import FaixaPagina from './FaixaPagina'
 import { MODULOS } from './modulos'
 import SecaoPagina from './SecaoPagina'
 import SemAcesso from './SemAcesso'
+import { avisarSalvo } from '../../components/aviso-salvo/avisarSalvo'
 import '../../styles/acesso.css'
 
 type Campo = 'nome' | 'email' | 'telefone' | 'senha'
@@ -125,8 +126,8 @@ export default function UsuarioFormPage() {
       } else {
         await editarUsuario(sessao.token, id!, { nome, telefone, administrador, ativo })
       }
-      const texto = novo ? 'Usuário criado.' : 'Usuário atualizado.'
-      navigate('/app/usuarios', { state: { aviso: { tipo: 'ok', texto } } })
+      avisarSalvo(novo ? 'Usuário cadastrado com sucesso' : 'Alterações feitas com sucesso', 'Usuário')
+      navigate('/app/usuarios')
     } catch (erro) {
       if (sessaoExpirada(erro)) return
       if (erro instanceof ErroApi && erro.campo === 'email') {

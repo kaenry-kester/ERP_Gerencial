@@ -13,6 +13,7 @@ import {
   requisitosSenha,
   telefoneValido,
 } from '../../utils/validacao'
+import { avisarSalvo } from '../../components/aviso-salvo/avisarSalvo'
 import '../../styles/acesso.css'
 import '../../styles/tela-dividida.css'
 import './cadastro.css'
@@ -121,6 +122,7 @@ export default function CadastroPage() {
         senha: valores.senha,
       })
       salvarSessao(sessao)
+      avisarSalvo('Conta criada com sucesso')
       // Como no Bling: conta e empresa criadas juntas, e a pessoa já entra no ERP.
       navigate('/app')
     } catch (erro) {

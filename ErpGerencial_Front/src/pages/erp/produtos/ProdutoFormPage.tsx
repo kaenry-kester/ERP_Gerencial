@@ -34,6 +34,7 @@ import SemAcesso from '../SemAcesso'
 import FaixaPagina from '../FaixaPagina'
 import CampoFicha from '../CampoFicha'
 import ImagensProduto, { type ImagemProduto } from './ImagensProduto'
+import { avisarSalvo } from '../../../components/aviso-salvo/avisarSalvo'
 import '../../../styles/acesso.css'
 
 type Campo =
@@ -252,13 +253,13 @@ export default function ProdutoFormPage() {
           })
           return
         }
-        navigate('/app/produtos', {
-          state: { aviso: { tipo: 'ok', texto: `Produto cadastrado (ID ${criado.numero}).` } },
-        })
+        avisarSalvo('Produto cadastrado com sucesso', `ID ${criado.numero}`)
+        navigate('/app/produtos')
       } else {
         await editarProduto(sessao.token, id!, paraApi(valores))
         await salvarImagens(id!, original!.imagens)
-        navigate(`/app/produtos/${id}`, { state: { aviso: { tipo: 'ok', texto: 'Produto atualizado.' } } })
+        avisarSalvo('Alterações feitas com sucesso', 'Produto')
+        navigate(`/app/produtos/${id}`)
       }
     } catch (erro) {
       if (sessaoExpirada(erro)) return

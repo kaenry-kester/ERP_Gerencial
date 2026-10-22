@@ -16,10 +16,18 @@ import ClientesPage from './pages/erp/clientes/ClientesPage'
 import ClienteFormPage from './pages/erp/clientes/ClienteFormPage'
 import ClientePage from './pages/erp/clientes/ClientePage'
 import MensagemAutomaticaPage from './pages/erp/clientes/MensagemAutomaticaPage'
+import AvisoSalvo from './components/aviso-salvo/AvisoSalvo'
+import CuponsPage from './pages/erp/cupons/CuponsPage'
+import CupomFormPage from './pages/erp/cupons/CupomFormPage'
+import CupomPage from './pages/erp/cupons/CupomPage'
+import FinanceiroPage from './pages/erp/financeiro/FinanceiroPage'
+import HistoricoPage from './pages/erp/historico/HistoricoPage'
+import HistoricoClientePage from './pages/erp/historico/HistoricoClientePage'
 
 export default function App() {
   return (
     <BrowserRouter>
+      <AvisoSalvo />
       <Routes>
         <Route path="/" element={<InicioPage />} />
         <Route path="/login" element={<LoginPage />} />
@@ -42,6 +50,14 @@ export default function App() {
           <Route path="clientes/mensagem" element={<MensagemAutomaticaPage />} />
           <Route path="clientes/:id" element={<ClientePage />} />
           <Route path="clientes/:id/editar" element={<ClienteFormPage />} />
+          <Route path="cupom-fiscal" element={<CuponsPage />} />
+          <Route path="cupom-fiscal/novo" element={<CupomFormPage />} />
+          <Route path="cupom-fiscal/:id" element={<CupomPage />} />
+          <Route path="financeiro" element={<FinanceiroPage />} />
+          <Route path="ordem-servico" element={<HistoricoPage />} />
+          <Route path="ordem-servico/:id" element={<HistoricoClientePage />} />
+          {/* O painel de vendas fica no Financeiro */}
+          <Route path="vendas" element={<Navigate to="/app/financeiro" replace />} />
           <Route path=":modulo" element={<ModuloPage />} />
         </Route>
 

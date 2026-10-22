@@ -1,0 +1,766 @@
+/*
+  Caixa (PDV), no modelo de frente de caixa: barra do caixa com relógio, dados da venda,
+  à esquerda o produto atual (qtd, descrição, foto, código, valor) e o pagamento,
+  à direita a grade dos itens, o total líquido grande, total pago, troco e os botões.
+  No computador ocupa a tela inteira sem rolar (só a grade rola); no celular, uma coluna.
+  Cores do tema do módulo (.tema-cupom), sem bordas: separação por cor de fundo.
+*/
+
+.pdv {
+  --pdv-painel: #dde9ef;
+  --pdv-campo: #fff;
+  --pdv-escuro: #0f4255;
+  height: 100%;
+  min-height: 640px;
+  display: flex;
+  flex-direction: column;
+  background: var(--pdv-painel);
+}
+
+/* ---------- Barra do caixa ---------- */
+
+.pdv-topo {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.45rem var(--erp-lado);
+  background: linear-gradient(100deg, var(--modulo-cupom-fiscal) 0%, #134f66 100%);
+  color: var(--branco);
+}
+
+.pdv-voltar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--branco);
+  transition: background-color 0.25s ease;
+}
+
+.pdv-voltar:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.pdv-situacao {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.95rem;
+}
+
+.pdv-situacao strong {
+  font-size: 1.1rem;
+}
+
+.pdv-situacao span {
+  opacity: 0.85;
+}
+
+.pdv-relogio {
+  flex-shrink: 0;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Dados da venda ---------- */
+
+.pdv-dados {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: auto auto minmax(14rem, 1fr) minmax(11rem, 16rem);
+  align-items: end;
+  gap: 0.6rem 1.1rem;
+  padding: 0.6rem var(--erp-lado);
+}
+
+.pdv-dado {
+  position: relative;
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.pdv-dado > span,
+.pdv-dado > label,
+.pdv-rotulo,
+.pdv-campo > label,
+.pdv-pagamentos label {
+  color: var(--pdv-escuro);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.pdv-dado > strong {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 0.75rem;
+  border-radius: 3px;
+  background: var(--pdv-campo);
+  font-variant-numeric: tabular-nums;
+}
+
+.pdv input,
+.pdv select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0.3rem 0.75rem;
+  border: none;
+  border-radius: 3px;
+  background: var(--pdv-campo);
+  color: var(--texto);
+  font: inherit;
+}
+
+.pdv input:focus-visible,
+.pdv select:focus-visible {
+  outline: 3px solid var(--foco);
+  outline-offset: 1px;
+}
+
+.pdv input:disabled {
+  background: #eef3f6;
+  color: var(--texto-suave);
+}
+
+.pdv-cliente-info {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.75rem;
+  color: var(--texto-suave);
+}
+
+/* Sugestões (clientes e produtos) embaixo do campo */
+.pdv-sugestoes {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  list-style: none;
+  max-height: 24rem;
+  overflow-y: auto;
+  padding: 0.3rem;
+  margin: 0;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: var(--sombra);
+}
+
+.pdv-sugestoes button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.pdv-sugestoes button:hover,
+.pdv-sugestoes button:focus-visible {
+  background: var(--pdv-painel);
+}
+
+.pdv-sugestoes button > strong,
+.pdv-sugestoes button > span:not([class]) {
+  display: block;
+}
+
+.pdv-sugestoes button > span:not([class]) {
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+}
+
+.pdv-cliente .pdv-sugestoes button {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.pdv-sugestoes img,
+.pdv-sugestao-sem-foto {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 3px;
+  object-fit: cover;
+  background: var(--creme-claro);
+  display: grid;
+  place-items: center;
+  font-size: 1.4rem;
+}
+
+.pdv-sugestao-textos {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+}
+
+.pdv-sugestao-textos span {
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+}
+
+.pdv-sugestao-preco {
+  font-weight: 800;
+  color: var(--pdv-escuro);
+  white-space: nowrap;
+}
+
+.pdv-sugestao-vazia {
+  padding: 0.6rem 0.75rem;
+  color: var(--texto-suave);
+}
+
+/* ---------- Corpo: duas colunas ---------- */
+
+.pdv-corpo {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(22rem, 0.8fr) minmax(0, 1.35fr);
+  gap: 1rem;
+  padding: 0 var(--erp-lado) 0.9rem;
+}
+
+.pdv-esquerda,
+.pdv-direita {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+/* Qtd + descrição do produto atual, grandes */
+.pdv-atual {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr;
+  gap: 0.6rem;
+}
+
+.pdv-qtd,
+.pdv-descricao {
+  display: grid;
+  align-content: start;
+  gap: 0.2rem;
+  padding: 0.45rem 0.7rem 0.6rem;
+  border-radius: 4px;
+  background: var(--pdv-escuro);
+  color: var(--branco);
+}
+
+.pdv-qtd label,
+.pdv-descricao span {
+  font-size: 0.8rem;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.pdv .pdv-qtd input {
+  min-height: 52px;
+  padding: 0 0.4rem;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--branco);
+  font-size: 2rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.pdv-descricao p {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+/* Foto do produto + valor unitário e total do item (o código de barras fica em cima, na largura toda) */
+.pdv-leitura {
+  display: grid;
+  grid-template-columns: clamp(8.5rem, 11vw, 11rem) 1fr;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.pdv-foto {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--pdv-campo);
+}
+
+.pdv-foto img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.pdv-campos {
+  display: grid;
+  align-content: start;
+  gap: 0.6rem;
+}
+
+.pdv-campo {
+  position: relative;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.pdv .pdv-codigo input {
+  min-height: 56px;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* O texto de ajuda inteiro cabe no campo (o que se digita continua grande) */
+.pdv .pdv-codigo input::placeholder {
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.pdv-valor-unitario {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 0 0.8rem;
+  border-radius: 3px;
+  background: var(--pdv-campo);
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--pdv-escuro);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Formas de pagamento: rótulo, forma e valor em linha */
+/* Qtd × valor unitário = total do item selecionado */
+.pdv-total-item {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--pdv-escuro);
+  font-variant-numeric: tabular-nums;
+}
+
+.pdv-pagamentos {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 9.5rem;
+  align-items: center;
+  gap: 0.45rem 0.6rem;
+}
+
+.pdv-pagamentos input {
+  text-align: right;
+  font-weight: 700;
+}
+
+/* ---------- Direita: grade dos itens ---------- */
+
+.pdv-grade {
+  position: relative;
+  flex: 1;
+  min-height: 12rem;
+  overflow: auto;
+  border-radius: 4px;
+  background: var(--pdv-campo);
+}
+
+.pdv-itens {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.pdv-itens th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.5rem 0.4rem;
+  background: var(--pdv-escuro);
+  color: var(--branco);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.pdv-itens td {
+  padding: 0.4rem 0.4rem;
+  vertical-align: middle;
+}
+
+/* Códigos numa linha só (não quebram no hífen) */
+.pdv-itens td:nth-child(2),
+.pdv-itens td:nth-child(3) {
+  white-space: nowrap;
+}
+
+.pdv-itens tbody tr {
+  cursor: pointer;
+}
+
+.pdv-itens tbody tr:nth-child(even) {
+  background: #f3f7f9;
+}
+
+.pdv-itens tbody tr.selecionado {
+  background: #cfe4ec;
+}
+
+.pdv-itens .numero {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.pdv-item-numero {
+  color: var(--texto-suave);
+  font-weight: 700;
+}
+
+.pdv-item-barras {
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pdv-item-descricao {
+  min-width: 8rem;
+}
+
+.pdv-item-descricao strong,
+.pdv-item-descricao span {
+  display: block;
+}
+
+.pdv-item-descricao span {
+  font-size: 0.76rem;
+  color: var(--texto-suave);
+}
+
+.pdv .pdv-itens input {
+  min-height: 34px;
+  padding: 0.2rem 0.5rem;
+  background: var(--pdv-painel);
+}
+
+.pdv .pdv-itens .pdv-item-qtd {
+  width: 3.6rem;
+  text-align: right;
+}
+
+.pdv .pdv-itens .pdv-item-valor {
+  width: 6.4rem;
+  text-align: right;
+}
+
+.pdv-item-total {
+  font-weight: 800;
+  color: var(--pdv-escuro);
+}
+
+.pdv-item-tirar {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--erro);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.pdv-item-tirar:hover {
+  background: var(--erro-fundo);
+}
+
+.pdv-grade-vazia {
+  position: absolute;
+  inset: 2.5rem 0 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.4rem;
+  color: var(--texto-suave);
+}
+
+.pdv-grade-vazia span {
+  font-size: 3rem;
+  opacity: 0.6;
+}
+
+/* ---------- Totais ---------- */
+
+.pdv-total-liquido {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 1.1rem;
+  border-radius: 4px;
+  background: var(--pdv-escuro);
+  color: var(--branco);
+}
+
+.pdv-total-liquido span {
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pdv-total-liquido strong {
+  font-size: clamp(2rem, 4.2vw, 3rem);
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.pdv-pago-troco {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem;
+}
+
+.pdv-pago-troco p {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 4px;
+  background: var(--pdv-campo);
+}
+
+.pdv-pago-troco span {
+  color: var(--pdv-escuro);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.pdv-pago-troco strong {
+  font-size: 1.4rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.pdv-troco.tem {
+  background: #d5efdc;
+}
+
+.pdv-troco.tem strong {
+  color: #1e6b3a;
+}
+
+.pdv-erro {
+  flex-shrink: 0;
+  padding: 0.5rem 0.9rem;
+  border-radius: 4px;
+  background: var(--erro-fundo);
+  color: var(--erro);
+  font-weight: 700;
+}
+
+/* ---------- Botões ---------- */
+
+.pdv-botoes {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  gap: 0.6rem;
+}
+
+.pdv-botao {
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.8rem;
+  border: none;
+  border-radius: 4px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.25s ease;
+}
+
+.pdv-botao:hover {
+  filter: brightness(0.95);
+}
+
+.pdv-botao:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.pdv-botao.neutro {
+  background: var(--pdv-campo);
+  color: var(--pdv-escuro);
+}
+
+.pdv-botao.gerar {
+  background: var(--modulo-cupom-fiscal);
+  color: var(--branco);
+  font-size: 1.15rem;
+}
+
+.pdv-botao.sair {
+  background: var(--erro);
+  color: var(--branco);
+}
+
+/* ---------- Telas menores ---------- */
+
+/* Monitores baixos (ex.: 1280×720): tudo um pouco mais compacto para caber sem rolar */
+@media (max-height: 800px) and (min-width: 1101px) {
+  .pdv {
+    min-height: 0;
+  }
+
+  .pdv-topo {
+    padding-block: 0.3rem;
+  }
+
+  .pdv-relogio {
+    font-size: 1.6rem;
+  }
+
+  .pdv-dados {
+    padding-block: 0.4rem;
+  }
+
+  .pdv input,
+  .pdv select,
+  .pdv-dado > strong {
+    min-height: 36px;
+  }
+
+  .pdv-corpo,
+  .pdv-esquerda,
+  .pdv-direita {
+    gap: 0.5rem;
+  }
+
+  .pdv-corpo {
+    padding-bottom: 0.6rem;
+  }
+
+  .pdv .pdv-qtd input,
+  .pdv-descricao p {
+    min-height: 44px;
+  }
+
+  .pdv-descricao p {
+    font-size: 1.15rem;
+  }
+
+  .pdv-leitura {
+    grid-template-columns: clamp(7rem, 9vw, 8.5rem) 1fr;
+  }
+
+  .pdv .pdv-codigo input,
+  .pdv-valor-unitario {
+    min-height: 46px;
+  }
+
+  .pdv-valor-unitario {
+    font-size: 1.35rem;
+  }
+
+  .pdv-campos {
+    gap: 0.4rem;
+  }
+
+  .pdv-total-liquido strong {
+    font-size: clamp(1.8rem, 3.4vw, 2.5rem);
+  }
+
+  .pdv-pago-troco strong {
+    font-size: 1.2rem;
+  }
+
+  .pdv-botao {
+    min-height: 46px;
+  }
+}
+
+@media (max-width: 1100px), (max-height: 640px) {
+  .pdv {
+    height: auto;
+    min-height: 100%;
+  }
+
+  .pdv-corpo {
+    grid-template-columns: 1fr;
+  }
+
+  .pdv-grade {
+    min-height: 14rem;
+    max-height: 26rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .pdv-situacao span {
+    display: none;
+  }
+
+  .pdv-dados {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .pdv-cliente,
+  .pdv-dados > .pdv-dado:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .pdv-corpo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pdv-leitura {
+    grid-template-columns: 7rem 1fr;
+  }
+
+  .pdv-pagamentos {
+    grid-template-columns: 1fr 8rem;
+  }
+
+  .pdv-pagamentos label {
+    grid-column: 1 / -1;
+  }
+
+  .pdv-botoes {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .pdv-itens th:nth-child(2),
+  .pdv-itens td:nth-child(2),
+  .pdv-itens th:nth-child(3),
+  .pdv-itens td:nth-child(3) {
+    display: none;
+  }
+}

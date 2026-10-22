@@ -26,6 +26,7 @@ import FaixaPagina from './FaixaPagina'
 import SecaoPagina from './SecaoPagina'
 import { useErp } from './contexto'
 import { MODULOS } from './modulos'
+import { avisarSalvo } from '../../components/aviso-salvo/avisarSalvo'
 import '../../styles/acesso.css'
 
 const MODULO = MODULOS.find((m) => m.id === 'conta')!
@@ -118,7 +119,7 @@ function SecaoDados({ conta, aoAtualizar }: PropsSecao) {
     try {
       aoAtualizar(await editarConta(sessao.token, { nome, telefone }))
       setEnviado(false)
-      setAviso({ tipo: 'ok', texto: 'Salvo.' })
+      avisarSalvo('Alterações feitas com sucesso', 'Seus dados')
     } catch (erro) {
       if (!sessaoExpirada(erro)) setAviso({ tipo: 'erro', texto: mensagemDe(erro) })
     } finally {
@@ -225,7 +226,7 @@ function SecaoEmail({ conta, aoAtualizar }: PropsSecao) {
       const atualizada = await confirmarTrocaDeEmail(sessao.token, { desafioId: verificacao.desafioId, codigo })
       aoAtualizar(atualizada)
       fechar()
-      setAviso({ tipo: 'ok', texto: 'E-mail alterado.' })
+      avisarSalvo('Alterações feitas com sucesso', 'E-mail alterado')
     } catch (erro) {
       setCodigo('')
       tratarErro(erro)
@@ -376,7 +377,7 @@ function SecaoSenha({ aoAtualizar }: Pick<PropsSecao, 'aoAtualizar'>) {
       setNova('')
       setConfirmacao('')
       setEnviado(false)
-      setAviso({ tipo: 'ok', texto: 'Senha alterada.' })
+      avisarSalvo('Alterações feitas com sucesso', 'Senha alterada')
     } catch (erro) {
       if (sessaoExpirada(erro)) return
       if (erro instanceof ErroApi && erro.campo === 'senhaAtual') setErroAtual('Incorreta')

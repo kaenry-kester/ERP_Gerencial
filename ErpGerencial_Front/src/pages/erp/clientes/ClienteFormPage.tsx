@@ -50,6 +50,7 @@ import {
   diaDe,
   proximosEnvios,
 } from './formatos'
+import { avisarSalvo } from '../../../components/aviso-salvo/avisarSalvo'
 import '../../../styles/acesso.css'
 import './clientes.css'
 
@@ -392,10 +393,12 @@ export default function ClienteFormPage() {
           state: { aviso: { tipo: 'erro', texto: `Cliente salvo, mas não foi possível salvar ${falhas}` } },
         })
       } else if (novo) {
-        // Volta para a lista, onde o cliente novo aparece no topo (sem aviso)
+        // Volta para a lista, onde o cliente novo aparece no topo
+        avisarSalvo('Cliente cadastrado com sucesso')
         navigate('/app/clientes')
       } else {
-        // Volta para a ficha do cliente (sem aviso)
+        // Volta para a ficha do cliente
+        avisarSalvo('Alterações feitas com sucesso', 'Cliente')
         navigate(`/app/clientes/${id}`)
       }
     } catch (erro) {
@@ -426,7 +429,7 @@ export default function ClienteFormPage() {
       const atualizado = await cancelarEnviosCliente(sessao.token, id!)
       setOriginal(atualizado)
       setValores((atual) => ({ ...atual, envioDia: '', envioHora: '' }))
-      setAviso({ tipo: 'ok', texto: 'Envios automáticos cancelados. Nenhuma mensagem será enviada para este cliente.' })
+      avisarSalvo('Alterações feitas com sucesso', 'Envios automáticos cancelados')
     } catch (erro) {
       if (!sessaoExpirada(erro)) setAviso({ tipo: 'erro', texto: mensagemDe(erro) })
     } finally {

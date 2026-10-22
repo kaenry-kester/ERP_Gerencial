@@ -26,6 +26,7 @@ import SemAcesso from '../SemAcesso'
 import BalaoMensagem from './BalaoMensagem'
 import { descreverIntervalo, formatarCadastro, formatarDataHora, proximosEnvios, situacaoManutencao } from './formatos'
 import JanelaEnvios from './JanelaEnvios'
+import { avisarSalvo } from '../../../components/aviso-salvo/avisarSalvo'
 import './clientes.css'
 
 const CLASSE_SITUACAO = { atrasada: 'lista-etiqueta alerta', proxima: 'lista-etiqueta atencao', 'em-dia': 'lista-etiqueta' }
@@ -120,7 +121,7 @@ export default function ClientePage() {
     setCancelando(true)
     try {
       setCliente(await cancelarEnviosCliente(sessao.token, cliente.id))
-      setAviso({ tipo: 'ok', texto: 'Envios automáticos cancelados. Nenhuma mensagem será enviada para este cliente.' })
+      avisarSalvo('Alterações feitas com sucesso', 'Envios automáticos cancelados')
     } catch (erro) {
       if (!sessaoExpirada(erro)) setAviso({ tipo: 'erro', texto: mensagemDe(erro) })
     } finally {

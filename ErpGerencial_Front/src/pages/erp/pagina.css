@@ -24,6 +24,17 @@
   --pg-zebra: #fbf8ef;
 }
 
+/* Cupons e recibos: o azul da ilustração do módulo */
+.pagina.tema-cupom {
+  --pg-faixa-1: var(--modulo-cupom-fiscal);
+  --pg-faixa-2: #134f66;
+  --pg-suave: #c4dce8;
+  --pg-lado: #e2eef4;
+  --pg-cor: var(--modulo-cupom-fiscal);
+  --pg-titulo: #0f4255;
+  --pg-zebra: #f4f8fa;
+}
+
 .pagina.tema-preferencias,
 .pagina.tema-clientes {
   --pg-faixa-1: var(--azul-inicio);

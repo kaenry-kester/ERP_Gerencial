@@ -18,6 +18,7 @@ import AvisoPagina from '../AvisoPagina'
 import { useErp } from '../contexto'
 import EditorMensagem from './EditorMensagem'
 import JanelaEnvios from './JanelaEnvios'
+import { avisarSalvo } from '../../../components/aviso-salvo/avisarSalvo'
 
 /** Sugestão de texto para quem ainda não escreveu nenhuma mensagem. */
 const SUGESTAO =
@@ -88,6 +89,7 @@ export default function JanelaMensagemPadrao({ aberto, onFechar }: Props) {
     setAviso(null)
     try {
       aplicar(await salvarWhatsapp(sessao.token, { remetente, mensagem }))
+      avisarSalvo('Alterações feitas com sucesso', 'Mensagem automática')
       onFechar()
     } catch (erro) {
       if (sessaoExpirada(erro)) return

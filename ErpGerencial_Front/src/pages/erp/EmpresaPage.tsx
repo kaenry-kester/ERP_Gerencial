@@ -17,10 +17,11 @@ import FaixaPagina from './FaixaPagina'
 import SecaoPagina from './SecaoPagina'
 import { useErp } from './contexto'
 import { MODULOS } from './modulos'
+import { avisarSalvo } from '../../components/aviso-salvo/avisarSalvo'
 import '../../styles/acesso.css'
 
 type Campo = keyof DadosEmpresa
-const ORDEM: Campo[] = ['nome', 'razaoSocial', 'documento', 'email', 'telefone']
+const ORDEM: Campo[] = ['nome', 'razaoSocial', 'documento', 'email', 'telefone', 'endereco', 'cidade', 'uf']
 
 const MODULO = MODULOS.find((m) => m.id === 'empresa')!
 
@@ -53,6 +54,9 @@ const paraFormulario = (e: Empresa): DadosEmpresa => ({
   documento: formatarDocumento(e.documento ?? ''),
   email: e.email ?? '',
   telefone: formatarTelefone(e.telefone ?? ''),
+  endereco: e.endereco ?? '',
+  cidade: e.cidade ?? '',
+  uf: e.uf ?? '',
 })
 
 function validar(v: DadosEmpresa): Partial<Record<Campo, string>> {
@@ -63,6 +67,7 @@ function validar(v: DadosEmpresa): Partial<Record<Campo, string>> {
   if (doc) erros.documento = doc
   if (v.email.trim() && !emailValido(v.email)) erros.email = 'E-mail inválido'
   if (v.telefone && !telefoneValido(v.telefone)) erros.telefone = 'Número incompleto'
+  if (v.uf && !/^[A-Za-z]{2}$/.test(v.uf)) erros.uf = 'Ex.: SP'
   return erros
 }
 
@@ -129,6 +134,14 @@ export default function EmpresaPage() {
               ]}
             />
           </SecaoPagina>
+          <SecaoPagina id="empresa-endereco" numero={3} titulo="Endereço">
+            <Dados
+              itens={[
+                ['Endereço', empresa.endereco ?? '—'],
+                ['Cidade', [empresa.cidade, empresa.uf].filter(Boolean).join(' / ') || '—'],
+              ]}
+            />
+          </SecaoPagina>
         </div>
       </div>
     )
@@ -138,6 +151,7 @@ export default function EmpresaPage() {
   const mascaras: Partial<Record<Campo, (v: string) => string>> = {
     documento: formatarDocumento,
     telefone: formatarTelefone,
+    uf: (v) => v.replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase(),
   }
 
   const campo = (id: Campo) => ({
@@ -170,7 +184,7 @@ export default function EmpresaPage() {
       setEnviado(false)
       // O nome aparece na barra de navegação: atualiza a sessão também.
       atualizarSessao({ ...sessao, empresa: { id: salva.id, nome: salva.nome } })
-      setAviso({ tipo: 'ok', texto: 'Salvo.' })
+      avisarSalvo('Alterações feitas com sucesso', 'Dados da empresa')
     } catch (erro) {
       if (sessaoExpirada(erro)) return
       if (erro instanceof ErroApi && erro.campo === 'documento') setErroServidor({ documento: 'Já cadastrado' })
@@ -216,6 +230,21 @@ export default function EmpresaPage() {
               autoComplete="email"
             />
           </div>
+        </SecaoPagina>
+
+        <SecaoPagina id="empresa-endereco" numero={3} titulo="Endereço">
+          <div className="erp-form">
+            <CampoTexto
+              {...campo('endereco')}
+              rotulo="Endereço"
+              placeholder="Rua, número e bairro"
+              autoComplete="street-address"
+              className="largo"
+            />
+            <CampoTexto {...campo('cidade')} rotulo="Cidade" autoComplete="address-level2" />
+            <CampoTexto {...campo('uf')} rotulo="UF" placeholder="SP" autoComplete="address-level1" />
+          </div>
+          <p className="erp-nota">Sai impresso nos cupons e recibos.</p>
         </SecaoPagina>
 
         <div className="pagina-barra">

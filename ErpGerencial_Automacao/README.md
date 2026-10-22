@@ -41,7 +41,12 @@ Precisa do **Node.js** (o mesmo do site), do **Git** e do **Python** (só para c
    ```
    git clone --depth 1 --branch 2.3.7 https://github.com/EvolutionAPI/evolution-api.git
    copy evolution.env.exemplo evolution-api\.env
+   git -C evolution-api apply ..\evolution-somente-envio.patch
    ```
+
+   O patch deixa a Evolution **somente para envio**: ela não baixa histórico, ignora grupos, status e canais, não
+   fica "online" no celular e descarta as mensagens, confirmações, chamadas, conversas e contatos que chegam — nada
+   disso é processado nem aparece no terminal.
 
    No `evolution-api\.env`, troque `SUA_SENHA` (do banco) e invente a `AUTHENTICATION_API_KEY`; copie essa mesma chave
    para `EVOLUTION_CHAVE` no `.env` desta pasta e para a API (`dotnet user-secrets set Evolution:Chave <chave>` na pasta

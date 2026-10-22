@@ -26,6 +26,7 @@ import { MENSAGEM_MAXIMO as MAXIMO, TRECHOS_MENSAGEM as TRECHOS } from './format
 import BalaoMensagem from './BalaoMensagem'
 import ExtrasMensagem from './ExtrasMensagem'
 import JanelaEnvios from './JanelaEnvios'
+import { avisarSalvo } from '../../../components/aviso-salvo/avisarSalvo'
 import '../../../styles/acesso.css'
 import './clientes.css'
 
@@ -101,7 +102,7 @@ export default function MensagemAutomaticaPage() {
     try {
       aplicar(await salvarWhatsapp(sessao.token, { remetente, mensagem }))
       setEnviado(false)
-      setAviso({ tipo: 'ok', texto: 'Salvo.' })
+      avisarSalvo('Alterações feitas com sucesso', 'Mensagem automática')
     } catch (erro) {
       if (sessaoExpirada(erro)) return
       if (erro instanceof ErroApi && (erro.campo === 'remetente' || erro.campo === 'mensagem'))

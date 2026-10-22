@@ -1,0 +1,383 @@
+/*
+  Histórico dos clientes (página "Número de ordem de serviço"): lista de clientes e a linha do tempo
+  de cada um, agrupada por mês, com um desenho por tipo (venda, mensagem, cancelamento, cadastro).
+  Verde do módulo, sem bordas: cartões brancos sobre o fundo.
+*/
+
+.pagina.tema-historico {
+  --pg-faixa-1: var(--modulo-ordem-servico);
+  --pg-faixa-2: #1f4f33;
+  --pg-suave: #c3e8c8;
+  --pg-lado: #e3f3e5;
+  --pg-cor: var(--modulo-ordem-servico);
+  --pg-titulo: #1f4f33;
+  --pg-zebra: #f4faf5;
+}
+
+.historico-doc {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--texto-suave);
+}
+
+.lista-etiqueta.vazia {
+  background: var(--cinza-claro);
+  color: var(--texto-suave);
+}
+
+/* ---------- Resumo do cliente ---------- */
+
+.historico-corpo {
+  display: grid;
+  gap: 1rem;
+}
+
+/* Seis quadros do mesmo tamanho: desenho + título numa linha, valor grande, detalhe discreto */
+.historico-resumo {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
+  gap: 0.75rem;
+}
+
+.historico-indicador {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem 0.9rem;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.historico-indicador-topo {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.historico-indicador-emoji {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 4px;
+  background: var(--pg-lado);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.historico-indicador-rotulo {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--texto-suave);
+}
+
+.historico-indicador-valor {
+  margin-top: 0.15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(1.15rem, 1.35vw, 1.5rem);
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--texto);
+  font-variant-numeric: tabular-nums;
+}
+
+.historico-indicador-detalhe {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  color: var(--texto-suave);
+}
+
+.historico-indicador-alerta {
+  align-self: flex-start;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: var(--erro-fundo);
+  color: var(--erro);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* 6 por linha só em telas largas; 3 em notebooks; 2 no celular (o valor nunca é cortado) */
+@media (max-width: 1499px) {
+  .historico-resumo {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .historico-resumo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .historico-indicador {
+    padding: 0.7rem 0.75rem;
+  }
+
+  .historico-indicador-valor {
+    font-size: clamp(0.9rem, 4.1vw, 1.1rem);
+  }
+
+  .historico-indicador-rotulo {
+    font-size: 0.68rem;
+    letter-spacing: 0.02em;
+  }
+
+  .historico-indicador-topo {
+    gap: 0.4rem;
+  }
+
+  .historico-indicador-emoji {
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  /* No celular, título e detalhe podem ir para a segunda linha */
+  .historico-indicador-rotulo,
+  .historico-indicador-detalhe {
+    white-space: normal;
+  }
+}
+
+.historico-endereco {
+  color: var(--texto-suave);
+}
+
+/* ---------- Filtros ---------- */
+
+.historico-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.historico-filtro {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.95rem;
+  border: none;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--texto);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.25s ease,
+    filter 0.25s ease;
+}
+
+.historico-filtro:hover {
+  filter: brightness(0.96);
+}
+
+.historico-filtro.marcado {
+  background: var(--pg-cor);
+  color: var(--branco);
+}
+
+.historico-filtro-numero {
+  min-width: 1.6rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--pg-lado);
+  color: var(--pg-titulo);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+/* ---------- Linha do tempo ---------- */
+
+.historico-mes {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.historico-mes-titulo {
+  font-size: 1rem;
+  color: var(--pg-titulo);
+}
+
+.historico-linha {
+  position: relative;
+  list-style: none;
+  display: grid;
+  gap: 0.7rem;
+  padding: 0 0 0 0;
+  margin: 0;
+}
+
+/* Trilho vertical ligando os desenhos */
+.historico-linha::before {
+  content: '';
+  position: absolute;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  left: 1.45rem;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--pg-suave);
+}
+
+.historico-evento {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2.9rem minmax(0, 1fr);
+  gap: 0.8rem;
+}
+
+.historico-evento-emoji {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 2.9rem;
+  height: 2.9rem;
+  border-radius: 50%;
+  background: #fff;
+  font-size: 1.35rem;
+  box-shadow: 0 0 0 4px var(--fundo);
+}
+
+.historico-evento.venda .historico-evento-emoji {
+  background: var(--pg-lado);
+}
+
+.historico-evento.cancelamento .historico-evento-emoji,
+.historico-evento.erro .historico-evento-emoji {
+  background: var(--erro-fundo);
+}
+
+.historico-evento-corpo {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.8rem 1rem;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.historico-evento.cancelamento .historico-evento-corpo {
+  background: #fff7f6;
+}
+
+.historico-evento-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.historico-evento-data {
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+  text-transform: capitalize;
+}
+
+.historico-evento-titulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+  font-size: 1rem;
+}
+
+.historico-evento-valor {
+  flex-shrink: 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--pg-titulo);
+  font-variant-numeric: tabular-nums;
+}
+
+.historico-evento.riscado .historico-evento-valor,
+.historico-evento.cancelamento .historico-evento-valor {
+  color: var(--erro);
+  text-decoration: line-through;
+}
+
+.historico-evento-detalhe {
+  font-size: 0.88rem;
+  color: var(--texto-suave);
+}
+
+.historico-itens {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.historico-itens th {
+  padding: 0.35rem 0.5rem;
+  background: var(--pg-lado);
+  color: var(--pg-titulo);
+  font-size: 0.72rem;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.historico-itens td {
+  padding: 0.35rem 0.5rem;
+}
+
+.historico-itens tbody tr:nth-child(even) {
+  background: var(--pg-zebra);
+}
+
+.historico-itens .numero {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Mensagem de WhatsApp como um balão */
+.historico-balao {
+  justify-self: start;
+  max-width: 46rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 4px 12px 12px 12px;
+  background: #e2f7d9;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.historico-evento.erro .historico-balao {
+  background: var(--erro-fundo);
+}
+
+.historico-link {
+  justify-self: start;
+  font-weight: 700;
+  color: var(--pg-titulo);
+}
+
+.historico-vazio {
+  color: var(--texto-suave);
+}
+
+@media (max-width: 700px) {
+  .historico-itens th:nth-child(2),
+  .historico-itens td:nth-child(2),
+  .historico-itens th:nth-child(3),
+  .historico-itens td:nth-child(3) {
+    display: none;
+  }
+}

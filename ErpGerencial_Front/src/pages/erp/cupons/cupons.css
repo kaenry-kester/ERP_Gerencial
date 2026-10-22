@@ -1,0 +1,162 @@
+/*
+  Cupons e recibos: cupom emitido (pré-visualização, impressão e cancelamento). O caixa fica em pdv.css.
+  Mesmo padrão das outras páginas: cores do tema (.tema-cupom), sem bordas, separação por cor de fundo,
+  botões grandes com desenho, cantos discretos.
+*/
+
+/* ---------- Cupom emitido ---------- */
+
+.cupom-cancelado-faixa {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 4px;
+  background: var(--erro-fundo);
+  color: var(--erro);
+  font-weight: 700;
+}
+
+.cupom-detalhe-grade {
+  display: grid;
+  grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);
+  align-items: start;
+  gap: 1.5rem;
+}
+
+.cupom-imprimir {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.cupom-formato {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.85rem 1rem;
+  border: none;
+  border-radius: 4px;
+  background: var(--pg-lado);
+  color: var(--texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 0.25s ease,
+    filter 0.25s ease;
+}
+
+.cupom-formato:hover {
+  filter: brightness(0.96);
+}
+
+.cupom-formato.marcado {
+  background: var(--pg-cor);
+  color: var(--branco);
+}
+
+.cupom-formato-emoji {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.55);
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.cupom-formato-textos {
+  display: grid;
+}
+
+.cupom-formato-textos span {
+  font-size: 0.82rem;
+  opacity: 0.85;
+}
+
+.cupom-botao-imprimir {
+  justify-content: center;
+  min-height: 54px;
+  font-size: 1.05rem;
+}
+
+.cupom-detalhe-dados {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.8rem 1rem;
+  margin-top: 0.4rem;
+  border-radius: 4px;
+  background: var(--pg-zebra);
+}
+
+.cupom-detalhe-dados div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.cupom-detalhe-dados dt {
+  color: var(--texto-suave);
+}
+
+.cupom-detalhe-dados dd {
+  font-weight: 600;
+}
+
+.cupom-cancelar {
+  justify-content: center;
+}
+
+.cupom-cancelamento {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.9rem 1rem;
+  border-radius: 4px;
+  background: var(--erro-fundo);
+}
+
+.cupom-cancelamento-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+/* Pré-visualização: o papel sobre um fundo cinza, como na impressão */
+.cupom-papel {
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem;
+  border-radius: 4px;
+  background: var(--cinza-claro);
+  overflow-x: auto;
+}
+
+.cupom-papel .ct {
+  padding: 4mm;
+  box-sizing: content-box;
+  box-shadow: var(--sombra);
+}
+
+.cupom-papel .rc {
+  padding: 8mm;
+  box-sizing: content-box;
+  box-shadow: var(--sombra);
+}
+
+/* A folha A4 é larga: na tela, mostra reduzida */
+.cupom-papel-recibo .rc {
+  zoom: 0.72;
+}
+
+@media (max-width: 900px) {
+  .cupom-detalhe-grade {
+    grid-template-columns: 1fr;
+  }
+
+  .cupom-papel-recibo .rc {
+    zoom: 0.5;
+  }
+}

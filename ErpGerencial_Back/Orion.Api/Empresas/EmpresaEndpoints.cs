@@ -6,7 +6,9 @@ using Orion.Api.Data;
 
 namespace Orion.Api.Empresas;
 
-public record EditarEmpresaRequest(string Nome, string? RazaoSocial, string? Documento, string? Email, string? Telefone);
+public record EditarEmpresaRequest(
+    string Nome, string? RazaoSocial, string? Documento, string? Email, string? Telefone,
+    string? Endereco = null, string? Cidade = null, string? Uf = null);
 
 public record EmpresaDto(
     Guid Id,
@@ -15,6 +17,9 @@ public record EmpresaDto(
     string? Documento,
     string? Email,
     string? Telefone,
+    string? Endereco,
+    string? Cidade,
+    string? Uf,
     DateTime CriadoEm);
 
 public static class EmpresaEndpoints
@@ -50,6 +55,9 @@ public static class EmpresaEndpoints
         empresa.Documento = Documento(req.Documento);
         empresa.Email = Opcional(req.Email)?.ToLowerInvariant();
         empresa.Telefone = Opcional(Validacao.SoDigitos(req.Telefone ?? ""));
+        empresa.Endereco = Opcional(req.Endereco);
+        empresa.Cidade = Opcional(req.Cidade);
+        empresa.Uf = Opcional(req.Uf)?.ToUpperInvariant();
 
         if (await Salvar(db) is { } conflito) return conflito;
         return Results.Ok(Dto(empresa));
@@ -73,5 +81,5 @@ public static class EmpresaEndpoints
     private static string? Documento(string? valor) => Opcional(Validacao.NormalizarDocumento(valor ?? ""));
 
     private static EmpresaDto Dto(Empresa e) =>
-        new(e.Id, e.Nome, e.RazaoSocial, e.Documento, e.Email, e.Telefone, e.CriadoEm);
+        new(e.Id, e.Nome, e.RazaoSocial, e.Documento, e.Email, e.Telefone, e.Endereco, e.Cidade, e.Uf, e.CriadoEm);
 }
