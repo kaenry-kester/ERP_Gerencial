@@ -90,7 +90,7 @@ export const MODULOS_PRINCIPAIS: Modulo[] = [
     descricao: 'Cupons de venda e recibos (não fiscais), com impressão.',
     Icone: IconeRecibo,
     Ilustracao: IlustracaoCupomFiscal,
-    cadastro: { rotulo: 'Emitir cupom', para: '/app/cupom-fiscal/novo', permissao: 'cupom-fiscal' },
+    // Sem atalho acima do bloco: "Emitir cupom" fica na faixa do topo da tela principal
     acesso: 'permissao',
   },
   {

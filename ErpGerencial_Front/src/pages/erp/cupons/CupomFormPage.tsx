@@ -104,7 +104,6 @@ export default function CupomFormPage() {
   const [forma2, setForma2] = useState<FormaPagamento | ''>('')
   const [valor2, setValor2] = useState('')
   const [observacao, setObservacao] = useState('')
-
   const [erro, setErro] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
   const gerarRef = useRef<() => void>(() => {})
@@ -313,7 +312,7 @@ export default function CupomFormPage() {
         clienteEndereco: cliente ? enderecoDo(cliente) || null : null,
         itens: itens.map((i) => ({
           produtoId: i.produtoId,
-          descricao: null,
+          descricao: i.produtoId ? null : i.descricao,
           quantidade: quantidadeParaNumero(i.quantidade) ?? 0,
           valorUnitario: moedaParaNumero(i.valor) ?? 0,
         })),
@@ -370,7 +369,7 @@ export default function CupomFormPage() {
         </Link>
         <p className="pdv-situacao">
           <strong>{itens.length > 0 ? 'Venda em andamento' : 'Caixa livre'}</strong>
-          <span> · Escaneie ou digite o nome do produto · F4 gera o cupom</span>
+          <span className="pdv-dica-topo"> · Escaneie ou digite o nome do produto · F4 gera o cupom</span>
         </p>
         <time className="pdv-relogio">{relogio}</time>
       </header>
@@ -512,7 +511,7 @@ export default function CupomFormPage() {
                 <p className="pdv-total-item">
                   {atual
                     ? `${atual.quantidade || '0'} × ${formatarMoeda(moedaParaNumero(atual.valor) ?? 0)} = ${formatarMoeda(totalDoItem(atual))}`
-                    : 'Qtd × valor unitário = total do item'}
+                    : ' ' /* sem produto: linha vazia (mantém a altura) */}
                 </p>
               </div>
             </div>

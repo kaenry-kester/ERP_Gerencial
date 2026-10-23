@@ -191,7 +191,7 @@ export default function HistoricoClientePage() {
   const acoes = (
     <>
       {podeVender && (
-        <Link to={`/app/cupom-fiscal/novo?cliente=${historico.id}`} className="pagina-botao marrom">
+        <Link to={`/app/cupom-fiscal/novo?cliente=${historico.id}`} className="pagina-botao marinho">
           🛒 Nova venda
         </Link>
       )}

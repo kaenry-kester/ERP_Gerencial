@@ -13,6 +13,7 @@ import FaixaPagina from '../FaixaPagina'
 import { useErp } from '../contexto'
 import { MODULOS, podeAcessar, tem } from '../modulos'
 import SemAcesso from '../SemAcesso'
+import './estoque.css'
 
 const MODULO = MODULOS.find((m) => m.id === 'produtos')!
 
@@ -88,6 +89,13 @@ export default function ProdutosPage() {
         acoes={cadastrar || undefined}
       />
 
+      {/* Estoque */}
+      <nav className="estoque-atalhos" aria-label="Estoque">
+        <Link to="/app/produtos/movimentacoes" className="estoque-atalho">
+          <span aria-hidden="true">📜</span> Movimentações
+        </Link>
+      </nav>
+
       <div className="lista-ferramentas">
         <div className="lista-busca">
           <label htmlFor="produtos-busca" className="sr-only">
@@ -137,7 +145,9 @@ export default function ProdutosPage() {
                     </th>
                     <th scope="col" className="lista-id">ID</th>
                     <th scope="col">Produto</th>
-                    <th scope="col">Código</th>
+                    <th scope="col" className="lista-barras">
+                      Código de barras
+                    </th>
                     <th scope="col" className="numero">Custo</th>
                     <th scope="col" className="numero">Venda PF</th>
                     <th scope="col" className="numero">Venda PJ</th>
@@ -167,15 +177,26 @@ export default function ProdutosPage() {
                           {p.nome}
                         </Link>
                       </td>
-                      <td data-rotulo="Código">{p.codigo ?? '—'}</td>
+                      <td className="lista-barras" data-rotulo="Código de barras">
+                        {p.codigoBarras ?? '—'}
+                      </td>
                       <td className="numero" data-rotulo="Custo">{formatarMoeda(p.precoCusto)}</td>
                       <td className="numero lista-destaque" data-rotulo="Venda PF">{formatarMoeda(p.precoVendaPf)}</td>
                       <td className="numero lista-destaque" data-rotulo="Venda PJ">{formatarMoeda(p.precoVendaPj)}</td>
                       <td className="numero" data-rotulo="Qtd.">
                         <span
-                          className={p.quantidade > 0 ? 'lista-etiqueta' : 'lista-etiqueta alerta'}
-                          title={p.quantidade > 0 ? undefined : 'Sem estoque'}
+                          className={p.quantidade <= 0 ? 'lista-etiqueta alerta' : p.estoqueBaixo ? 'lista-etiqueta atencao' : 'lista-etiqueta'}
+                          title={
+                            p.quantidade < 0
+                              ? 'Estoque negativo: vendeu mais do que tinha'
+                              : p.quantidade === 0
+                                ? 'Sem estoque'
+                                : p.estoqueBaixo
+                                ? `Estoque baixo (mínimo ${formatarQuantidade(p.estoqueMinimo)})`
+                                : undefined
+                          }
                         >
+                          {p.estoqueBaixo && p.quantidade > 0 && <span aria-hidden="true">⚠️ </span>}
                           {formatarQuantidade(p.quantidade)}
                         </span>
                       </td>

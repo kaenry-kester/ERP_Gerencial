@@ -1,5 +1,5 @@
 /*
-  Documentos impressos: cupom de 80 mm (impressora térmica) e recibo A4 (duas vias, no modelo do talão).
+  Documento impresso: cupom de 80 mm (impressora térmica).
   Na impressão só o documento aparece; na tela, os mesmos componentes servem de pré-visualização.
 */
 
@@ -63,6 +63,15 @@
   text-align: center;
 }
 
+/* Logo da loja no topo do cupom */
+.ct-logo {
+  display: block;
+  max-width: 56mm;
+  max-height: 22mm;
+  margin: 0 auto 2mm;
+  object-fit: contain;
+}
+
 .ct-empresa {
   font-size: 15px;
   font-weight: 700;
@@ -109,8 +118,7 @@
   font-weight: 700;
 }
 
-.ct-cancelado,
-.rc-cancelado {
+.ct-cancelado {
   position: absolute;
   top: 40%;
   left: 50%;
@@ -123,162 +131,4 @@
   letter-spacing: 0.15em;
   opacity: 0.75;
   pointer-events: none;
-}
-
-/* ---------- Recibo A4 (duas vias) ---------- */
-
-.rc {
-  --rc-cor: #1b6d8c;
-  --rc-fundo: #dbeaf1;
-  width: 190mm;
-  margin: 0 auto;
-  background: #fff;
-  color: #111;
-  font-family: Arial, "Helvetica Neue", sans-serif;
-  font-size: 13px;
-  line-height: 1.4;
-  letter-spacing: 0;
-  word-spacing: 0;
-}
-
-.rc p {
-  margin: 0;
-}
-
-.rc-via {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 3.2mm;
-  height: 132mm;
-  padding: 6mm 7mm 5mm;
-  border: 1.5px solid var(--rc-cor);
-  border-radius: 3mm;
-}
-
-.rc-topo {
-  display: flex;
-  align-items: stretch;
-  gap: 4mm;
-  margin-bottom: 1mm;
-}
-
-.rc-titulo {
-  display: flex;
-  align-items: center;
-  padding: 1mm 5mm;
-  border-radius: 1.5mm;
-  background: var(--rc-cor);
-  color: #fff;
-  font-size: 22px;
-  font-weight: 800;
-}
-
-.rc-caixa {
-  display: flex;
-  align-items: center;
-  gap: 3mm;
-  padding: 1mm 4mm;
-  border-radius: 1.5mm;
-  background: var(--rc-fundo);
-}
-
-.rc-valor {
-  margin-left: auto;
-  min-width: 62mm;
-}
-
-.rc-numero {
-  font-size: 17px;
-  font-weight: 800;
-}
-
-.rc-rotulo {
-  flex-shrink: 0;
-  color: var(--rc-cor);
-  font-weight: 700;
-}
-
-.rc-linha {
-  display: flex;
-  align-items: baseline;
-  gap: 2.5mm;
-}
-
-/* O valor escrito sobre a linha, como num talão preenchido */
-.rc-preenchido {
-  flex: 1;
-  min-width: 0;
-  min-height: 1.4em;
-  padding: 0 1mm;
-  border-bottom: 1px solid var(--rc-cor);
-  overflow-wrap: anywhere;
-}
-
-.rc-quantia {
-  display: flex;
-  align-items: center;
-  gap: 2.5mm;
-}
-
-.rc-extenso {
-  flex: 1;
-  padding: 2mm 3mm;
-  border-radius: 1.5mm;
-  background: var(--rc-fundo);
-  font-weight: 700;
-  font-style: italic;
-}
-
-.rc-extenso::first-letter {
-  text-transform: uppercase;
-}
-
-.rc-data {
-  text-align: right;
-  font-weight: 600;
-}
-
-.rc-rodape {
-  display: flex;
-  align-items: flex-end;
-  gap: 8mm;
-  margin-top: auto;
-}
-
-.rc-emitente {
-  flex: 1;
-  display: grid;
-  gap: 2.5mm;
-}
-
-.rc-assinatura {
-  width: 62mm;
-  display: grid;
-  justify-items: center;
-  gap: 1mm;
-  font-size: 11px;
-}
-
-.rc-assinatura-linha {
-  width: 100%;
-  height: 12mm;
-  border-bottom: 1px solid #111;
-}
-
-.rc-via-nome {
-  position: absolute;
-  right: 7mm;
-  bottom: 1.2mm;
-  color: #666;
-  font-size: 9.5px;
-}
-
-.rc-corte {
-  margin: 4mm 0 !important;
-  border-top: 1px dashed #888;
-  color: #888;
-  font-size: 10px;
-  line-height: 0;
-  text-align: center;
 }

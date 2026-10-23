@@ -183,7 +183,7 @@ export default function EmpresaPage() {
       setValores(paraFormulario(salva))
       setEnviado(false)
       // O nome aparece na barra de navegação: atualiza a sessão também.
-      atualizarSessao({ ...sessao, empresa: { id: salva.id, nome: salva.nome } })
+      atualizarSessao({ ...sessao, empresa: { ...sessao.empresa, id: salva.id, nome: salva.nome } })
       avisarSalvo('Alterações feitas com sucesso', 'Dados da empresa')
     } catch (erro) {
       if (sessaoExpirada(erro)) return
@@ -244,7 +244,7 @@ export default function EmpresaPage() {
             <CampoTexto {...campo('cidade')} rotulo="Cidade" autoComplete="address-level2" />
             <CampoTexto {...campo('uf')} rotulo="UF" placeholder="SP" autoComplete="address-level1" />
           </div>
-          <p className="erp-nota">Sai impresso nos cupons e recibos.</p>
+          <p className="erp-nota">Sai impresso nos cupons.</p>
         </SecaoPagina>
 
         <div className="pagina-barra">

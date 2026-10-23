@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import type { Aviso } from '../../../components/formulario/FaixaAviso'
 import { IlustracaoFinanceiro } from '../../../components/icones/Ilustracoes'
 import { useSessaoExpirada } from '../../../hooks/useSessaoExpirada'
@@ -153,7 +153,6 @@ async function baixarPlanilha(token: string, filtros: FiltrosVendas, situacao: s
 // Financeiro: todas as vendas (cupons emitidos), com painel de resumo e o registro completo, nos mesmos filtros.
 export default function FinanceiroPage() {
   const { sessao } = useErp()
-  const navigate = useNavigate()
   const sessaoExpirada = useSessaoExpirada()
   const podeVer = podeAcessar(sessao.usuario, MODULO)
 
@@ -239,7 +238,6 @@ export default function FinanceiroPage() {
   }
 
   const total = lista?.total ?? 0
-  const paginas = lista ? Math.max(1, Math.ceil(total / lista.tamanhoPagina)) : 1
 
   return (
     <div className="pagina tema-financeiro">
@@ -376,12 +374,6 @@ export default function FinanceiroPage() {
                 rotulo="Itens vendidos"
                 valor={formatarQuantidade(t.itensVendidos)}
                 extra={t.descontos > 0 ? `Descontos: ${formatarMoeda(t.descontos)}` : undefined}
-              />
-              <Indicador
-                emoji="⛔"
-                rotulo="Cancelados"
-                valor={formatarQuantidade(t.cancelados)}
-                extra={t.cancelados > 0 ? formatarMoeda(t.valorCancelado) : undefined}
               />
             </div>
 
@@ -540,77 +532,15 @@ export default function FinanceiroPage() {
                   }
                 }}
               >
-                📥 {baixando ? 'Gerando...' : 'Baixar planilha'}
+                📥 {baixando ? 'Gerando...' : 'Baixar planilha de registro de vendas'}
               </button>
             </div>
           </div>
 
-          {lista && lista.itens.length === 0 && <p className="grafico-vazio">Nenhuma venda neste filtro.</p>}
-          {lista && lista.itens.length > 0 && (
-            <div className="lista-tabela-area">
-              <table className="lista-tabela">
-                <thead>
-                  <tr>
-                    <th scope="col" className="lista-id">Nº</th>
-                    <th scope="col">Data</th>
-                    <th scope="col">Cliente</th>
-                    <th scope="col">Itens</th>
-                    <th scope="col">Pagamento</th>
-                    <th scope="col">Vendedor</th>
-                    <th scope="col" className="numero">Total</th>
-                    <th scope="col">Situação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lista.itens.map((c) => (
-                    <tr key={c.id} onClick={() => navigate(`/app/cupom-fiscal/${c.id}`)}>
-                      <td className="lista-id" data-rotulo="Nº">
-                        <Link to={`/app/cupom-fiscal/${c.id}`} className="lista-nome">
-                          {numeroCupom(c.numero)}
-                        </Link>
-                      </td>
-                      <td data-rotulo="Data">{dataHora(c.emitidoEm)}</td>
-                      <td className="lista-principal quebra" data-rotulo="Cliente">{c.clienteNome ?? 'Consumidor'}</td>
-                      <td className="quebra" data-rotulo="Itens">
-                        {c.itens.length > 0
-                          ? c.itens.map((i) => `${formatarQuantidade(i.quantidade)}× ${i.descricao}`).join(', ')
-                          : (c.referente ?? 'Recibo')}
-                      </td>
-                      <td data-rotulo="Pagamento">
-                        {rotuloPagamento(c.formaPagamento)}
-                        {c.formaPagamento2 && ` + ${rotuloPagamento(c.formaPagamento2)}`}
-                      </td>
-                      <td data-rotulo="Vendedor">{c.vendedorNome ?? c.emitidoPor}</td>
-                      <td className="numero lista-destaque" data-rotulo="Total">{formatarMoeda(c.total)}</td>
-                      <td data-rotulo="Situação">
-                        <span className={c.canceladoEm ? 'lista-etiqueta alerta' : 'lista-etiqueta'}>
-                          {c.canceladoEm ? 'Cancelado' : 'Emitido'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {lista && paginas > 1 && (
-            <nav className="lista-paginas" aria-label="Páginas">
-              <span>
-                Página {pagina} de {paginas} · {total} vendas
-              </span>
-              <button type="button" className="pagina-botao neutro" disabled={pagina <= 1} onClick={() => setPagina((n) => n - 1)}>
-                Anterior
-              </button>
-              <button
-                type="button"
-                className="pagina-botao neutro"
-                disabled={pagina >= paginas}
-                onClick={() => setPagina((n) => n + 1)}
-              >
-                Próxima
-              </button>
-            </nav>
-          )}
+          {/* Sem a tabela na tela: o registro completo sai na planilha (mesmos filtros do painel) */}
+          <p className="fin-registro-resumo">
+            {lista ? (total ? `${total} ${total === 1 ? 'venda' : 'vendas'} neste filtro.` : 'Nenhuma venda neste filtro.') : 'Carregando...'}
+          </p>
         </section>
       </div>
     </div>

@@ -24,6 +24,7 @@ import {
   formatarQuantidade,
   mascaraMoeda,
   mascaraQuantidade,
+  mascaraQuantidadeComSinal,
   moedaParaNumero,
   quantidadeParaNumero,
 } from '../../../utils/validacao'
@@ -50,6 +51,8 @@ type Campo =
   | 'cor'
   | 'voltagem'
   | 'observacao'
+  | 'estoqueMinimo'
+  | 'unidade'
 type Valores = Record<Campo, string>
 
 const VAZIO: Valores = {
@@ -65,13 +68,16 @@ const VAZIO: Valores = {
   cor: '',
   voltagem: '',
   observacao: '',
+  estoqueMinimo: '',
+  unidade: 'UN',
 }
 
 const MASCARAS: Partial<Record<Campo, (v: string) => string>> = {
   precoCusto: mascaraMoeda,
   precoVendaPf: mascaraMoeda,
   precoVendaPj: mascaraMoeda,
-  quantidade: mascaraQuantidade,
+  quantidade: mascaraQuantidadeComSinal,
+  estoqueMinimo: mascaraQuantidade,
 }
 
 const VOLTAGENS = ['110V', '127V', '220V', 'Bivolt', '12V', '24V', 'Não se aplica']
@@ -95,6 +101,8 @@ const paraFormulario = (p: Produto): Valores => ({
   cor: p.cor ?? '',
   voltagem: p.voltagem ?? '',
   observacao: p.observacao ?? '',
+  estoqueMinimo: p.estoqueMinimo ? formatarQuantidade(p.estoqueMinimo).replace(/\./g, '') : '',
+  unidade: p.unidade || 'UN',
 })
 
 const paraApi = (v: Valores): DadosProduto => ({
@@ -103,6 +111,7 @@ const paraApi = (v: Valores): DadosProduto => ({
   precoVendaPf: moedaParaNumero(v.precoVendaPf),
   precoVendaPj: moedaParaNumero(v.precoVendaPj),
   quantidade: quantidadeParaNumero(v.quantidade),
+  estoqueMinimo: quantidadeParaNumero(v.estoqueMinimo),
 })
 
 /** Cadastro (/app/produtos/novo) e edição (/app/produtos/:id/editar) de produto. */
@@ -291,20 +300,21 @@ export default function ProdutoFormPage() {
       <form className="ficha-pagina" onSubmit={salvar} noValidate>
         <div className="ficha-area">
           <div className="ficha" role="group" aria-label="Cadastro de produto">
-            <CampoFicha {...campo('nome')} rotulo="Nome do produto" obrigatorio maxLength={200} className="c6" />
-            <CampoFicha {...campo('codigo')} rotulo="Código do produto" maxLength={60} className="c3" />
+            {/* Sem o campo "Código do produto": o código antigo (se houver) continua salvo e é enviado de volta como está */}
+            <CampoFicha {...campo('nome')} rotulo="Nome do produto" obrigatorio maxLength={200} className="c8" />
             <CampoFicha
               {...campo('codigoBarras')}
               rotulo="Código de barras"
               maxLength={50}
-              className="c3"
+              className="c4"
             />
 
             <h2 className="ficha-topico">Preços e estoque</h2>
-            <CampoFicha {...campo('precoCusto')} rotulo="Custo" inputMode="numeric" placeholder="R$ 0,00" className="c3" />
-            <CampoFicha {...campo('precoVendaPf')} rotulo="Venda pessoa física" inputMode="numeric" placeholder="R$ 0,00" className="c3" />
-            <CampoFicha {...campo('precoVendaPj')} rotulo="Venda pessoa jurídica" inputMode="numeric" placeholder="R$ 0,00" className="c3" />
-            <CampoFicha {...campo('quantidade')} rotulo="Quantidade em estoque" inputMode="decimal" placeholder="0" className="c3" />
+            {/* Estoque mínimo e unidade não aparecem mais: os valores já salvos continuam e são enviados de volta como estão */}
+            <CampoFicha {...campo('precoCusto')} rotulo="Custo" inputMode="numeric" placeholder="R$ 0,00" className="c2" />
+            <CampoFicha {...campo('precoVendaPf')} rotulo="Venda pessoa física" inputMode="numeric" placeholder="R$ 0,00" className="c4" />
+            <CampoFicha {...campo('precoVendaPj')} rotulo="Venda pessoa jurídica" inputMode="numeric" placeholder="R$ 0,00" className="c4" />
+            <CampoFicha {...campo('quantidade')} rotulo="Em estoque" placeholder="0" className="c2" />
 
             <h2 className="ficha-topico">Características</h2>
             <CampoFicha {...campo('marca')} rotulo="Marca" maxLength={80} className="c3" />

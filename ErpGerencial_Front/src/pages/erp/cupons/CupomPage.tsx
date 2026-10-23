@@ -13,9 +13,11 @@ import FaixaPagina from '../FaixaPagina'
 import { useErp } from '../contexto'
 import { MODULOS, podeAcessar } from '../modulos'
 import SemAcesso from '../SemAcesso'
-import { CupomTermico, ReciboA4 } from './ImpressaoCupom'
+import { CupomTermico } from './ImpressaoCupom'
+import NotaGov from './NotaGov'
+import { LOGO_HORIZONTAL } from '../logoLoja'
 import { numeroCupom } from './numero'
-import { useImpressao, type FormatoImpressao } from './useImpressao'
+import { useImpressao } from './useImpressao'
 import '../../../styles/acesso.css'
 import './cupons.css'
 
@@ -23,19 +25,19 @@ const MODULO = MODULOS.find((m) => m.id === 'cupom-fiscal')!
 
 const dataHora = (iso: string) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
 
-// Cupom emitido: pré-visualização do papel, imprimir (80 mm ou recibo A4) e cancelar.
+// Cupom emitido: pré-visualização do papel, imprimir (80 mm) e cancelar.
 export default function CupomPage() {
   const { id } = useParams()
   const { sessao } = useErp()
   const sessaoExpirada = useSessaoExpirada()
   const [cupom, setCupom] = useState<Cupom | null>(null)
   const [aviso, setAviso] = useState<Aviso>(null)
-  const [previa, setPrevia] = useState<FormatoImpressao>('cupom')
   const [cancelando, setCancelando] = useState(false)
   const [motivo, setMotivo] = useState('')
   const [erroMotivo, setErroMotivo] = useState<string>()
   const [enviandoCancelamento, setEnviandoCancelamento] = useState(false)
-  const { imprimir, imprimindo, elemento } = useImpressao(cupom)
+  // Logo da loja no topo do cupom
+  const { imprimir, imprimindo, elemento } = useImpressao(cupom, LOGO_HORIZONTAL)
   const podeVer = podeAcessar(sessao.usuario, MODULO)
 
   useEffect(() => {
@@ -92,7 +94,7 @@ export default function CupomPage() {
   }
 
   const acoes = (
-    <Link to="/app/cupom-fiscal/novo" className="pagina-botao marrom">
+    <Link to="/app/cupom-fiscal/novo" className="pagina-botao marinho">
       <IconeMais tamanho={20} />
       Emitir outro
     </Link>
@@ -119,42 +121,16 @@ export default function CupomPage() {
         )}
 
         <div className="cupom-detalhe-grade">
-          {/* Imprimir: botões grandes, cada um com o desenho do papel */}
+          {/* Imprimir: só o cupom fiscal (impressora térmica de 80 mm) */}
           <section className="cupom-imprimir" aria-label="Imprimir">
             <h2 className="detalhe-titulo">Imprimir</h2>
-            <button
-              type="button"
-              className={previa === 'cupom' ? 'cupom-formato marcado' : 'cupom-formato'}
-              onClick={() => setPrevia('cupom')}
-              aria-pressed={previa === 'cupom'}
-            >
-              <span className="cupom-formato-emoji" aria-hidden="true">🧾</span>
-              <span className="cupom-formato-textos">
-                <strong>Cupom 80 mm</strong>
-                <span>Impressora térmica (bobina)</span>
-              </span>
-            </button>
-            <button
-              type="button"
-              className={previa === 'recibo' ? 'cupom-formato marcado' : 'cupom-formato'}
-              onClick={() => setPrevia('recibo')}
-              aria-pressed={previa === 'recibo'}
-            >
-              <span className="cupom-formato-emoji" aria-hidden="true">📄</span>
-              <span className="cupom-formato-textos">
-                <strong>Recibo A4</strong>
-                <span>Duas vias numa folha, para assinar</span>
-              </span>
-            </button>
-            <button
-              type="button"
-              className="pagina-botao cupom-botao-imprimir"
-              onClick={() => imprimir(previa)}
-              disabled={imprimindo}
-            >
+            <button type="button" className="pagina-botao cupom-botao-imprimir" onClick={imprimir} disabled={imprimindo}>
               <span aria-hidden="true">🖨️</span>
-              {previa === 'cupom' ? 'Imprimir cupom' : 'Imprimir recibo'}
+              Imprimir cupom fiscal
             </button>
+
+            {/* Nota fiscal: emitida no site do governo (gov.br); aqui fica anotado o número */}
+            <NotaGov cupom={cupom} />
 
             <dl className="cupom-detalhe-dados">
               <div>
@@ -214,8 +190,8 @@ export default function CupomPage() {
           </section>
 
           {/* Como vai sair no papel */}
-          <section className={`cupom-papel cupom-papel-${previa}`} aria-label="Pré-visualização">
-            {previa === 'cupom' ? <CupomTermico cupom={cupom} /> : <ReciboA4 cupom={cupom} />}
+          <section className="cupom-papel cupom-papel-cupom" aria-label="Pré-visualização">
+            <CupomTermico cupom={cupom} logoUrl={LOGO_HORIZONTAL} />
           </section>
         </div>
       </div>

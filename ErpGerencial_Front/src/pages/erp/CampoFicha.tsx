@@ -59,7 +59,9 @@ export default function CampoFicha({
       maxLength={maxLength}
       min={min}
       list={lista}
-      autoComplete="off"
+      // O Chrome ignora "off" em campos de endereço e preenche com endereços salvos (número, complemento...);
+      // um valor que ele não reconhece desliga o preenchimento automático de verdade.
+      autoComplete="nao-preencher"
       required={obrigatorio}
       aria-invalid={!!erro}
       aria-describedby={erro ? idErro : undefined}

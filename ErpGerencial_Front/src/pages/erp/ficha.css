@@ -2,7 +2,7 @@
    Inspirada no registro em papel (pedido de 2026-10-14): folha branca, rótulo em negrito em cima de cada campo e o
    campo numa caixa retangular de linha fina (exceção pedida às regras "sem bordas"). Centralizada e compacta, para o
    cadastro inteiro caber numa tela de notebook sem rolar. As cores vêm do tema da página
-   (.pagina.tema-clientes azul; .pagina.tema-produtos marrom e creme). */
+   (.pagina.tema-clientes azul; .pagina.tema-produtos azul-marinho). */
 
 .ficha-pagina {
   flex: 1;
@@ -24,7 +24,7 @@
 }
 
 .tema-produtos .ficha {
-  --ficha-linha: #a08a62;
+  --ficha-linha: #8c9fbf;
 }
 
 .ficha,

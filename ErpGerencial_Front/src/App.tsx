@@ -23,6 +23,8 @@ import CupomPage from './pages/erp/cupons/CupomPage'
 import FinanceiroPage from './pages/erp/financeiro/FinanceiroPage'
 import HistoricoPage from './pages/erp/historico/HistoricoPage'
 import HistoricoClientePage from './pages/erp/historico/HistoricoClientePage'
+import MovimentacoesPage from './pages/erp/produtos/MovimentacoesPage'
+import RecuperarSenhaPage from './pages/login/RecuperarSenhaPage'
 
 export default function App() {
   return (
@@ -31,6 +33,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<InicioPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/recuperar-senha" element={<RecuperarSenhaPage />} />
         <Route path="/cadastro" element={<CadastroPage />} />
 
         {/* ERP da empresa: tela inicial com os botões grandes e as páginas dos módulos */}
@@ -43,6 +46,11 @@ export default function App() {
           <Route path="usuarios/:id" element={<UsuarioFormPage />} />
           <Route path="produtos" element={<ProdutosPage />} />
           <Route path="produtos/novo" element={<ProdutoFormPage />} />
+          <Route path="produtos/categorias" element={<Navigate to="/app/produtos" replace />} />
+          <Route path="produtos/movimentacoes" element={<MovimentacoesPage />} />
+          {/* Fornecedores e entrada de mercadoria foram removidos */}
+          <Route path="produtos/fornecedores" element={<Navigate to="/app/produtos" replace />} />
+          <Route path="produtos/entrada" element={<Navigate to="/app/produtos" replace />} />
           <Route path="produtos/:id" element={<ProdutoPage />} />
           <Route path="produtos/:id/editar" element={<ProdutoFormPage />} />
           <Route path="clientes" element={<ClientesPage />} />

@@ -30,6 +30,12 @@ public partial class EnvioAutomatico(IServiceScopeFactory escopos, IConfiguratio
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
+        // Desligável (EnvioAutomatico:Ativo = false): para uma segunda cópia da API não enviar junto com a principal.
+        if (!Opcoes.GetValue("Ativo", true))
+        {
+            log.LogInformation("Envio automático de WhatsApp desligado (EnvioAutomatico:Ativo = false).");
+            return;
+        }
         var segundos = Math.Max(15, Opcoes.GetValue("VerificarACadaSegundos", 60));
         log.LogInformation("Envio automático de WhatsApp ligado (modo {Modo}, verifica a cada {Segundos} segundos).",
             Opcoes["Modo"] ?? "envio", segundos);
@@ -99,9 +105,11 @@ public partial class EnvioAutomatico(IServiceScopeFactory escopos, IConfiguratio
                 }
                 if (!conectado)
                 {
-                    var motivo = $"WhatsApp de {remetente} desconectado: rode 'python lembretes.py conectar {remetente}' na pasta ErpGerencial_Automacao";
+                    // Não gasta o envio: a mensagem fica na fila e sai assim que o celular conectar.
+                    var motivo = $"WhatsApp de {remetente} desconectado: conecte em Clientes > Inserir mensagem automática "
+                        + "(QR Code). A mensagem fica na fila e sai assim que conectar.";
                     log.LogError("{Motivo}", motivo);
-                    foreach (var p in lista) await Registrar(db, p, Montar(p), null, "erro", motivo, ct);
+                    foreach (var p in lista) await RegistrarFalhaPassageira(db, p, Montar(p), motivo, ct);
                     continue;
                 }
             }
@@ -127,6 +135,12 @@ public partial class EnvioAutomatico(IServiceScopeFactory escopos, IConfiguratio
                     await evolution.Enviar(remetente, p.Celular, texto, imagem?.Dados, imagem?.TipoConteudo, ct);
                     await Registrar(db, p, texto, imagem, "enviado", null, ct);
                     log.LogInformation("Mensagem automática enviada para {Nome} (+55{Celular}).", p.Nome, p.Celular);
+                }
+                catch (ErroEnvio erro) when (erro.Passageiro)
+                {
+                    // Conexão caiu no meio, Evolution reiniciando...: fica na fila e tenta de novo na próxima verificação.
+                    await RegistrarFalhaPassageira(db, p, texto, erro.Message, ct);
+                    log.LogWarning("Mensagem para {Nome} (+55{Celular}) ficou na fila: {Motivo}", p.Nome, p.Celular, erro.Message);
                 }
                 catch (ErroEnvio erro)
                 {
@@ -162,6 +176,31 @@ public partial class EnvioAutomatico(IServiceScopeFactory escopos, IConfiguratio
 
     [GeneratedRegex(@"\{(nome|data|empresa)\}", RegexOptions.IgnoreCase)]
     private static partial Regex Trechos();
+
+    /// <summary>De quanto em quanto tempo uma falha passageira do mesmo cliente volta a aparecer no histórico.</summary>
+    private static readonly TimeSpan IntervaloEntreAvisos = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// Falha passageira: registra no histórico (no máximo a cada 15 minutos por cliente, para não encher) e NÃO mexe
+    /// no próximo envio — a mensagem continua vencida e é tentada de novo na próxima verificação.
+    /// </summary>
+    private async Task RegistrarFalhaPassageira(OrionDbContext db, Pendente p, string texto, string erro, CancellationToken ct)
+    {
+        var desde = DateTime.UtcNow - IntervaloEntreAvisos;
+        if (await db.EnviosWhatsapp.AnyAsync(w => w.ClienteId == p.ClienteId && w.Status == "erro" && w.CriadoEm > desde, ct)) return;
+        db.EnviosWhatsapp.Add(new EnvioWhatsapp
+        {
+            EmpresaId = p.EmpresaId,
+            ClienteId = p.ClienteId,
+            DataReferencia = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(p.EnvioEm, Brasilia)),
+            Tipo = "agendado",
+            Telefone = p.Celular,
+            Mensagem = texto.Length > 1200 ? texto[..1200] : texto,
+            Status = "erro",
+            Erro = erro.Length > 500 ? erro[..500] : erro,
+        });
+        await db.SaveChangesAsync(ct);
+    }
 
     /// <summary>Grava o resultado no histórico e marca o próximo envio do cliente (ou apaga, se era uma vez só).</summary>
     private async Task Registrar(

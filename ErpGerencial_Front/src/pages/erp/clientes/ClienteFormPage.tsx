@@ -11,17 +11,11 @@ import {
   editarCliente,
   ErroApi,
   excluirFotoCliente,
-  excluirImagemMensagem,
   mensagemDe,
   obterCliente,
-  obterWhatsapp,
   salvarFotoCliente,
-  salvarImagemMensagem,
-  salvarMensagemCliente,
   urlFotoCliente,
-  urlImagemMensagem,
   type Cliente,
-  type ConfiguracaoWhatsapp,
   type DadosCliente,
 } from '../../../services/api'
 import {
@@ -41,7 +35,6 @@ import SemAcesso from '../SemAcesso'
 import CampoFicha from '../CampoFicha'
 import CalendarioEnvio from './CalendarioEnvio'
 import FotoCliente from './FotoCliente'
-import JanelaMensagem from './JanelaMensagem'
 import {
   formatarCadastro,
   HORA_DO_ENVIO,
@@ -225,11 +218,6 @@ export default function ClienteFormPage() {
   const [original, setOriginal] = useState<Cliente | null>(null)
   const [valores, setValores] = useState<Valores>(VAZIO)
   const [foto, setFoto] = useState<Foto>({ tipo: 'salva' })
-  // Mensagem de WhatsApp deste cliente (texto e imagem): editada na janela, salva junto com o cadastro
-  const [mensagem, setMensagem] = useState('')
-  const [imagemMensagem, setImagemMensagem] = useState<Foto>({ tipo: 'salva' })
-  const [janelaMensagem, setJanelaMensagem] = useState(false)
-  const [padrao, setPadrao] = useState<ConfiguracaoWhatsapp | null>(null)
   const [enviado, setEnviado] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [cancelando, setCancelando] = useState(false)
@@ -252,7 +240,6 @@ export default function ClienteFormPage() {
         cepBuscado.current = c.cep ?? ''
         setOriginal(c)
         setValores(paraFormulario(c))
-        setMensagem(c.mensagemWhatsapp ?? '')
       })
       .catch((e) => ativo && !sessaoExpirada(e) && setAviso({ tipo: 'erro', texto: mensagemDe(e) }))
     return () => {
@@ -261,25 +248,11 @@ export default function ClienteFormPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, sessao.token, permitido])
 
-  // Mensagem padrão da empresa: prévia na janela da mensagem quando o cliente não tem texto próprio
-  useEffect(() => {
-    if (!permitido) return
-    let ativo = true
-    obterWhatsapp(sessao.token).then((c) => ativo && setPadrao(c)).catch(() => {})
-    return () => {
-      ativo = false
-    }
-  }, [sessao.token, permitido])
-
-  // Foto ou imagem nova: libera da memória ao trocar ou sair da página
+  // Foto nova: libera da memória ao trocar ou sair da página
   useEffect(() => {
     if (foto.tipo !== 'nova') return
     return () => URL.revokeObjectURL(foto.url)
   }, [foto])
-  useEffect(() => {
-    if (imagemMensagem.tipo !== 'nova') return
-    return () => URL.revokeObjectURL(imagemMensagem.url)
-  }, [imagemMensagem])
 
   // CEP completo: busca o endereço e preenche os campos da ficha.
   const cep = apenasDigitos(valores.cep)
@@ -343,7 +316,7 @@ export default function ClienteFormPage() {
   })
 
   /**
-   * Depois de salvar o cadastro: a foto e a mensagem de WhatsApp (texto e imagem), quando mudaram.
+   * Depois de salvar o cadastro: a foto, quando mudou.
    * Devolve o que não deu certo, se houver.
    */
   const salvarExtras = async (clienteId: string) => {
@@ -359,13 +332,15 @@ export default function ClienteFormPage() {
     if (foto.tipo === 'nova') await tentar('a foto', () => salvarFotoCliente(sessao.token, clienteId, foto.arquivo))
     else if (foto.tipo === 'removida' && original?.fotoId)
       await tentar('a foto', () => excluirFotoCliente(sessao.token, clienteId))
-    if (mensagem.trim() !== (original?.mensagemWhatsapp ?? ''))
-      await tentar('a mensagem', () => salvarMensagemCliente(sessao.token, clienteId, mensagem))
-    if (imagemMensagem.tipo === 'nova')
-      await tentar('a imagem da mensagem', () => salvarImagemMensagem(sessao.token, imagemMensagem.arquivo, clienteId))
-    else if (imagemMensagem.tipo === 'removida' && original?.mensagemImagemId)
-      await tentar('a imagem da mensagem', () => excluirImagemMensagem(sessao.token, clienteId))
     return falhas.length ? falhas.join('; ') : null
+  }
+
+  /** A mensagem é a geral, para todos os clientes: leva à página dela (o que não foi salvo aqui se perde). */
+  const irParaMensagemGeral = () => {
+    const mudou = JSON.stringify(valores) !== JSON.stringify(original ? paraFormulario(original) : VAZIO) || foto.tipo !== 'salva'
+    if (mudou && !window.confirm('Ir para a mensagem do WhatsApp? O que você preencheu nesta ficha e ainda não salvou será perdido.'))
+      return
+    navigate('/app/clientes/mensagem')
   }
 
   const salvar = async (e: SubmitEvent<HTMLFormElement>) => {
@@ -388,7 +363,7 @@ export default function ClienteFormPage() {
         : await editarCliente(sessao.token, id!, { ...paraApi(valores), manterEnvio })
       const falhas = await salvarExtras(cliente.id)
       if (falhas) {
-        // O cadastro foi salvo; só a foto ou a mensagem não: mostra o aviso na ficha do cliente
+        // O cadastro foi salvo; só a foto não: mostra o aviso na ficha do cliente
         navigate(`/app/clientes/${cliente.id}`, {
           state: { aviso: { tipo: 'erro', texto: `Cliente salvo, mas não foi possível salvar ${falhas}` } },
         })
@@ -441,12 +416,6 @@ export default function ClienteFormPage() {
   const colunas = (c: Campo, base: string) => (doCep.includes(c) ? `${base} do-cep` : base)
 
   const voltar = novo ? '/app/clientes' : `/app/clientes/${id}`
-  const imagemMensagemUrl =
-    imagemMensagem.tipo === 'nova'
-      ? imagemMensagem.url
-      : imagemMensagem.tipo === 'salva' && original?.mensagemImagemId
-        ? urlImagemMensagem(original.mensagemImagemId)
-        : null
   const urlFoto =
     foto.tipo === 'nova' ? foto.url : foto.tipo === 'salva' && original?.fotoId ? urlFotoCliente(original.fotoId) : null
 
@@ -472,28 +441,6 @@ export default function ClienteFormPage() {
         titulo={novo ? 'Cadastrar cliente' : 'Editar cliente'}
         subtitulo={novo ? undefined : `ID ${original!.numero} · cadastrado em ${formatarCadastro(original!.criadoEm)}`}
         voltar={{ para: voltar, rotulo: novo ? 'Clientes' : original!.nome }}
-      />
-
-      <JanelaMensagem
-        aberto={janelaMensagem}
-        onFechar={() => setJanelaMensagem(false)}
-        texto={mensagem}
-        onTexto={(t) => {
-          setMensagem(t)
-          setAviso(null)
-        }}
-        imagemUrl={imagemMensagemUrl}
-        onImagem={(arquivo) => setImagemMensagem({ tipo: 'nova', arquivo, url: URL.createObjectURL(arquivo) })}
-        onRemoverImagem={() => setImagemMensagem({ tipo: 'removida' })}
-        padrao={
-          padrao && {
-            texto: padrao.mensagem ?? '',
-            imagemUrl: padrao.imagemId ? urlImagemMensagem(padrao.imagemId) : null,
-          }
-        }
-        nomeCliente={valores.nome}
-        empresa={sessao.empresa.nome}
-        envio={envio}
       />
 
       {/* Ficha do cliente (como o registro em papel), centralizada e compacta: cabe na tela sem rolar */}
@@ -550,14 +497,9 @@ export default function ClienteFormPage() {
 
               {/* Calendário: clicar num dia marca o próximo envio da mensagem; os seguintes saem a cada N meses */}
               <section className="ficha-envio" aria-labelledby="cliente-envio-titulo">
-                <div className="ficha-topico ficha-envio-cabecalho">
-                  <h2 id="cliente-envio-titulo">Calendário</h2>
-                  {/* A mensagem que sai nas datas do calendário (texto, emojis e imagem) */}
-                  <button type="button" className="ficha-envio-mensagem" onClick={() => setJanelaMensagem(true)}>
-                    <span aria-hidden="true">💬</span> Mensagem do WhatsApp
-                    {(mensagem.trim() || imagemMensagemUrl) && <span className="ficha-envio-mensagem-marca">personalizada</span>}
-                  </button>
-                </div>
+                <h2 id="cliente-envio-titulo" className="ficha-topico">
+                  Calendário
+                </h2>
                 <div className="ficha-envio-corpo">
                   <CalendarioEnvio
                     id="cliente-envioDia"
@@ -574,7 +516,7 @@ export default function ClienteFormPage() {
                     {/* O intervalo e as datas seguintes são salvos, mas não aparecem aqui (só marcados no calendário) */}
                     {!diaValido && (
                       <p className="ficha-envio-vazio">
-                        Clique no dia do próximo envio. O intervalo é calculado sozinho: de hoje até o dia escolhido.
+                        Clique no dia do próximo envio. Os seguintes saem no mesmo intervalo.
                       </p>
                     )}
                     {(diaValido || original?.envioEm) && (
@@ -582,6 +524,11 @@ export default function ClienteFormPage() {
                         {cancelando ? 'Cancelando...' : 'Cancelar envios automáticos'}
                       </button>
                     )}
+                    {/* A mensagem que sai nas datas do calendário é a mesma para todos os clientes */}
+                    <button type="button" className="ficha-envio-mensagem" onClick={irParaMensagemGeral}>
+                      <img src="/imgs/whatsapp.png" alt="" aria-hidden="true" />
+                      Mensagem do WhatsApp
+                    </button>
                   </div>
                 </div>
               </section>

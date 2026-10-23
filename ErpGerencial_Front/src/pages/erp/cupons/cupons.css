@@ -52,7 +52,7 @@
 }
 
 .cupom-formato.marcado {
-  background: var(--pg-cor);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--pg-cor) 91%, #fff) 0%, var(--pg-cor) 100%);
   color: var(--branco);
 }
 
@@ -140,23 +140,33 @@
   box-shadow: var(--sombra);
 }
 
-.cupom-papel .rc {
-  padding: 8mm;
-  box-sizing: content-box;
-  box-shadow: var(--sombra);
-}
-
-/* A folha A4 é larga: na tela, mostra reduzida */
-.cupom-papel-recibo .rc {
-  zoom: 0.72;
-}
-
 @media (max-width: 900px) {
   .cupom-detalhe-grade {
     grid-template-columns: 1fr;
   }
+}
 
-  .cupom-papel-recibo .rc {
-    zoom: 0.5;
-  }
+/* Nota fiscal no gov.br: o botão que abre o site do governo (e a nota anotada, se houver) */
+.cupom-gov {
+  min-width: 0;
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.8rem 1rem;
+  border-radius: 4px;
+  background: var(--pg-zebra);
+}
+
+.cupom-gov.anotada {
+  background: #dcf1e2;
+}
+
+.cupom-gov-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 800;
+}
+
+.cupom-gov > .cupom-formato {
+  background: #fff;
 }

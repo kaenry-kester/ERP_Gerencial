@@ -18,7 +18,7 @@
   font-size: clamp(0.95rem, min(1.6vw, 2.6vh), 1.1rem);
 }
 
-/* Coluna centralizada (na largura e na altura) só na área branca, abaixo da faixa cinza */
+/* Coluna centralizada (na largura e na altura) só na área branca, abaixo da faixa azul-marinho */
 .login-conteudo {
   width: min(620px, calc(100% - var(--area-esquerda) - var(--area-direita)));
   margin: auto;
@@ -89,4 +89,29 @@
   .login .tela-status {
     font-size: 0.98rem;
   }
+}
+
+/* "Esqueci minha senha" (e o "Pedir outro código"): link discreto à direita, embaixo da senha */
+.login-esqueci {
+  margin-top: -0.35rem;
+  text-align: right;
+}
+
+.login-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--azul);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.login-link:disabled {
+  color: var(--texto-suave);
+  text-decoration: none;
+  cursor: default;
 }

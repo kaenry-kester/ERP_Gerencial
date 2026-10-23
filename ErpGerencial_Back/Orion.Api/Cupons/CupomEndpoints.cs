@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Orion.Api.Auth;
 using Orion.Api.Data;
+using Orion.Api.Produtos;
 
 namespace Orion.Api.Cupons;
 
@@ -67,7 +68,13 @@ public record CupomDto(
     string? VendedorNome,
     DateTime EmitidoEm,
     DateTime? CanceladoEm,
-    string? MotivoCancelamento);
+    string? MotivoCancelamento,
+    /// <summary>Nota emitida no site do governo: "cupom" (consumidor) ou "nota" (empresa).</summary>
+    string? NotaTipo,
+    string? NotaNumero,
+    DateTime? NotaRegistradaEm);
+
+public record AnotarNotaRequest(string? Tipo, string? Numero);
 
 public record ListaCupons(List<CupomDto> Itens, int Total, int Pagina, int TamanhoPagina);
 
@@ -91,6 +98,7 @@ public static class CupomEndpoints
         grupo.MapGet("/{id:guid}", Obter);
         grupo.MapPost("/", Emitir);
         grupo.MapPost("/{id:guid}/cancelar", Cancelar);
+        grupo.MapPut("/{id:guid}/nota", AnotarNota);
     }
 
     /// <summary>
@@ -226,7 +234,7 @@ public static class CupomEndpoints
             VendedorNome = vendedor.Nome,
         };
 
-        var ordem = 0;
+        var posicao = 0;
         foreach (var item in req.Itens!)
         {
             var produto = item.ProdutoId is { } idProduto ? produtos[idProduto] : null;
@@ -234,7 +242,7 @@ public static class CupomEndpoints
             var unitario = Math.Round(item.ValorUnitario, 2);
             cupom.Itens.Add(new CupomItem
             {
-                Ordem = ++ordem,
+                Ordem = ++posicao,
                 ProdutoId = produto?.Id,
                 Descricao = Opcional(item.Descricao) ?? produto!.Nome,
                 Codigo = produto?.Codigo,
@@ -245,11 +253,7 @@ public static class CupomEndpoints
                 CustoUnitario = produto?.PrecoCusto ?? 0,
             });
             // Baixa no estoque (pode ficar negativo: a venda acontece mesmo sem o estoque atualizado)
-            if (produto is not null)
-            {
-                produto.Quantidade -= quantidade;
-                produto.AtualizadoEm = DateTime.UtcNow;
-            }
+            if (produto is not null) Estoque.Movimentar(db, produto, "venda", -quantidade, usuario, cupomId: cupom.Id);
         }
 
         cupom.Subtotal = cupom.Itens.Count > 0 ? cupom.Itens.Sum(i => i.Total) : Math.Round(req.Valor ?? 0, 2);
@@ -302,8 +306,39 @@ public static class CupomEndpoints
         return Results.Created($"/api/cupons/{cupom.Id}", Dto(cupom));
     }
 
+    /// <summary>
+    /// Anota a nota emitida no site do governo: tipo ("cupom" ou "nota") e o número. Número vazio apaga a anotação.
+    /// </summary>
+    private static async Task<IResult> AnotarNota(Guid id, AnotarNotaRequest req, ClaimsPrincipal user, OrionDbContext db)
+    {
+        var (usuario, negado) = await Permissoes.Exigir(user, db, Permissoes.CupomFiscal);
+        if (usuario is null) return negado!;
+        var cupom = await db.Cupons.Include(c => c.Itens)
+            .SingleOrDefaultAsync(c => c.Id == id && c.EmpresaId == usuario.EmpresaId);
+        if (cupom is null) return Results.NotFound();
+
+        var numero = req.Numero?.Trim() ?? "";
+        if (numero.Length == 0)
+        {
+            cupom.NotaTipo = null;
+            cupom.NotaNumero = null;
+            cupom.NotaRegistradaEm = null;
+        }
+        else
+        {
+            if (req.Tipo is not ("cupom" or "nota")) return Erro("tipo", "Escolha cupom fiscal ou nota fiscal");
+            if (numero.Length > 30) return Erro("numero", "Máximo de 30 letras");
+            cupom.NotaTipo = req.Tipo;
+            cupom.NotaNumero = numero;
+            cupom.NotaRegistradaEm = DateTime.UtcNow;
+        }
+        await db.SaveChangesAsync();
+        return Results.Ok(Dto(cupom));
+    }
+
     /// <summary>Cancela o cupom (fica registrado, com o motivo) e devolve ao estoque os produtos dele.</summary>
-    private static async Task<IResult> Cancelar(Guid id, CancelarCupomRequest req, ClaimsPrincipal user, OrionDbContext db)
+    private static async Task<IResult> Cancelar(
+        Guid id, CancelarCupomRequest req, ClaimsPrincipal user, OrionDbContext db)
     {
         var (usuario, negado) = await Permissoes.Exigir(user, db, Permissoes.CupomFiscal);
         if (usuario is null) return negado!;
@@ -325,10 +360,7 @@ public static class CupomEndpoints
         foreach (var item in cupom.Itens)
         {
             if (item.ProdutoId is { } idProduto && produtos.TryGetValue(idProduto, out var produto))
-            {
-                produto.Quantidade += item.Quantidade;
-                produto.AtualizadoEm = DateTime.UtcNow;
-            }
+                Estoque.Movimentar(db, produto, "cancelamento", item.Quantidade, usuario, cupomId: cupom.Id, observacao: motivo);
         }
 
         await db.SaveChangesAsync();
@@ -401,7 +433,7 @@ public static class CupomEndpoints
         return partes.Count == 0 ? null : string.Join(" - ", partes);
     }
 
-    private static CupomDto Dto(Cupom c) => new(
+    public static CupomDto Dto(Cupom c) => new(
         c.Id, c.Numero,
         c.EmitenteNome, c.EmitenteRazaoSocial, c.EmitenteDocumento, c.EmitenteEndereco, c.EmitenteCidade, c.EmitenteUf,
         c.EmitenteTelefone,
@@ -413,5 +445,6 @@ public static class CupomEndpoints
         c.Subtotal, c.Desconto, c.Total, c.FormaPagamento, c.ValorPagamento1, c.FormaPagamento2, c.ValorPagamento2,
         c.ValorRecebido, c.ValorRecebido is { } recebido ? recebido - c.Total : null,
         c.Referente, c.Observacao, c.EmitidoPor, c.VendedorNome ?? c.EmitidoPor, c.EmitidoEm, c.CanceladoEm,
-        c.MotivoCancelamento);
+        c.MotivoCancelamento,
+        c.NotaTipo, c.NotaNumero, c.NotaRegistradaEm);
 }

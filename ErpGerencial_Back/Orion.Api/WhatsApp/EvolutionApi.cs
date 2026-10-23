@@ -3,13 +3,23 @@ using System.Text.Json;
 
 namespace Orion.Api.WhatsApp;
 
-/// <summary>A mensagem não saiu (motivo em português, vai para o histórico de envios).</summary>
-public class ErroEnvio(string mensagem) : Exception(mensagem);
+/// <summary>
+/// A mensagem não saiu (motivo em português, vai para o histórico de envios).
+/// Passageiro (o padrão): WhatsApp desconectado, conexão caiu, Evolution fora do ar — a mensagem fica na fila e é
+/// tentada de novo. Definitivo: não adianta tentar de novo (ex.: o número do cliente não tem WhatsApp).
+/// </summary>
+public class ErroEnvio(string mensagem, bool passageiro = true) : Exception(mensagem)
+{
+    public bool Passageiro { get; } = passageiro;
+}
+
+/// <summary>Para conectar um celular: o QR Code (imagem "data:image/png;base64,...") e o código de 8 letras.</summary>
+public record ConexaoWhatsapp(string? QrCode, string? Codigo);
 
 /// <summary>
 /// Envio pelo WhatsApp através da Evolution API (pasta ErpGerencial_Automacao/evolution-api, roda em localhost:8080).
-/// Cada celular que envia é uma "instância" da Evolution com o nome igual ao número (só dígitos, com DDD); para conectar
-/// um celular, rode `python lembretes.py conectar &lt;celular&gt;` na pasta ErpGerencial_Automacao.
+/// Cada celular que envia é uma "instância" da Evolution com o nome igual ao número (só dígitos, com DDD). O celular é
+/// conectado pelo próprio site (Mensagem automática → QR Code), ou por `python lembretes.py conectar &lt;celular&gt;`.
 /// Configuração (user-secrets): Evolution:Url (padrão http://localhost:8080) e Evolution:Chave.
 /// </summary>
 public class EvolutionApi(HttpClient http, IConfiguration config)
@@ -51,12 +61,38 @@ public class EvolutionApi(HttpClient http, IConfiguration config)
     }
 
     /// <summary>O celular que envia está conectado ao WhatsApp.</summary>
-    public async Task<bool> Conectado(string remetente, CancellationToken ct)
+    public async Task<bool> Conectado(string remetente, CancellationToken ct) => await Estado(remetente, ct) == "open";
+
+    /// <summary>"open" (conectado), "connecting", "close" ou "inexistente" (este celular nunca foi conectado).</summary>
+    public async Task<string> Estado(string remetente, CancellationToken ct)
     {
         var (status, corpo) = await Chamar(HttpMethod.Get, $"/instance/connectionState/{Uri.EscapeDataString(remetente)}", null, ct);
+        if (status == 404) return "inexistente";
         return status < 300 && corpo.ValueKind == JsonValueKind.Object
             && corpo.TryGetProperty("instance", out var instancia)
-            && instancia.TryGetProperty("state", out var estado) && estado.GetString() == "open";
+            && instancia.TryGetProperty("state", out var estado) && estado.GetString() is { Length: > 0 } e
+            ? e
+            : "close";
+    }
+
+    /// <summary>
+    /// Começa a conectar o celular: cria a instância dele (se ainda não existir) e pede um QR Code novo.
+    /// O QR muda a cada ~20 segundos; o site chama de novo para mostrar o atual.
+    /// </summary>
+    public async Task<ConexaoWhatsapp> IniciarConexao(string remetente, CancellationToken ct)
+    {
+        if (await Estado(remetente, ct) == "inexistente")
+        {
+            var (criado, resposta) = await Chamar(HttpMethod.Post, "/instance/create",
+                new { instanceName = remetente, integration = "WHATSAPP-BAILEYS", qrcode = false }, ct);
+            if (criado >= 300) throw new ErroEnvio($"Não foi possível criar a conexão: {Detalhe(resposta)}");
+        }
+        var (status, corpo) = await Chamar(HttpMethod.Get, $"/instance/connect/{Uri.EscapeDataString(remetente)}?number=55{remetente}", null, ct);
+        if (status >= 300) throw new ErroEnvio($"Não foi possível gerar o QR Code: {Detalhe(corpo)}");
+        string? Texto(string nome) => corpo.ValueKind == JsonValueKind.Object && corpo.TryGetProperty(nome, out var v)
+            && v.ValueKind == JsonValueKind.String && v.GetString() is { Length: > 0 } t ? t : null;
+        var qr = Texto("base64");
+        return new ConexaoWhatsapp(qr is not null && qr.StartsWith("data:image") ? qr : null, Texto("pairingCode"));
     }
 
     /// <summary>
@@ -72,7 +108,7 @@ public class EvolutionApi(HttpClient http, IConfiguration config)
         if (status >= 300) throw new ErroEnvio($"Não foi possível conferir o número: {Detalhe(corpo)}");
         var numero = corpo.ValueKind == JsonValueKind.Array && corpo.GetArrayLength() > 0 ? corpo[0] : default;
         if (numero.ValueKind != JsonValueKind.Object || !numero.TryGetProperty("exists", out var existe) || !existe.GetBoolean())
-            throw new ErroEnvio("Este celular não tem WhatsApp ou o número está errado");
+            throw new ErroEnvio("Este celular não tem WhatsApp ou o número está errado", passageiro: false);
         var para = numero.TryGetProperty("jid", out var jid) && jid.GetString() is { Length: > 0 } j ? j : $"55{destino}";
 
         // "delay": mostra "digitando..." por um instante antes de enviar, como uma pessoa faria.

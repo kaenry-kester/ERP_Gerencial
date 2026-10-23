@@ -98,7 +98,7 @@ export const diaDe = (d: Date) =>
 
 export type Situacao = { tipo: 'atrasada' | 'proxima' | 'em-dia'; texto: string }
 
-/** Atrasada (vermelho), nos próximos 30 dias (creme) ou em dia (azul). */
+/** Atrasada (vermelho), nos próximos 30 dias (azul-gelo) ou em dia (azul). */
 export function situacaoManutencao(proxima: string): Situacao {
   const hoje = new Date()
   hoje.setHours(0, 0, 0, 0)

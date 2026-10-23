@@ -164,7 +164,7 @@
 }
 
 .mensagem-ferramenta.ativa {
-  background: var(--azul);
+  background: var(--grad-azul);
   color: #fff;
 }
 
@@ -570,7 +570,7 @@
   margin-inline: auto;
   overflow: hidden;
   border-radius: 4px;
-  background: var(--preto);
+  background: linear-gradient(160deg, #15191e 0%, var(--preto) 100%);
 }
 
 .janela-foto-video video {
@@ -735,7 +735,7 @@
 
 /* O próximo envio, escolhido */
 .calendario-dia.escolhido {
-  background: var(--azul);
+  background: var(--grad-azul);
   font-weight: 800;
   color: #fff;
 }
@@ -1034,45 +1034,145 @@
 }
 
 /* Botão "Mensagem do WhatsApp" na faixa do Calendário (Editar cliente) */
-.ficha-envio-cabecalho {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding-block: 0.2rem;
-}
-
-.ficha-envio-cabecalho h2 {
-  font: inherit;
-  letter-spacing: inherit;
-}
-
+/* Mensagem do WhatsApp: botão do tamanho dos outros, no pé da coluna do horário (alinhado ao fim do calendário) */
 .ficha-envio-mensagem {
+  margin-top: auto;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.2rem 0.6rem;
+  justify-content: flex-start;
+  gap: 0.55rem;
+  width: 100%;
+  min-height: clamp(40px, 6vh, 48px);
+  padding: 0.35rem 0.75rem;
   border: none;
-  border-radius: 3px;
-  background: var(--azul);
+  border-radius: 4px;
+  background: var(--grad-azul);
   font: inherit;
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  text-transform: none;
+  font-size: clamp(0.78rem, 0.95vw, 0.9rem);
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: left;
   color: #fff;
   cursor: pointer;
   transition: filter 0.25s ease;
+}
+
+.ficha-envio-mensagem img {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
 }
 
 .ficha-envio-mensagem:hover {
   filter: brightness(0.94);
 }
 
-.ficha-envio-mensagem-marca {
-  padding: 0 0.35rem;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.2);
-  font-size: 0.66rem;
+/* ---------- Conexão do WhatsApp que envia (Mensagem automática, seção 1) ---------- */
+.whatsapp-conexao {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.whatsapp-conexao-situacao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #f4f6f8 0%, var(--cinza-claro) 100%);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.whatsapp-conexao-situacao small {
+  flex-basis: 100%;
+  font-weight: 500;
+  color: var(--texto-suave);
+}
+
+.whatsapp-conexao.conectado .whatsapp-conexao-situacao {
+  background: linear-gradient(135deg, #e6f5ea 0%, #d4eedb 100%);
+  color: #1e6b3a;
+}
+
+.whatsapp-conexao.desconectado .whatsapp-conexao-situacao,
+.whatsapp-conexao.indisponivel .whatsapp-conexao-situacao {
+  background: linear-gradient(135deg, #fdf3e6 0%, #fbe7cc 100%);
+  color: #7a4a0c;
+}
+
+.whatsapp-conectar {
+  justify-self: start;
+}
+
+.whatsapp-conectar img {
+  width: 22px;
+  height: 22px;
+}
+
+/* QR Code ao lado dos passos (no celular, um embaixo do outro) */
+.whatsapp-qr {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  padding: 1rem;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #f7fafb 0%, var(--azul-claro) 100%);
+}
+
+.whatsapp-qr-imagem {
+  grid-row: span 2;
+  width: 240px;
+  height: 240px;
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+}
+
+.whatsapp-qr-imagem img {
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+.whatsapp-qr-passos {
+  display: grid;
+  gap: 0.4rem;
+  padding-left: 1.2rem;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.whatsapp-qr-codigo {
+  font-size: 1.15rem;
+  letter-spacing: 0.12em;
+  color: var(--azul);
+}
+
+.whatsapp-qr > .pagina-botao {
+  justify-self: start;
+}
+
+.whatsapp-conexao-erro {
+  font-size: 0.88rem;
   font-weight: 700;
+  color: var(--erro);
+}
+
+@media (max-width: 700px) {
+  .whatsapp-qr {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .whatsapp-qr-imagem {
+    grid-row: auto;
+    justify-self: center;
+  }
 }

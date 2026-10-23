@@ -47,7 +47,7 @@
 }
 
 .requisito.atendido .requisito-icone {
-  background: var(--azul);
+  background: var(--grad-azul);
   color: #fff;
 }
 

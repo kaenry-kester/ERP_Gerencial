@@ -73,7 +73,7 @@ export default function CuponsPage() {
         titulo={MODULO.rotulo}
         subtitulo={MODULO.descricao}
         acoes={
-          <Link to="/app/cupom-fiscal/novo" className="pagina-botao marrom">
+          <Link to="/app/cupom-fiscal/novo" className="pagina-botao marinho">
             <IconeMais tamanho={20} />
             Emitir cupom
           </Link>

@@ -4,14 +4,28 @@ import type { Aviso } from '../../../components/formulario/FaixaAviso'
 import { IconeLapis, IconeLixeira, IconeVoltar } from '../../../components/icones/Icones'
 import { IlustracaoProdutos } from '../../../components/icones/Ilustracoes'
 import { useSessaoExpirada } from '../../../hooks/useSessaoExpirada'
-import { excluirProduto, mensagemDe, obterProduto, urlImagemProduto, type Produto } from '../../../services/api'
-import { formatarMoeda, formatarQuantidade } from '../../../utils/validacao'
+import { avisarSalvo } from '../../../components/aviso-salvo/avisarSalvo'
+import CampoTexto from '../../../components/formulario/CampoTexto'
+import {
+  ajustarEstoque,
+  excluirProduto,
+  listarMovimentos,
+  mensagemDe,
+  obterProduto,
+  urlImagemProduto,
+  type MovimentoEstoque,
+  type Produto,
+} from '../../../services/api'
+import { formatarMoeda, formatarQuantidade, mascaraQuantidadeComSinal, quantidadeParaNumero } from '../../../utils/validacao'
 import AvisoPagina from '../AvisoPagina'
 import { useErp } from '../contexto'
 import { tem } from '../modulos'
 import SemAcesso from '../SemAcesso'
 import FaixaPagina from '../FaixaPagina'
+import TabelaMovimentos from './TabelaMovimentos'
+import './estoque.css'
 import './imagens.css'
+import '../../../styles/acesso.css'
 
 const data = (iso: string) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
 
@@ -25,6 +39,11 @@ export default function ProdutoPage() {
   const [aviso, setAviso] = useState<Aviso>((useLocation().state as { aviso?: Aviso } | null)?.aviso ?? null)
   const [confirmando, setConfirmando] = useState(false)
   const [excluindo, setExcluindo] = useState(false)
+  const [movimentos, setMovimentos] = useState<MovimentoEstoque[] | null>(null)
+  const [ajustando, setAjustando] = useState(false)
+  const [novaQuantidade, setNovaQuantidade] = useState('')
+  const [motivo, setMotivo] = useState('')
+  const [erroAjuste, setErroAjuste] = useState<string>()
 
   const podeVer = tem(sessao.usuario, 'produtos')
   const podeEditar = tem(sessao.usuario, 'produtos-editar')
@@ -35,6 +54,9 @@ export default function ProdutoPage() {
     obterProduto(sessao.token, id!)
       .then((p) => ativo && setProduto(p))
       .catch((e) => ativo && !sessaoExpirada(e) && setAviso({ tipo: 'erro', texto: mensagemDe(e) }))
+    listarMovimentos(sessao.token, { produtoId: id })
+      .then((l) => ativo && setMovimentos(l.itens.slice(0, 20)))
+      .catch(() => ativo && setMovimentos([]))
     return () => {
       ativo = false
     }
@@ -42,6 +64,25 @@ export default function ProdutoPage() {
   }, [id, sessao.token, podeVer])
 
   if (!podeVer) return <div className="erp-pagina"><SemAcesso /></div>
+
+  const confirmarAjuste = async () => {
+    const quantidade = quantidadeParaNumero(novaQuantidade)
+    if (quantidade === null) return setErroAjuste('Digite a quantidade contada')
+    if (!motivo.trim()) return setErroAjuste('Diga o motivo (inventário, avaria, perda...)')
+    try {
+      await ajustarEstoque(sessao.token, id!, quantidade, motivo.trim())
+      avisarSalvo('Estoque ajustado com sucesso', `Agora: ${formatarQuantidade(quantidade)}`)
+      setAjustando(false)
+      setNovaQuantidade('')
+      setMotivo('')
+      setErroAjuste(undefined)
+      const [p, l] = await Promise.all([obterProduto(sessao.token, id!), listarMovimentos(sessao.token, { produtoId: id })])
+      setProduto(p)
+      setMovimentos(l.itens.slice(0, 20))
+    } catch (e) {
+      if (!sessaoExpirada(e)) setErroAjuste(mensagemDe(e))
+    }
+  }
 
   const excluir = async () => {
     setExcluindo(true)
@@ -87,7 +128,12 @@ export default function ProdutoPage() {
         ['Venda pessoa jurídica', formatarMoeda(produto.precoVendaPj)],
       ],
     },
-    { titulo: 'Estoque', itens: [['Quantidade', formatarQuantidade(produto.quantidade)]] },
+    {
+      titulo: 'Estoque',
+      itens: [
+        ['Quantidade', `${formatarQuantidade(produto.quantidade)} ${produto.unidade}${produto.estoqueBaixo ? ' ⚠️ baixo' : ''}`],
+      ],
+    },
     {
       titulo: 'Características',
       itens: [
@@ -164,6 +210,58 @@ export default function ProdutoPage() {
             </dl>
           </section>
         ))}
+
+        {/* Estoque: entrada, ajuste e o histórico deste produto */}
+        <section className="detalhe-grupo" aria-label="Movimentações do estoque">
+          <h2 className="detalhe-titulo">Movimentações do estoque</h2>
+          {podeEditar && (
+            <div className="estoque-linha-acoes">
+              <button type="button" className="pagina-botao marinho" onClick={() => setAjustando((v) => !v)}>
+                ✏️ Ajustar estoque
+              </button>
+            </div>
+          )}
+          {ajustando && (
+            <div className="estoque-cartao" style={{ background: 'var(--pg-zebra)' }}>
+              <p className="estoque-dica">
+                Digite a quantidade que você contou. A diferença para o estoque de agora ({formatarQuantidade(produto.quantidade)}) fica registrada.
+              </p>
+              <div className="erp-form">
+                <CampoTexto
+                  id="ajuste-quantidade"
+                  rotulo="Quantidade contada"
+                  valor={novaQuantidade}
+                  onChange={(v) => {
+                    setNovaQuantidade(mascaraQuantidadeComSinal(v))
+                    setErroAjuste(undefined)
+                  }}
+                />
+                <CampoTexto
+                  id="ajuste-motivo"
+                  rotulo="Motivo (inventário, avaria, perda...)"
+                  valor={motivo}
+                  maxLength={300}
+                  onChange={(v) => {
+                    setMotivo(v)
+                    setErroAjuste(undefined)
+                  }}
+                />
+              </div>
+              {erroAjuste && <p className="erp-aviso erro">{erroAjuste}</p>}
+              <div className="estoque-linha-acoes">
+                <button type="button" className="pagina-botao marinho" onClick={() => void confirmarAjuste()}>
+                  Confirmar ajuste
+                </button>
+                <button type="button" className="pagina-botao neutro" onClick={() => setAjustando(false)}>
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+          {movimentos === null && <p className="erp-carregando">Carregando...</p>}
+          {movimentos?.length === 0 && <p className="detalhe-texto">Nenhuma movimentação ainda.</p>}
+          {movimentos && movimentos.length > 0 && <TabelaMovimentos itens={movimentos} mostrarProduto={false} />}
+        </section>
 
         <section className="detalhe-grupo" aria-label="Observação">
           <h2 className="detalhe-titulo">Observação</h2>

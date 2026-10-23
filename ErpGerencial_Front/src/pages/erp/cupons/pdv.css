@@ -198,7 +198,7 @@
   flex-shrink: 0;
   border-radius: 3px;
   object-fit: cover;
-  background: var(--creme-claro);
+  background: var(--gelo-claro);
   display: grid;
   place-items: center;
   font-size: 1.4rem;
@@ -622,7 +622,7 @@
 }
 
 .pdv-botao.gerar {
-  background: var(--modulo-cupom-fiscal);
+  background: linear-gradient(135deg, #217798 0%, var(--modulo-cupom-fiscal) 100%);
   color: var(--branco);
   font-size: 1.15rem;
 }
@@ -724,7 +724,7 @@
 }
 
 @media (max-width: 760px) {
-  .pdv-situacao span {
+  .pdv-situacao .pdv-dica-topo {
     display: none;
   }
 

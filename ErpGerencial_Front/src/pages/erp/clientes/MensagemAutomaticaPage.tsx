@@ -1,8 +1,9 @@
 import { useEffect, useState, type SubmitEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import CampoArea from '../../../components/formulario/CampoArea'
 import CampoTexto from '../../../components/formulario/CampoTexto'
 import type { Aviso } from '../../../components/formulario/FaixaAviso'
-import { IconeCheck, IconeMensagem } from '../../../components/icones/Icones'
+import { IconeCheck, IconeMensagem, IconeVoltar } from '../../../components/icones/Icones'
 import { IlustracaoClientes } from '../../../components/icones/Ilustracoes'
 import { useSessaoExpirada } from '../../../hooks/useSessaoExpirada'
 import {
@@ -24,6 +25,7 @@ import SecaoPagina from '../SecaoPagina'
 import SemAcesso from '../SemAcesso'
 import { MENSAGEM_MAXIMO as MAXIMO, TRECHOS_MENSAGEM as TRECHOS } from './formatos'
 import BalaoMensagem from './BalaoMensagem'
+import ConexaoWhatsapp from './ConexaoWhatsapp'
 import ExtrasMensagem from './ExtrasMensagem'
 import JanelaEnvios from './JanelaEnvios'
 import { avisarSalvo } from '../../../components/aviso-salvo/avisarSalvo'
@@ -41,6 +43,7 @@ type Campo = 'remetente' | 'mensagem'
 export default function MensagemAutomaticaPage() {
   const { sessao } = useErp()
   const sessaoExpirada = useSessaoExpirada()
+  const navigate = useNavigate()
   const [config, setConfig] = useState<ConfiguracaoWhatsapp | null>(null)
   const [remetente, setRemetente] = useState('')
   const [mensagem, setMensagem] = useState('')
@@ -155,6 +158,8 @@ export default function MensagemAutomaticaPage() {
               erro={erros.remetente}
             />
           </div>
+          {/* Conectar o celular deste número: QR Code aqui mesmo */}
+          <ConexaoWhatsapp salvo={config.remetente} digitado={remetente} />
         </SecaoPagina>
 
         <SecaoPagina id="whatsapp-mensagem" numero={2} titulo="Mensagem">
@@ -229,6 +234,15 @@ export default function MensagemAutomaticaPage() {
           <button type="submit" className="pagina-botao" disabled={salvando}>
             <IconeCheck tamanho={20} />
             {salvando ? 'Salvando...' : 'Salvar'}
+          </button>
+          {/* Volta para a tela de onde veio (ex.: a ficha do cliente); aberta direto, vai para Clientes */}
+          <button
+            type="button"
+            className="pagina-botao neutro"
+            onClick={() => ((window.history.state as { idx?: number } | null)?.idx ? navigate(-1) : navigate('/app/clientes'))}
+          >
+            <IconeVoltar tamanho={20} />
+            Voltar
           </button>
           {aviso && <AvisoPagina aviso={aviso} />}
         </div>

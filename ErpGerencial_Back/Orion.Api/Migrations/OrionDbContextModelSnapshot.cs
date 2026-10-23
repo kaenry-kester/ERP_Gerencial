@@ -242,6 +242,11 @@ namespace Orion.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("expira_em");
 
+                    b.Property<string>("Finalidade")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("finalidade");
+
                     b.Property<string>("NovoEmail")
                         .HasMaxLength(254)
                         .HasColumnType("character varying(254)")
@@ -366,6 +371,20 @@ namespace Orion.Api.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)")
                         .HasColumnName("motivo_cancelamento");
+
+                    b.Property<string>("NotaNumero")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("nota_numero");
+
+                    b.Property<DateTime?>("NotaRegistradaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("nota_registrada_em");
+
+                    b.Property<string>("NotaTipo")
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)")
+                        .HasColumnName("nota_tipo");
 
                     b.Property<int>("Numero")
                         .HasColumnType("integer")
@@ -678,6 +697,78 @@ namespace Orion.Api.Migrations
                     b.ToTable("mensagem_imagens", (string)null);
                 });
 
+            modelBuilder.Entity("Orion.Api.Data.MovimentoEstoque", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<Guid?>("CupomId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cupom_id");
+
+                    b.Property<decimal?>("CustoUnitario")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("custo_unitario");
+
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<string>("Observacao")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("observacao");
+
+                    b.Property<Guid>("ProdutoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("produto_id");
+
+                    b.Property<decimal>("Quantidade")
+                        .HasPrecision(14, 3)
+                        .HasColumnType("numeric(14,3)")
+                        .HasColumnName("quantidade");
+
+                    b.Property<decimal>("SaldoApos")
+                        .HasPrecision(14, 3)
+                        .HasColumnType("numeric(14,3)")
+                        .HasColumnName("saldo_apos");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)")
+                        .HasColumnName("tipo");
+
+                    b.Property<Guid?>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.Property<string>("UsuarioNome")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("usuario_nome");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CupomId");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.HasIndex("EmpresaId", "CriadoEm");
+
+                    b.HasIndex("ProdutoId", "CriadoEm");
+
+                    b.ToTable("movimentos_estoque", (string)null);
+                });
+
             modelBuilder.Entity("Orion.Api.Data.Produto", b =>
                 {
                     b.Property<Guid>("Id")
@@ -711,6 +802,11 @@ namespace Orion.Api.Migrations
                     b.Property<Guid>("EmpresaId")
                         .HasColumnType("uuid")
                         .HasColumnName("empresa_id");
+
+                    b.Property<decimal>("EstoqueMinimo")
+                        .HasPrecision(14, 3)
+                        .HasColumnType("numeric(14,3)")
+                        .HasColumnName("estoque_minimo");
 
                     b.Property<string>("Marca")
                         .HasMaxLength(80)
@@ -756,6 +852,14 @@ namespace Orion.Api.Migrations
                         .HasPrecision(14, 3)
                         .HasColumnType("numeric(14,3)")
                         .HasColumnName("quantidade");
+
+                    b.Property<string>("Unidade")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)")
+                        .HasDefaultValue("UN")
+                        .HasColumnName("unidade");
 
                     b.Property<string>("Voltagem")
                         .HasMaxLength(30)
@@ -981,6 +1085,31 @@ namespace Orion.Api.Migrations
                         .HasForeignKey("EmpresaId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Orion.Api.Data.MovimentoEstoque", b =>
+                {
+                    b.HasOne("Orion.Api.Data.Cupom", null)
+                        .WithMany()
+                        .HasForeignKey("CupomId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Orion.Api.Data.Empresa", null)
+                        .WithMany()
+                        .HasForeignKey("EmpresaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Orion.Api.Data.Produto", null)
+                        .WithMany()
+                        .HasForeignKey("ProdutoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Orion.Api.Data.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("Orion.Api.Data.Produto", b =>

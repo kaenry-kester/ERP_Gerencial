@@ -122,6 +122,11 @@ export default function LoginPage() {
               onChange={alterar(setSenha)}
               erro={erros.senha}
             />
+            <p className="login-esqueci">
+              <Link to="/recuperar-senha" className="login-link">
+                Esqueci minha senha
+              </Link>
+            </p>
 
             <button type="submit" className="primary-button botao-acao" disabled={enviando}>
               <IconeLogin tamanho={22} />

@@ -4,7 +4,7 @@
   - seções numeradas de ponta a ponta: número e título na coluna colorida, conteúdo na área branca (SecaoPagina);
   - barra de ações fixa no pé da tela (.pagina-barra), na cor da faixa.
   - listas com busca e tabela de ponta a ponta, e páginas de detalhes.
-  A cor vem do tema: Produtos em marrom e creme (caixa e fita do logo); Clientes, Minha conta, Empresa
+  A cor vem do tema: Produtos em azul-marinho; Clientes, Minha conta, Empresa
   e Usuários em azul petróleo (seta do logo). Cantos discretos (2–4px) e separação por cor, sem linhas.
 */
 
@@ -15,13 +15,13 @@
 }
 
 .pagina.tema-produtos {
-  --pg-faixa-1: #654a2a;
-  --pg-faixa-2: var(--marrom-escuro);
-  --pg-suave: var(--creme);
-  --pg-lado: var(--creme-claro);
-  --pg-cor: var(--marrom);
-  --pg-titulo: var(--marrom-escuro);
-  --pg-zebra: #fbf8ef;
+  --pg-faixa-1: #2f528c;
+  --pg-faixa-2: #203c6c;
+  --pg-suave: var(--gelo);
+  --pg-lado: var(--gelo-claro);
+  --pg-cor: var(--marinho);
+  --pg-titulo: var(--marinho-escuro);
+  --pg-zebra: #f6f8fc;
 }
 
 /* Cupons e recibos: o azul da ilustração do módulo */
@@ -38,7 +38,7 @@
 .pagina.tema-preferencias,
 .pagina.tema-clientes {
   --pg-faixa-1: var(--azul-inicio);
-  --pg-faixa-2: var(--azul-escuro);
+  --pg-faixa-2: #11495e;
   --pg-suave: #cfe4ec;
   --pg-lado: var(--azul-claro);
   --pg-cor: var(--azul);
@@ -48,9 +48,26 @@
 
 /* ---------- Faixa do topo ---------- */
 
+/*
+  Transições suaves entre as cores: o azul do cabeçalho escorre para dentro da faixa (em cima)
+  e a faixa se desfaz numa sombra colorida curta sobre o conteúdo (embaixo), sem corte seco.
+*/
 .pagina-faixa {
-  background: linear-gradient(160deg, var(--pg-faixa-1) 0%, var(--pg-faixa-2) 100%);
+  position: relative;
+  z-index: 2;
+  background:
+    linear-gradient(180deg, rgba(17, 71, 92, 0.55) 0%, rgba(17, 71, 92, 0) 70%),
+    linear-gradient(120deg, var(--pg-faixa-1) 0%, var(--pg-faixa-2) 100%);
   color: var(--branco);
+}
+
+.pagina-faixa::after {
+  content: '';
+  position: absolute;
+  inset: 100% 0 auto;
+  height: 16px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pg-faixa-2) 22%, transparent) 0%, transparent 100%);
+  pointer-events: none;
 }
 
 .pagina-faixa-conteudo {
@@ -68,12 +85,27 @@
   display: grid;
   place-items: center;
   border-radius: 4px;
-  background: var(--creme-claro);
+  background: var(--grad-gelo);
 }
 
 .pagina-faixa-arte :is(svg, img) {
   width: 34px;
   height: 34px;
+}
+
+/* Logo da loja ao lado do nome: mesma altura de antes, só esticada um pouco na horizontal */
+.pagina-faixa-arte:has(> img.pagina-faixa-logo) {
+  width: auto;
+  height: 54px;
+  padding: 3px 6px;
+  background: #fff;
+}
+
+.pagina-faixa-arte img.pagina-faixa-logo {
+  /* Quadrada de 48px esticada para 60px de largura (um pouco na horizontal) */
+  width: 60px;
+  height: 48px;
+  object-fit: fill;
 }
 
 .pagina-faixa-textos {
@@ -87,7 +119,7 @@
 /* Faixa fina e mais escura, só para o "voltar" */
 .pagina-faixa-voltar-area {
   padding: 0.3rem var(--erp-lado);
-  background: rgba(0, 0, 0, 0.18);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.16) 0%, rgba(0, 0, 0, 0.06) 100%);
 }
 
 .pagina-faixa-voltar {
@@ -144,7 +176,7 @@
   padding: 0.5rem 1.3rem;
   border: none;
   border-radius: 4px;
-  background: var(--pg-cor, var(--azul));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--pg-cor, var(--azul)) 91%, #fff) 0%, var(--pg-cor, var(--azul)) 100%);
   font-weight: 700;
   white-space: nowrap;
   color: #fff;
@@ -168,21 +200,21 @@
   opacity: 0.6;
 }
 
-/* Creme sobre a faixa: a ação principal */
+/* Azul-gelo sobre a faixa: a ação principal */
 .pagina-botao.claro {
-  background: var(--creme);
+  background: linear-gradient(135deg, #e3eaf6 0%, var(--gelo) 100%);
   color: var(--azul);
 }
 
-/* Marrom da caixa do logo */
-.pagina-botao.marrom {
-  background: var(--marrom);
+/* Azul-marinho */
+.pagina-botao.marinho {
+  background: var(--grad-marinho);
   color: #fff;
 }
 
 /* Azul petróleo da seta do logo */
 .pagina-botao.azul {
-  background: var(--azul);
+  background: var(--grad-azul);
   color: #fff;
 }
 
@@ -204,7 +236,7 @@
 }
 
 .pagina-botao.perigo {
-  background: var(--erro);
+  background: linear-gradient(135deg, #bd2d21 0%, var(--erro) 100%);
   color: #fff;
 }
 
@@ -237,7 +269,7 @@
   align-items: flex-start;
   gap: 0.85rem;
   padding: 1.25rem 1.25rem 1.25rem var(--erp-lado);
-  background: var(--pg-lado);
+  background: linear-gradient(180deg, var(--pg-lado) 0%, color-mix(in srgb, var(--pg-lado) 75%, #fff) 100%);
 }
 
 .pagina-secao-numero {
@@ -247,7 +279,7 @@
   display: grid;
   place-items: center;
   border-radius: 3px;
-  background: var(--pg-cor);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--pg-cor) 90%, #fff) 0%, var(--pg-cor) 100%);
   font-weight: 700;
   color: #fff;
 }
@@ -386,7 +418,17 @@
   align-items: center;
   gap: 0.75rem 1rem;
   padding: 0.8rem var(--erp-lado);
-  background: var(--pg-faixa-2);
+  background: linear-gradient(100deg, var(--pg-faixa-1) 0%, var(--pg-faixa-2) 100%);
+}
+
+/* A barra do pé nasce do conteúdo com uma sombra colorida curta (sem corte seco) */
+.pagina-barra::before {
+  content: '';
+  position: absolute;
+  inset: auto 0 100%;
+  height: 16px;
+  background: linear-gradient(0deg, color-mix(in srgb, var(--pg-faixa-1) 20%, transparent) 0%, transparent 100%);
+  pointer-events: none;
 }
 
 .pagina-barra {
@@ -395,7 +437,7 @@
 
 .pagina-barra .pagina-botao[type='submit'] {
   order: 1;
-  background: var(--creme);
+  background: linear-gradient(135deg, #e3eaf6 0%, var(--gelo) 100%);
   color: var(--preto);
 }
 
@@ -410,7 +452,7 @@
 }
 
 .pagina-barra .erp-aviso {
-  color: var(--creme);
+  color: var(--gelo);
 }
 
 .pagina-barra .erp-aviso.erro {
@@ -428,7 +470,7 @@
 
 /* ---------- Listas com busca e tabela (Produtos, Clientes) ---------- */
 
-/* Barra creme com a busca e o total */
+/* Barra azul-gelo com a busca e o total */
 .lista-ferramentas {
   display: flex;
   flex-wrap: wrap;
@@ -436,7 +478,10 @@
   justify-content: space-between;
   gap: 0.75rem 1.5rem;
   padding: 0.6rem var(--erp-lado);
-  background: var(--pg-lado);
+  /* Clareia para a direita e escurece um pouco embaixo, aproximando-se do cabeçalho da tabela */
+  background:
+    linear-gradient(180deg, transparent 55%, color-mix(in srgb, var(--azul) 7%, transparent) 100%),
+    linear-gradient(90deg, var(--pg-lado) 0%, color-mix(in srgb, var(--pg-lado) 70%, #fff) 100%);
 }
 
 .lista-busca {
@@ -497,7 +542,7 @@
   margin: clamp(0.7rem, 2vh, 1rem) var(--erp-lado);
 }
 
-/* Tabela de ponta a ponta: cabeçalho azul (seta do logo), linhas alternadas em creme bem claro.
+/* Tabela de ponta a ponta: cabeçalho azul (seta do logo), linhas alternadas em azul-gelo bem claro.
    Nunca rola para o lado: os textos quebram linha e, em telas estreitas, cada linha vira um cartão. */
 .lista-tabela-area {
   min-width: 0;
@@ -512,7 +557,7 @@
 
 .lista-tabela th {
   padding: 0.65rem 0.8rem;
-  background: var(--azul);
+  background: linear-gradient(180deg, #175d77 0%, var(--azul) 100%);
   font-size: 0.76rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -559,6 +604,13 @@
 /* Marca na cor da página à esquerda da linha sob o mouse */
 .lista-tabela tbody tr:hover td:first-child {
   box-shadow: inset 4px 0 0 var(--pg-cor);
+}
+
+/* Código de barras: o título quebra em duas linhas e os 13 números podem quebrar (a lista nunca rola para o lado) */
+.lista-tabela .lista-barras {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
 }
 
 .lista-tabela .numero {
@@ -645,10 +697,10 @@
   color: var(--erro);
 }
 
-/* Perto de vencer: creme (fita do logo) */
+/* Perto de vencer: azul-gelo */
 .lista-etiqueta.atencao {
-  background: var(--creme);
-  color: var(--marrom-escuro);
+  background: var(--gelo);
+  color: var(--marinho-escuro);
 }
 
 /* Paginação no pé da lista */
@@ -906,4 +958,3 @@
     gap: 0.5rem 1rem;
   }
 }
-

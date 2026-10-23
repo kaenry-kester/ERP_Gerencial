@@ -1,33 +1,27 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Cupom } from '../../../services/api'
-import { CupomTermico, ReciboA4 } from './ImpressaoCupom'
-
-export type FormatoImpressao = 'cupom' | 'recibo'
+import { CupomTermico } from './ImpressaoCupom'
 
 /**
- * Impressão do cupom: `imprimir('cupom')` abre a janela de impressão já no tamanho 80 mm;
- * `imprimir('recibo')`, em A4. Só o documento sai no papel (o resto da página fica escondido).
- * Coloque `elemento` em qualquer lugar da página.
+ * Impressão do cupom: `imprimir()` abre a janela de impressão já no tamanho 80 mm (impressora térmica).
+ * Só o cupom sai no papel (o resto da página fica escondido). Coloque `elemento` em qualquer lugar da página.
  */
-export function useImpressao(cupom: Cupom | null) {
-  const [formato, setFormato] = useState<FormatoImpressao | null>(null)
+export function useImpressao(cupom: Cupom | null, logoUrl?: string | null) {
+  const [imprimindo, setImprimindo] = useState(false)
 
   useEffect(() => {
-    if (!formato) return
+    if (!imprimindo) return
     // A bobina de 80 mm não tem altura fixa: o papel fica do tamanho do cupom (medido já montado, fora da tela)
     const altura = document.querySelector<HTMLElement>('.impressao .ct')?.offsetHeight ?? 0
     const alturaMm = Math.ceil((altura * 25.4) / 96) + 6
     const pagina = document.createElement('style')
-    pagina.textContent =
-      formato === 'cupom'
-        ? `@page { size: 80mm ${Math.max(alturaMm, 60)}mm; margin: 0; }`
-        : '@page { size: A4 portrait; margin: 10mm; }'
+    pagina.textContent = `@page { size: 80mm ${Math.max(alturaMm, 60)}mm; margin: 0; }`
     document.head.appendChild(pagina)
     document.body.classList.add('imprimindo')
-    const terminar = () => setFormato(null)
+    const terminar = () => setImprimindo(false)
     window.addEventListener('afterprint', terminar)
-    // Espera o documento aparecer na página antes de abrir a janela de impressão
+    // Espera o cupom aparecer na página antes de abrir a janela de impressão
     const timer = window.setTimeout(() => window.print(), 50)
     return () => {
       window.clearTimeout(timer)
@@ -35,17 +29,17 @@ export function useImpressao(cupom: Cupom | null) {
       pagina.remove()
       document.body.classList.remove('imprimindo')
     }
-  }, [formato])
+  }, [imprimindo])
 
   const elemento =
-    cupom && formato
+    cupom && imprimindo
       ? createPortal(
-          <div className={`impressao impressao-${formato}`}>
-            {formato === 'cupom' ? <CupomTermico cupom={cupom} /> : <ReciboA4 cupom={cupom} />}
+          <div className="impressao impressao-cupom">
+            <CupomTermico cupom={cupom} logoUrl={logoUrl} />
           </div>,
           document.body,
         )
       : null
 
-  return { imprimir: setFormato, imprimindo: formato !== null, elemento }
+  return { imprimir: () => setImprimindo(true), imprimindo, elemento }
 }

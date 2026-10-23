@@ -64,6 +64,13 @@ public class Cupom
 
     public DateTime? CanceladoEm { get; set; }
     public string? MotivoCancelamento { get; set; }
+
+    // ----- Nota emitida no site do governo (Emissor Nacional), anotada aqui depois -----
+    /// <summary>"cupom" = cupom fiscal (consumidor) ou "nota" = nota fiscal (empresa). null: sem nota anotada.</summary>
+    public string? NotaTipo { get; set; }
+    /// <summary>Número da nota no Emissor Nacional.</summary>
+    public string? NotaNumero { get; set; }
+    public DateTime? NotaRegistradaEm { get; set; }
 }
 
 /// <summary>Item do cupom: um produto do cadastro (dá baixa no estoque) ou um item avulso (ex.: serviço).</summary>

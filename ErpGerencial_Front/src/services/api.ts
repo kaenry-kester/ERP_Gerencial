@@ -140,6 +140,33 @@ export const entrar = (dados: { email: string; senha: string } | { telefone: str
 /** Sessão atualizada (permissões, empresa e status podem ter mudado). */
 export const sessaoAtual = (token: string) => requisicao<Sessao>('GET', '/api/auth/eu', { token })
 
+/** Quando o token vence (milissegundos), lido do próprio token; null se não der para ler. */
+export function expiracaoDoToken(token: string): number | null {
+  try {
+    const parte = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    const { exp } = JSON.parse(atob(parte.padEnd(parte.length + ((4 - (parte.length % 4)) % 4), '='))) as { exp?: number }
+    return typeof exp === 'number' ? exp * 1000 : null
+  } catch {
+    return null
+  }
+}
+
+/** Sessão nova (mais 8 horas); o ERP chama sozinho enquanto está aberto. */
+export const renovarSessao = (token: string) => requisicao<Sessao>('POST', '/api/auth/renovar', { token })
+
+// ---------- Esqueci minha senha ----------
+
+export type PedidoSenha = { desafioId: string; reenviarEmSegundos: number }
+
+export const pedirCodigoDeSenha = (acesso: { email: string } | { telefone: string }) =>
+  requisicao<PedidoSenha>('POST', '/api/auth/senha/esqueci', { corpo: acesso })
+
+export const reenviarCodigoDeSenha = (desafioId: string) =>
+  requisicao<PedidoSenha>('POST', '/api/auth/senha/reenviar', { corpo: { desafioId } })
+
+export const redefinirSenha = (dados: { desafioId: string; codigo: string; novaSenha: string }) =>
+  requisicao<Sessao>('POST', '/api/auth/senha/redefinir', { corpo: dados })
+
 // ---------- Empresa ----------
 
 export const obterEmpresa = (token: string) => requisicao<Empresa>('GET', '/api/empresa', { token })
@@ -170,7 +197,7 @@ export const criarUsuario = (
 export const editarUsuario = (
   token: string,
   id: string,
-  dados: { nome: string; telefone: string; administrador: boolean; ativo: boolean },
+  dados: { nome: string; telefone: string; administrador: boolean; ativo: boolean; novaSenha?: string | null },
 ) => requisicao<Usuario>('PUT', `/api/usuarios/${id}`, { corpo: dados, token })
 
 // ---------- Produtos ----------
@@ -195,6 +222,11 @@ export type Produto = {
   atualizadoEm: string
   /** Ids das imagens na ordem da galeria; a primeira é a capa (ver urlImagemProduto). */
   imagens: string[]
+  /** UN, KG, M, CX... */
+  unidade: string
+  estoqueMinimo: number
+  /** Quantidade no mínimo ou abaixo dele. */
+  estoqueBaixo: boolean
 }
 
 export type DadosProduto = {
@@ -210,16 +242,14 @@ export type DadosProduto = {
   cor: string
   voltagem: string
   observacao: string
+  unidade: string
+  estoqueMinimo: number | null
 }
 
 export type ListaProdutos = { itens: Produto[]; total: number; pagina: number; tamanhoPagina: number }
 
 export const listarProdutos = (token: string, busca = '', pagina = 1) =>
-  requisicao<ListaProdutos>(
-    'GET',
-    `/api/produtos?pagina=${pagina}${busca.trim() ? `&busca=${encodeURIComponent(busca.trim())}` : ''}`,
-    { token },
-  )
+  requisicao<ListaProdutos>('GET', `/api/produtos?${parametros({ busca: busca.trim(), pagina })}`, { token })
 
 export const obterProduto = async (token: string, id: string) => {
   const produto = await requisicao<Produto>('GET', `/api/produtos/${id}`, { token })
@@ -450,6 +480,39 @@ export const obterWhatsapp = (token: string) => requisicao<ConfiguracaoWhatsapp>
 export const salvarWhatsapp = (token: string, dados: DadosWhatsapp) =>
   requisicao<ConfiguracaoWhatsapp>('PUT', '/api/whatsapp', { corpo: dados, token })
 
+/** Situação do WhatsApp que envia; ao conectar, vem o QR Code (imagem) e o código de 8 letras. */
+export type ConexaoWhatsapp = {
+  remetente: string | null
+  estado: 'sem-numero' | 'conectado' | 'aguardando' | 'desconectado' | 'indisponivel'
+  qrCode: string | null
+  codigo: string | null
+  mensagem: string | null
+}
+
+export const obterConexaoWhatsapp = (token: string) => requisicao<ConexaoWhatsapp>('GET', '/api/whatsapp/conexao', { token })
+/** Gera um QR Code novo para conectar o celular do número salvo (o QR vale ~20 segundos). */
+export const conectarWhatsapp = (token: string) => requisicao<ConexaoWhatsapp>('POST', '/api/whatsapp/conexao', { token })
+
+/** Mensagem automática programada para hoje (tela inicial), uma por cliente: enviada, não saiu ou ainda vai sair. */
+/** Cópias de segurança do programa da loja (aviso na tela inicial). */
+export type SituacaoBackup = { ativo: boolean; pasta: string; ultima: string | null }
+
+export const obterSituacaoBackup = (token: string) => requisicao<SituacaoBackup>('GET', '/api/sistema/backup', { token })
+
+export type MensagemHoje = {
+  clienteId: string
+  nome: string
+  celular: string
+  /** Horário do envio (feito) ou o marcado no cliente (agendada). */
+  horario: string
+  situacao: 'enviada' | 'teste' | 'erro' | 'agendada'
+  erro: string | null
+  /** Quantas já saíram hoje (cliente com intervalo de minutos/horas recebe mais de uma por dia). */
+  enviadas: number
+}
+
+export const listarMensagensHoje = (token: string) => requisicao<MensagemHoje[]>('GET', '/api/whatsapp/hoje', { token })
+
 /** Endereço da imagem da mensagem para a tag <img> (aberto: o id é aleatório, não dá para adivinhar). */
 export const urlImagemMensagem = (id: string) => `/api/whatsapp/imagens/${id}`
 
@@ -536,6 +599,10 @@ export type Cupom = {
   emitidoEm: string
   canceladoEm: string | null
   motivoCancelamento: string | null
+  /** Nota emitida no site do governo e anotada aqui: 'cupom' (consumidor) ou 'nota' (empresa). */
+  notaTipo: TipoNota | null
+  notaNumero: string | null
+  notaRegistradaEm: string | null
 }
 
 export type DadosCupom = {
@@ -580,6 +647,39 @@ export const emitirCupom = (token: string, dados: DadosCupom) =>
 
 export const cancelarCupom = (token: string, id: string, motivo: string) =>
   requisicao<Cupom>('POST', `/api/cupons/${id}/cancelar`, { corpo: { motivo }, token })
+
+export type TipoNota = 'cupom' | 'nota'
+
+
+// ---------- Estoque ----------
+
+export type TipoMovimento = 'inicial' | 'ajuste' | 'venda' | 'cancelamento'
+
+export type MovimentoEstoque = {
+  id: string
+  produtoId: string
+  produtoNome: string
+  produtoCodigo: string | null
+  tipo: TipoMovimento
+  /** Positivo entra, negativo sai. */
+  quantidade: number
+  saldoApos: number
+  custoUnitario: number | null
+  observacao: string | null
+  cupomId: string | null
+  usuarioNome: string
+  criadoEm: string
+}
+
+export type ListaMovimentos = { itens: MovimentoEstoque[]; total: number; pagina: number; tamanhoPagina: number }
+
+export const listarMovimentos = (
+  token: string,
+  filtros: { produtoId?: string; tipo?: string; de?: string; ate?: string; pagina?: number } = {},
+) => requisicao<ListaMovimentos>('GET', `/api/estoque/movimentos?${parametros(filtros)}`, { token })
+
+export const ajustarEstoque = (token: string, produtoId: string, novaQuantidade: number, motivo: string) =>
+  requisicao<{ quantidade: number }>('POST', `/api/estoque/produtos/${produtoId}/ajuste`, { corpo: { novaQuantidade, motivo }, token })
 
 // ---------- Financeiro ----------
 

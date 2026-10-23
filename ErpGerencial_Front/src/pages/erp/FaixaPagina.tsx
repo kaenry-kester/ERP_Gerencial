@@ -6,7 +6,7 @@ import './pagina.css'
 type Props = {
   titulo: string
   subtitulo?: ReactNode
-  /** Ilustração do módulo, sobre um quadrado creme. */
+  /** Ilustração do módulo, sobre um quadrado azul-gelo. */
   Ilustracao?: ComponentType<{ tamanho?: number }>
   /** Link "←" numa faixa fina acima do título (ex.: voltar para a lista). */
   voltar?: { para: string; rotulo: string }

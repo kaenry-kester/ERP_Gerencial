@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useSessaoExpirada } from '../../hooks/useSessaoExpirada'
-import { lerSessao, sair, salvarSessao, sessaoAtual, type Sessao } from '../../services/api'
+import { expiracaoDoToken, lerSessao, renovarSessao, sair, salvarSessao, sessaoAtual, type Sessao } from '../../services/api'
 import type { ContextoErp } from './contexto'
 import { caminhoDo, podeAcessar, PREFERENCIAS } from './modulos'
 import './erp.css'
@@ -40,6 +40,30 @@ export default function ErpLayout() {
     // Só ao abrir o ERP (e a cada novo login); sessaoExpirada muda a cada render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessao?.token])
+
+  // Sessão renovada sozinha enquanto o sistema está aberto (o token vale 8 horas): quando faltam menos de 4 horas,
+  // pede um novo — a cada 15 minutos e ao voltar para a aba (ex.: depois do computador dormir).
+  useEffect(() => {
+    if (!sessao) return
+    const token = sessao.token
+    const renovarSePreciso = () => {
+      const vence = expiracaoDoToken(token)
+      if (vence && vence - Date.now() < 4 * 60 * 60 * 1000 && vence > Date.now())
+        renovarSessao(token)
+          .then((nova) => {
+            salvarSessao(nova)
+            setSessao(nova)
+          })
+          .catch(() => {}) // vencida ou sem conexão: a próxima chamada leva ao login
+    }
+    renovarSePreciso()
+    const id = window.setInterval(renovarSePreciso, 15 * 60 * 1000)
+    window.addEventListener('focus', renovarSePreciso)
+    return () => {
+      window.clearInterval(id)
+      window.removeEventListener('focus', renovarSePreciso)
+    }
+  }, [sessao?.token]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!sessao) return <Navigate to="/login" replace />
 

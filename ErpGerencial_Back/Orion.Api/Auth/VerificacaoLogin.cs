@@ -11,8 +11,8 @@ namespace Orion.Api.Auth;
 public record VerificacaoResponse(Guid DesafioId, string Canal, string Destino, DateTime ExpiraEm, int ReenviarEmSegundos);
 
 /// <summary>
-/// Código de 6 dígitos por e-mail para confirmar a troca de e-mail em "Minha conta" (o login não pede código:
-/// e-mail ou celular e a senha bastam).
+/// Código de 6 dígitos por e-mail: confirma a troca de e-mail em "Minha conta" e o "Esqueci minha senha"
+/// (o login não pede código: e-mail ou celular e a senha bastam).
 /// </summary>
 public static class VerificacaoLogin
 {
@@ -46,9 +46,12 @@ public static class VerificacaoLogin
     /// </summary>
     public static async Task<VerificacaoResponse?> EnviarCodigo(
         OrionDbContext db, EmailService email, Usuario usuario, CodigoLogin? existente, CancellationToken ct,
-        string? novoEmail = null)
+        string? novoEmail = null, bool redefinirSenha = false)
     {
-        var desafio = existente ?? new CodigoLogin { UsuarioId = usuario.Id, CodigoHash = "", NovoEmail = novoEmail };
+        var desafio = existente ?? new CodigoLogin
+        {
+            UsuarioId = usuario.Id, CodigoHash = "", NovoEmail = novoEmail, Finalidade = redefinirSenha ? "senha" : null,
+        };
         var codigo = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
         desafio.CodigoHash = HashCodigo(desafio.Id, codigo);
         desafio.ExpiraEm = DateTime.UtcNow + ValidadeCodigo;
@@ -59,24 +62,30 @@ public static class VerificacaoLogin
 
         var para = desafio.NovoEmail ?? usuario.Email;
         var trocaDeEmail = desafio.NovoEmail is not null;
-        var (html, texto) = MensagemCodigo(usuario.Nome, codigo, trocaDeEmail);
+        var senha = desafio.Finalidade == "senha";
+        var (html, texto) = MensagemCodigo(usuario.Nome, codigo, trocaDeEmail, senha);
         var assunto = trocaDeEmail
             ? $"{codigo} é o código para confirmar seu novo e-mail no Órion"
-            : $"{codigo} é o seu código de acesso ao Órion";
+            : senha
+                ? $"{codigo} é o código para criar uma nova senha no Órion"
+                : $"{codigo} é o seu código de acesso ao Órion";
         if (!await email.Enviar(para, assunto, html, texto, ct)) return null;
 
         await db.SaveChangesAsync(ct);
         return new VerificacaoResponse(desafio.Id, "email", MascararEmail(para), desafio.ExpiraEm, (int)IntervaloReenvio.TotalSeconds);
     }
 
-    private static (string Html, string Texto) MensagemCodigo(string nome, string codigo, bool trocaDeEmail)
+    private static (string Html, string Texto) MensagemCodigo(string nome, string codigo, bool trocaDeEmail, bool senha = false)
     {
         var primeiroNome = WebUtility.HtmlEncode(nome.Split(' ')[0]);
         var minutos = (int)ValidadeCodigo.TotalMinutes;
-        var acao = trocaDeEmail ? "confirmar este e-mail como seu novo login no Órion" : "entrar no Órion";
+        var acao = trocaDeEmail ? "confirmar este e-mail como seu novo login no Órion"
+            : senha ? "criar uma nova senha no Órion" : "entrar no Órion";
         var alerta = trocaDeEmail
             ? "Se você não pediu esta troca, ignore este e-mail."
-            : "Se não foi você que tentou entrar, troque sua senha.";
+            : senha
+                ? "Se você não pediu uma nova senha, ignore este e-mail: a sua senha continua a mesma."
+                : "Se não foi você que tentou entrar, troque sua senha.";
         var texto = $"""
             Olá, {nome.Split(' ')[0]}!
 

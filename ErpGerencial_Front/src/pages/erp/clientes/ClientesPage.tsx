@@ -64,13 +64,13 @@ export default function ClientesPage() {
   const acoes = (
     <>
       {tem(sessao.usuario, 'clientes-editar') && (
-        <Link to="/app/clientes/mensagem" className="pagina-botao marrom">
+        <Link to="/app/clientes/mensagem" className="pagina-botao marinho">
           <IconeMensagem tamanho={20} />
           Inserir mensagem automática
         </Link>
       )}
       {tem(sessao.usuario, 'clientes-cadastrar') && (
-        <Link to="/app/clientes/novo" className="pagina-botao marrom">
+        <Link to="/app/clientes/novo" className="pagina-botao marinho">
           <IconeMais tamanho={20} />
           Cadastrar cliente
         </Link>

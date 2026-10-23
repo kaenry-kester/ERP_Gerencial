@@ -99,12 +99,8 @@ public static class FinanceiroEndpoints
 
         var formas = new Dictionary<string, (decimal Valor, int Vendas)>();
         foreach (var c in validos)
-        {
-            // Venda dividida: a 2ª forma fica com o valor dela e a 1ª com o resto (o troco sai do dinheiro)
-            var valor2 = c.FormaPagamento2 is null ? 0 : Math.Min(c.ValorPagamento2 ?? 0, c.Total);
-            Somar(formas, c.FormaPagamento, c.Total - valor2);
-            if (c.FormaPagamento2 is { } forma2) Somar(formas, forma2, valor2);
-        }
+            foreach (var (formaPaga, valor) in Pagamentos.PorForma(c))
+                Somar(formas, formaPaga, valor);
 
         var produtos = validos.SelectMany(c => c.Itens)
             .GroupBy(i => i.ProdutoId?.ToString() ?? $"avulso:{i.Descricao.Trim().ToLowerInvariant()}")

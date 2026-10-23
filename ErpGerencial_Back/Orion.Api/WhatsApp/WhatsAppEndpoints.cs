@@ -23,11 +23,25 @@ public record EnvioDto(
 public record ConfiguracaoWhatsappDto(string? Remetente, string? Mensagem, Guid? ImagemId, List<EnvioDto> Envios);
 
 /// <summary>
+/// Situação do WhatsApp que envia: "sem-numero", "conectado", "aguardando" (esperando ler o QR Code),
+/// "desconectado" ou "indisponivel" (a Evolution não respondeu; o motivo vai em Mensagem).
+/// </summary>
+public record ConexaoWhatsappDto(string? Remetente, string Estado, string? QrCode, string? Codigo, string? Mensagem);
+
+/// <summary>
+/// Um cliente com mensagem automática programada para hoje (tela inicial), uma linha por cliente:
+/// "agendada" (ainda vai sair: Horario = o marcado), "enviada"/"teste" (Horario = o último envio) ou "erro" (não saiu).
+/// Enviadas = quantas saíram hoje (cliente com intervalo de minutos/horas recebe mais de uma por dia).
+/// </summary>
+public record MensagemHojeDto(
+    Guid ClienteId, string Nome, string Celular, DateTime Horario, string Situacao, string? Erro, int Enviadas = 0);
+
+/// <summary>
 /// Mensagem automática da empresa (WhatsApp): a mensagem padrão, o número remetente e os últimos
 /// clientes que receberam a mensagem. Quem pode editar clientes pode mexer aqui; o histórico de um
 /// cliente (GET /api/clientes/{id}/envios) abre para quem pode ver clientes.
-/// Quem envia de fato é o robô em Python (ErpGerencial_Automacao/lembretes.py), que lê esta
-/// configuração no banco e grava cada envio em envios_whatsapp.
+/// Quem envia de fato é a própria API (EnvioAutomatico), pela Evolution; o celular que envia é conectado aqui
+/// mesmo, pelo QR Code (/api/whatsapp/conexao).
 /// </summary>
 public static class WhatsAppEndpoints
 {
@@ -40,6 +54,11 @@ public static class WhatsAppEndpoints
         var grupo = app.MapGroup("/api/whatsapp").RequireAuthorization();
         grupo.MapGet("/", Obter);
         grupo.MapPut("/", Salvar);
+        // Conectar o celular que envia pelo próprio site (QR Code), sem rodar comando
+        grupo.MapGet("/conexao", SituacaoConexao);
+        grupo.MapPost("/conexao", Conectar);
+        // Tela inicial: as mensagens programadas para hoje (uma linha por cliente)
+        grupo.MapGet("/hoje", MensagensDeHoje);
         app.MapGet("/api/clientes/{clienteId:guid}/envios", EnviosDoCliente).RequireAuthorization();
 
         // Imagem da mensagem (vai como foto, com o texto de legenda): a da mensagem padrão e a de cada cliente.
@@ -154,6 +173,93 @@ public static class WhatsAppEndpoints
         empresa.MensagemManutencao = mensagem.Length == 0 ? null : mensagem;
         await db.SaveChangesAsync();
         return Results.Ok(await Dto(empresa, db));
+    }
+
+    /// <summary>
+    /// As mensagens automáticas de hoje (dia de Brasília): os envios já feitos e os que ainda vão sair hoje,
+    /// em ordem de horário. Cada envio feito move o próximo envio do cliente, então as duas listas não se repetem.
+    /// </summary>
+    private static async Task<IResult> MensagensDeHoje(ClaimsPrincipal user, OrionDbContext db)
+    {
+        var (usuario, negado) = await Permissoes.Exigir(user, db, Permissoes.Clientes);
+        if (usuario is null) return negado!;
+        var hoje = Horario.Hoje;
+        var inicio = Horario.InicioDoDiaUtc(hoje);
+        var fim = Horario.InicioDoDiaUtc(hoje.AddDays(1));
+
+        // Só o que foi PROGRAMADO para hoje (o dia da mensagem, não o dia da tentativa): amanhã a lista recomeça.
+        var tentativas = await db.EnviosWhatsapp
+            .Where(w => w.EmpresaId == usuario.EmpresaId && w.DataReferencia == hoje)
+            .Select(w => new { w.ClienteId, Nome = w.Cliente!.Nome, w.Telefone, w.CriadoEm, w.Status, w.Erro })
+            .ToListAsync();
+        var pendentes = await db.Clientes
+            .Where(c => c.EmpresaId == usuario.EmpresaId && c.EnvioEm >= inicio && c.EnvioEm < fim)
+            .Select(c => new { c.Id, c.Nome, c.Celular, EnvioEm = c.EnvioEm!.Value })
+            .ToDictionaryAsync(c => c.Id);
+
+        var linhas = new List<MensagemHojeDto>();
+        // Quem já teve envio programado para hoje: uma linha só, com o resultado do dia
+        foreach (var cliente in tentativas.GroupBy(t => t.ClienteId))
+        {
+            var enviadas = cliente.Where(t => t.Status is "enviado" or "teste").OrderBy(t => t.CriadoEm).ToList();
+            var ultima = cliente.MaxBy(t => t.CriadoEm)!;
+            if (pendentes.Remove(cliente.Key, out var pendente))
+                // Ainda tem mensagem de hoje na fila (próximo horário, ou tentando de novo depois de uma falha)
+                linhas.Add(new MensagemHojeDto(cliente.Key, pendente.Nome, pendente.Celular, pendente.EnvioEm, "agendada",
+                    ultima.Status == "erro" ? ultima.Erro : null, enviadas.Count));
+            else if (enviadas.Count > 0)
+                linhas.Add(new MensagemHojeDto(cliente.Key, ultima.Nome, ultima.Telefone, enviadas[^1].CriadoEm,
+                    enviadas[^1].Status == "teste" ? "teste" : "enviada", null, enviadas.Count));
+            else
+                linhas.Add(new MensagemHojeDto(cliente.Key, ultima.Nome, ultima.Telefone, ultima.CriadoEm, "erro", ultima.Erro));
+        }
+        // Quem ainda não teve nenhuma tentativa hoje: vai sair no horário marcado
+        linhas.AddRange(pendentes.Values.Select(c => new MensagemHojeDto(c.Id, c.Nome, c.Celular, c.EnvioEm, "agendada", null)));
+        return Results.Ok(linhas.OrderBy(m => m.Horario).Take(200).ToList());
+    }
+
+    /// <summary>O WhatsApp do número salvo está conectado?</summary>
+    private static async Task<IResult> SituacaoConexao(ClaimsPrincipal user, OrionDbContext db, EvolutionApi evolution, CancellationToken ct)
+    {
+        var (usuario, negado) = await Permissoes.Exigir(user, db, Permissoes.ClientesEditar);
+        if (usuario is null) return negado!;
+        var remetente = usuario.Empresa!.WhatsappRemetente;
+        if (remetente is null) return Results.Ok(new ConexaoWhatsappDto(null, "sem-numero", null, null, null));
+        try
+        {
+            var estado = await evolution.Estado(remetente, ct) switch
+            {
+                "open" => "conectado",
+                "connecting" => "aguardando",
+                _ => "desconectado",
+            };
+            return Results.Ok(new ConexaoWhatsappDto(remetente, estado, null, null, null));
+        }
+        catch (ErroEnvio ex)
+        {
+            return Results.Ok(new ConexaoWhatsappDto(remetente, "indisponivel", null, null, ex.Message));
+        }
+    }
+
+    /// <summary>Gera o QR Code (e o código de 8 letras) para conectar o celular do número salvo.</summary>
+    private static async Task<IResult> Conectar(ClaimsPrincipal user, OrionDbContext db, EvolutionApi evolution, CancellationToken ct)
+    {
+        var (usuario, negado) = await Permissoes.Exigir(user, db, Permissoes.ClientesEditar);
+        if (usuario is null) return negado!;
+        var remetente = usuario.Empresa!.WhatsappRemetente;
+        if (remetente is null)
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["remetente"] = ["Salve o número remetente antes de conectar"] });
+        try
+        {
+            if (await evolution.Conectado(remetente, ct))
+                return Results.Ok(new ConexaoWhatsappDto(remetente, "conectado", null, null, null));
+            var conexao = await evolution.IniciarConexao(remetente, ct);
+            return Results.Ok(new ConexaoWhatsappDto(remetente, "aguardando", conexao.QrCode, conexao.Codigo, null));
+        }
+        catch (ErroEnvio ex)
+        {
+            return Results.Ok(new ConexaoWhatsappDto(remetente, "indisponivel", null, null, ex.Message));
+        }
     }
 
     private static async Task<ConfiguracaoWhatsappDto> Dto(Empresa empresa, OrionDbContext db)
