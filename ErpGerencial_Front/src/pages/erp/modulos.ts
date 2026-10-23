@@ -1,7 +1,6 @@
 import type { ComponentType } from 'react'
 import {
   IconeCaixa,
-  IconeCarrinho,
   IconeCarteira,
   IconeClientes,
   IconeCracha,
@@ -19,7 +18,6 @@ import {
   IlustracaoOrdemServico,
   IlustracaoProdutos,
   IlustracaoUsuarios,
-  IlustracaoVendas,
 } from '../../components/icones/Ilustracoes'
 import type { Usuario } from '../../services/api'
 
@@ -78,36 +76,28 @@ export const MODULOS_PRINCIPAIS: Modulo[] = [
   {
     id: 'financeiro',
     rotulo: 'Financeiro',
-    resumo: 'Contas a pagar, a receber e caixa',
-    descricao: 'Contas a pagar, a receber e caixa.',
+    resumo: 'Vendas, faturamento e painel',
+    descricao: 'Todas as vendas, com o resumo e o painel.',
     Icone: IconeCarteira,
     Ilustracao: IlustracaoFinanceiro,
     acesso: 'permissao',
   },
-  // Módulos novos (em construção): só o administrador vê por enquanto (o funcionário tem permissões fixas).
+  // Módulos novos: só o administrador vê por enquanto (o funcionário tem permissões fixas).
   {
     id: 'cupom-fiscal',
-    rotulo: 'Cupom fiscal',
-    resumo: 'Emissão e consulta de cupons',
-    descricao: 'Emissão e consulta de cupons fiscais.',
+    rotulo: 'Cupons e recibos',
+    resumo: 'Emissão e impressão de cupons',
+    descricao: 'Cupons de venda e recibos (não fiscais), com impressão.',
     Icone: IconeRecibo,
     Ilustracao: IlustracaoCupomFiscal,
-    acesso: 'permissao',
-  },
-  {
-    id: 'vendas',
-    rotulo: 'Vendas',
-    resumo: 'Pedidos, orçamentos e vendas',
-    descricao: 'Pedidos, orçamentos e vendas.',
-    Icone: IconeCarrinho,
-    Ilustracao: IlustracaoVendas,
+    // Sem atalho acima do bloco: "Emitir cupom" fica na faixa do topo da tela principal
     acesso: 'permissao',
   },
   {
     id: 'ordem-servico',
     rotulo: 'Número de ordem de serviço',
-    resumo: 'Abertura e acompanhamento das OS',
-    descricao: 'Abertura e acompanhamento das ordens de serviço.',
+    resumo: 'Histórico completo de cada cliente',
+    descricao: 'Tudo o que foi vendido e enviado a cada cliente.',
     Icone: IconeOrdemServico,
     Ilustracao: IlustracaoOrdemServico,
     acesso: 'permissao',

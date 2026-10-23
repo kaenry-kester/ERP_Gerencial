@@ -73,6 +73,10 @@ public static partial class Validacao
 
         var telefone = SoDigitos(req.Telefone ?? "");
         if (telefone.Length > 0 && telefone.Length is not (10 or 11)) erros["telefone"] = ["Número incompleto"];
+        if ((req.Endereco?.Trim().Length ?? 0) > 200) erros["endereco"] = ["Máximo de 200 letras"];
+        if ((req.Cidade?.Trim().Length ?? 0) > 100) erros["cidade"] = ["Máximo de 100 letras"];
+        var uf = req.Uf?.Trim() ?? "";
+        if (uf.Length > 0 && (uf.Length != 2 || !uf.All(char.IsAsciiLetter))) erros["uf"] = ["Ex.: SP"];
         return erros;
     }
 

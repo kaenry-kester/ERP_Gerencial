@@ -8,7 +8,9 @@ type Props = {
   onChange: (valor: string) => void
   erro?: string
   obrigatorio?: boolean
-  type?: 'text' | 'tel' | 'date' | 'datetime-local'
+  type?: 'text' | 'tel' | 'date' | 'time' | 'datetime-local'
+  /** Data mínima (campos de data), ex.: "2026-10-14". */
+  min?: string
   /** Texto longo (ex.: observação): vira uma caixa de texto com esse número de linhas. */
   linhas?: number
   /** Com opções, vira uma lista de escolha (select). */
@@ -20,11 +22,13 @@ type Props = {
   lista?: string
   /** Colunas da ficha (ex.: "c9") e "do-cep" (preenchido pela busca do CEP). */
   className?: string
+  /** Imagem pequena à esquerda do campo (ex.: "/imgs/whatsapp.png"). */
+  icone?: string
 }
 
 /**
- * Célula da ficha de cadastro (clientes e produtos): rótulo pequeno no canto de cima e o campo sem borda,
- * como num formulário impresso. As linhas da ficha separam as células (ver ficha.css).
+ * Campo da ficha de cadastro (clientes e produtos): rótulo em negrito em cima e o campo numa caixa retangular,
+ * como num formulário impresso (ver ficha.css).
  */
 export default function CampoFicha({
   id,
@@ -41,8 +45,41 @@ export default function CampoFicha({
   opcoes,
   linhas,
   className,
+  icone,
+  min,
 }: Props) {
   const idErro = `${id}-erro`
+  const campoTexto = (
+    <input
+      id={id}
+      type={type}
+      value={valor}
+      inputMode={inputMode}
+      placeholder={placeholder}
+      maxLength={maxLength}
+      min={min}
+      list={lista}
+      // O Chrome ignora "off" em campos de endereço e preenche com endereços salvos (número, complemento...);
+      // um valor que ele não reconhece desliga o preenchimento automático de verdade.
+      autoComplete="nao-preencher"
+      required={obrigatorio}
+      aria-invalid={!!erro}
+      aria-describedby={erro ? idErro : undefined}
+      onChange={(e) => onChange(e.target.value)}
+      // Data e horário: clicar em qualquer parte da caixa abre o seletor (não só no ícone)
+      onClick={
+        type === 'text' || type === 'tel'
+          ? undefined
+          : (e) => {
+              try {
+                e.currentTarget.showPicker()
+              } catch {
+                // Navegador sem showPicker: continua abrindo pelo ícone
+              }
+            }
+      }
+    />
+  )
   return (
     <div className={['ficha-campo', erro && 'com-erro', className].filter(Boolean).join(' ')}>
       <div className="ficha-cabecalho">
@@ -79,21 +116,13 @@ export default function CampoFicha({
             </option>
           ))}
         </select>
+      ) : icone ? (
+        <div className="ficha-com-icone">
+          <img src={icone} alt="" aria-hidden="true" />
+          {campoTexto}
+        </div>
       ) : (
-        <input
-          id={id}
-          type={type}
-          value={valor}
-          inputMode={inputMode}
-          placeholder={placeholder}
-          maxLength={maxLength}
-          list={lista}
-          autoComplete="off"
-          required={obrigatorio}
-          aria-invalid={!!erro}
-          aria-describedby={erro ? idErro : undefined}
-          onChange={(e) => onChange(e.target.value)}
-        />
+        campoTexto
       )}
     </div>
   )

@@ -26,23 +26,29 @@
   --azul-escuro: #0f4255;
   --azul-claro: #e3eef2;
   --azul-vivo: #1f7a99; /* azul mais claro, para detalhes sobre o preto */
-  /* Marrom da caixa de papelão e creme da fita, do logo */
-  --marrom: #8a663b;
-  --marrom-escuro: #5f4527;
-  --creme: #e6d89a;
-  --creme-claro: #f5efd9;
+  /* Azul-marinho (cor de destaque: par clássico do azul petróleo) e azul-gelo (fundos claros) */
+  --marinho: #27467c;
+  --marinho-escuro: #1b3260;
+  --gelo: #dbe4f3;
+  --gelo-claro: #f0f4fa;
   --branco: #f8f8f8;
 
+  /* Degradês: do tom mais claro (em cima, à esquerda) ao tom da cor */
+  --grad-marinho: linear-gradient(135deg, #2e5089 0%, #233f71 100%);
+  --grad-azul: linear-gradient(135deg, #185f79 0%, #134d63 100%);
+  --grad-gelo: linear-gradient(135deg, #f7f9fd 0%, #e5ecf7 100%);
+  --grad-escuro: linear-gradient(135deg, #232b32 0%, #1c2329 100%);
+
   /* Cor de cada módulo (o botão de cadastro usa a mesma cor do módulo) */
-  --modulo-produtos: var(--marrom);
-  --modulo-produtos-fundo: var(--creme-claro);
+  --modulo-produtos: var(--marinho);
+  --modulo-produtos-fundo: var(--gelo-claro);
   --modulo-clientes: var(--azul);
   --modulo-clientes-fundo: var(--azul-claro);
   --modulo-financeiro: var(--preto);
   --modulo-financeiro-fundo: #e4e9ec;
   /* Módulos novos: o fundo é a cor do quadrado da própria ilustração (ela se funde ao cartão) */
-  --modulo-vendas: #6f5a2c;
-  --modulo-vendas-fundo: #dfd5b4;
+  --modulo-vendas: #27467c;
+  --modulo-vendas-fundo: #dbe4f3;
   --modulo-cupom-fiscal: #1b6d8c;
   --modulo-cupom-fiscal-fundo: #98bed4;
   --modulo-ordem-servico: #2e6b47;
@@ -179,7 +185,7 @@ a {
    O texto colorido usa o tom escuro, para manter bom contraste (acessibilidade). */
 .tema-produtos {
   --tema: var(--modulo-produtos);
-  --tema-texto: var(--marrom-escuro);
+  --tema-texto: var(--marinho-escuro);
   --tema-fundo: var(--modulo-produtos-fundo);
 }
 
@@ -197,7 +203,7 @@ a {
 
 .tema-vendas {
   --tema: var(--modulo-vendas);
-  --tema-texto: #4e3f1d;
+  --tema-texto: #1b3260;
   --tema-fundo: var(--modulo-vendas-fundo);
 }
 

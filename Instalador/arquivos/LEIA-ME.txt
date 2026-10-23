@@ -1,0 +1,43 @@
+﻿ÓRION — COMO USAR
+==================
+
+1) ABRIR
+   Dê dois cliques em "Iniciar Orion".
+   Na primeira vez ele prepara tudo sozinho (leva cerca de 1 minuto).
+   O sistema abre no navegador em:  http://localhost:5000
+   Na primeira vez, clique em "Criar minha conta" e cadastre a loja.
+
+   Se o Windows perguntar sobre o Firewall, clique em "Permitir":
+   assim outros computadores e celulares do mesmo Wi-Fi também podem usar
+   (o endereço aparece na janela preta ao abrir).
+
+2) FECHAR
+   Dê dois cliques em "Parar Orion". Ele faz uma última cópia de segurança e fecha tudo.
+   Se o computador for desligado sem fechar, os dados continuam salvos.
+
+3) CÓPIAS DE SEGURANÇA (BACKUP)
+   Enquanto o Órion está aberto, ele faz uma cópia a cada hora (e outra ao fechar) na pasta
+   "Orion-Copias" do Google Drive (ou do OneDrive). Essas cópias vão para a nuvem sozinhas.
+   IMPORTANTE: deixe o Google Drive (ou o OneDrive) instalado e com a conta conectada.
+   Se a última cópia tiver mais de 1 dia, aparece um aviso na tela principal do Órion.
+   Guarda: todas as cópias das últimas 24 horas e uma por dia dos últimos 30 dias.
+
+4) COMPUTADOR ESTRAGOU, FOI FORMATADO OU TROCADO?
+   a) No computador novo, instale o Google Drive (ou OneDrive) e entre com a MESMA conta.
+   b) Espere a pasta "Orion-Copias" aparecer.
+   c) Baixe e descompacte o Órion de novo.
+   d) Dê dois cliques em "Restaurar copia de seguranca" e escolha a cópia mais recente (número 1).
+   Pronto: clientes, produtos, vendas e fotos voltam como estavam na última cópia.
+
+5) WHATSAPP (MENSAGENS AUTOMÁTICAS)
+   No Órion: Clientes > Inserir mensagem automática > digite o número e clique em
+   "Conectar este WhatsApp". Leia o QR Code com o celular da loja.
+   As mensagens só saem com o Órion aberto. As que venceram com o computador desligado
+   saem assim que o Órion for aberto de novo.
+
+6) ESQUECEU A SENHA?
+   - Funcionário: o administrador define uma senha nova em "Equipe" (abra a pessoa e preencha "Nova senha").
+   - O próprio administrador: dê dois cliques em "Esqueci a senha" (nesta pasta), digite o e-mail e a senha nova.
+     Isso só funciona neste computador.
+
+Não apague a pasta "dados": é nela que fica o banco de dados deste computador.

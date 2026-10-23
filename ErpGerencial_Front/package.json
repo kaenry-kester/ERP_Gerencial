@@ -10,10 +10,12 @@
     "preview": "vite preview",
     "api": "dotnet watch run --non-interactive --project ../ErpGerencial_Back/Orion.Api --launch-profile http",
     "whatsapp": "cd ..\\ErpGerencial_Automacao\\evolution-api && node dist/main",
-    "robo": "cd ..\\ErpGerencial_Automacao && .venv\\Scripts\\python.exe lembretes.py",
-    "dev:tudo": "concurrently -k -n API,FRONT,WHATS,ROBO -c blue,cyan,green,magenta \"npm:api\" \"npm:dev\" \"npm:whatsapp\" \"npm:robo\""
+    "dev:tudo": "concurrently --restart-tries -1 --restart-after 5000 -n API,FRONT,WHATS -c blue,cyan,green \"npm:api\" \"npm:dev\" \"npm:whatsapp\"",
+    "test": "vitest run",
+    "build:api": "tsc -b && vite build --outDir ../ErpGerencial_Back/Orion.Api/wwwroot --emptyOutDir && node -e \"require('fs').writeFileSync('../ErpGerencial_Back/Orion.Api/wwwroot/.gitkeep', '')\""
   },
   "dependencies": {
+    "emoji-picker-element": "^1.29.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.3"
@@ -26,6 +28,7 @@
     "concurrently": "^10.0.5",
     "oxlint": "^1.79.0",
     "typescript": "~6.0.2",
-    "vite": "^8.2.2"
+    "vite": "^8.2.2",
+    "vitest": "5.0.3"
   }
 }

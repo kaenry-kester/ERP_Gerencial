@@ -1,99 +1,29 @@
 """
-Robô de mensagens automáticas do Órion (WhatsApp).
+Ferramentas do WhatsApp do Órion (Evolution API, pasta evolution-api).
 
-A cada minuto olha o banco e, quando chega o horário do envio de um cliente, envia a mensagem pelo
-WhatsApp (Evolution API, pasta evolution-api). O horário vem do cadastro do cliente: mensalmente (a cada N meses, às 6h, no mesmo dia do
-mês em que o intervalo foi salvo; depois de enviar, o robô marca o próximo) ou numa data e hora
-específica (uma vez só; depois do envio, fica vazio). A mensagem é a personalizada do cliente ou, se ele não tiver, a mensagem padrão
-(da lista de clientes). Cada envio fica em envios_whatsapp (histórico da página "Mensagem automática").
+O envio automático das mensagens agora é feito pela própria API (Orion.Api, WhatsApp/EnvioAutomatico.cs), em segundo
+plano: não é preciso deixar nenhum robô aberto. Este arquivo ficou só com os comandos para conectar o celular que envia
+e para mandar uma mensagem de teste.
 
 Comandos (dentro da pasta ErpGerencial_Automacao, com o ambiente .venv):
-    python lembretes.py                         roda sem parar (verifica a cada minuto)
-    python lembretes.py --uma-vez               verifica uma vez
     python lembretes.py conectar 16991039268    conecta o WhatsApp desse celular (código ou QR Code)
     python lembretes.py testar 16991039268 16999998888 "Olá!"   envia uma mensagem de teste
 
 Configuração no arquivo .env (veja .env.exemplo):
-    ORION_BANCO                conexão com o PostgreSQL
-    WHATSAPP_MODO              "envio" (envia de verdade) ou "teste" (só registra, nada sai)
     EVOLUTION_URL              endereço da Evolution API (padrão: http://localhost:8080)
     EVOLUTION_CHAVE            chave da Evolution API (AUTHENTICATION_API_KEY do evolution-api/.env)
-    VERIFICAR_A_CADA_SEGUNDOS  intervalo entre as verificações (padrão: 60)
 """
 
 import argparse
-import logging
 import os
-import random
 import re
 import sys
 import time
-from datetime import date
-from itertools import groupby
 from pathlib import Path
-
-import psycopg
-from psycopg.rows import dict_row
 
 from whatsapp import CONECTADO, ErroEnvio, EvolutionAPI
 
 PASTA = Path(__file__).resolve().parent
-log = logging.getLogger("lembretes")
-
-# Envios com data e hora já vencidas (marcadas no cadastro do cliente).
-SQL_PENDENTES = """
-SELECT c.id AS cliente_id, c.nome, c.celular,
-       e.id AS empresa_id, e.nome AS empresa, e.whatsapp_remetente AS remetente,
-       coalesce(c.mensagem_whatsapp, e.mensagem_manutencao) AS modelo,
-       (c.envio_em AT TIME ZONE 'America/Sao_Paulo')::date AS data,
-       c.envio_em
-FROM clientes c
-JOIN empresas e ON e.id = c.empresa_id
-WHERE c.envio_em IS NOT NULL AND c.envio_em <= now()
-ORDER BY e.whatsapp_remetente NULLS FIRST, c.envio_em
-"""
-
-SQL_REGISTRAR = """
-INSERT INTO envios_whatsapp (id, empresa_id, cliente_id, data_referencia, tipo, telefone, mensagem, status, erro, criado_em)
-VALUES (gen_random_uuid(), %(empresa_id)s, %(cliente_id)s, %(data)s, 'agendado', %(telefone)s, %(mensagem)s,
-        %(status)s, %(erro)s, now())
-"""
-
-# Depois do envio (se a pessoa não tiver mudado a data enquanto isso):
-#   mensalmente -> marca o próximo: mesmo dia, N meses à frente, às 6h de Brasília. Se o robô ficou
-#                  parado por meses, pula direto para o próximo ciclo que ainda está no futuro
-#                  (assim não manda a mesma mensagem várias vezes seguidas);
-#   data específica -> apaga o horário (era uma vez só).
-SQL_PROXIMO_ENVIO = """
-UPDATE clientes c SET envio_em = CASE
-    WHEN c.tipo_intervalo = 'meses' AND c.intervalo_manutencao_meses IS NOT NULL THEN
-        ((dia + make_interval(months => c.intervalo_manutencao_meses * (meses_passados / c.intervalo_manutencao_meses + 1)))::date
-          + time '06:00') AT TIME ZONE 'America/Sao_Paulo'
-    ELSE NULL END
-FROM (
-    SELECT (envio_em AT TIME ZONE 'America/Sao_Paulo')::date AS dia,
-           (extract(year FROM age(now() AT TIME ZONE 'America/Sao_Paulo', envio_em AT TIME ZONE 'America/Sao_Paulo')) * 12
-            + extract(month FROM age(now() AT TIME ZONE 'America/Sao_Paulo', envio_em AT TIME ZONE 'America/Sao_Paulo')))::int AS meses_passados
-    FROM clientes WHERE id = %(cliente_id)s
-) ciclo
-WHERE c.id = %(cliente_id)s AND c.envio_em = %(envio_em)s
-"""
-
-# Quantas mensagens cada celular já enviou hoje (horário de Brasília), para o limite diário.
-SQL_ENVIADAS_HOJE = """
-SELECT count(*) AS total
-FROM envios_whatsapp w
-JOIN empresas e ON e.id = w.empresa_id
-WHERE e.whatsapp_remetente = %(remetente)s
-  AND w.status IN ('enviado', 'teste')
-  AND (w.criado_em AT TIME ZONE 'America/Sao_Paulo')::date = (now() AT TIME ZONE 'America/Sao_Paulo')::date
-"""
-
-# Ritmo de envio de cada celular: a partir de quando ele pode mandar a próxima mensagem (relógio do robô).
-PROXIMO_LIBERADO: dict[str, float] = {}
-
-SEM_CELULAR = "Configure o Número remetente em Clientes > Mensagem automática"
-SEM_MENSAGEM = "Sem mensagem: escreva a mensagem padrão (lista de clientes) ou a personalizada do cliente"
 
 
 def carregar_env() -> None:
@@ -106,114 +36,6 @@ def carregar_env() -> None:
         if linha and not linha.startswith("#") and "=" in linha:
             chave, valor = linha.split("=", 1)
             os.environ.setdefault(chave.strip(), valor.strip())
-
-
-def montar(modelo: str, nome: str, data: date, empresa: str) -> str:
-    """Troca {nome} (primeiro nome do cliente), {data} e {empresa} no texto digitado no site."""
-    primeiro_nome = nome.split()[0] if nome.split() else nome
-    trocas = {"nome": primeiro_nome, "data": data.strftime("%d/%m/%Y"), "empresa": empresa}
-    return re.sub(r"\{(nome|data|empresa)\}", lambda m: trocas[m.group(1).lower()], modelo, flags=re.IGNORECASE).strip()
-
-
-def mensagem_de(envio: dict) -> str:
-    return montar(envio["modelo"] or "", envio["nome"], envio["data"], envio["empresa"])
-
-
-def registrar(conexao, envio: dict, mensagem: str, status: str, erro: str | None = None) -> None:
-    """Grava o resultado no histórico e marca o próximo envio do cliente (ou apaga, na data específica)."""
-    conexao.execute(SQL_REGISTRAR, {
-        "empresa_id": envio["empresa_id"], "cliente_id": envio["cliente_id"], "data": envio["data"],
-        "telefone": envio["celular"], "mensagem": mensagem, "status": status, "erro": erro,
-    })
-    conexao.execute(SQL_PROXIMO_ENVIO, {"cliente_id": envio["cliente_id"], "envio_em": envio["envio_em"]})
-    conexao.commit()
-
-
-def ritmo() -> tuple[int, float, float]:
-    """Limite diário por celular e o intervalo sorteado entre uma mensagem e outra (segundos), do .env."""
-    limite = int(os.environ.get("LIMITE_DIARIO", "40"))
-    minimo = float(os.environ.get("ESPACO_MIN_SEGUNDOS", "120"))
-    maximo = float(os.environ.get("ESPACO_MAX_SEGUNDOS", "300"))
-    return limite, minimo, max(minimo, maximo)
-
-
-def processar(conexao, envios: list[dict], modo: str) -> None:
-    """
-    Envia as mensagens vencidas, com cuidado para o número não ser bloqueado:
-      - uma de cada vez por celular, com um intervalo sorteado entre elas (ESPACO_MIN/MAX_SEGUNDOS):
-        se muitas vencerem juntas (ex.: às 6h), elas saem espalhadas ao longo da manhã;
-      - no máximo LIMITE_DIARIO mensagens por celular por dia; o resto fica para o dia seguinte.
-    As que não saem agora continuam marcadas e são enviadas nas próximas verificações.
-    """
-    # Sem celular que envia ou sem mensagem: nem tenta enviar, só registra o motivo.
-    for e in envios:
-        if not e["remetente"] or not e["modelo"]:
-            motivo = SEM_CELULAR if not e["remetente"] else SEM_MENSAGEM
-            registrar(conexao, e, mensagem_de(e), "erro", motivo)
-            log.warning("Não enviada para %s: %s", e["nome"], motivo)
-    prontos = sorted((e for e in envios if e["remetente"] and e["modelo"]), key=lambda e: (e["remetente"], e["envio_em"]))
-    limite, espaco_min, espaco_max = ritmo()
-
-    for remetente, grupo in groupby(prontos, key=lambda e: e["remetente"]):
-        if time.monotonic() < PROXIMO_LIBERADO.get(remetente, 0):
-            continue  # ainda no intervalo entre uma mensagem e outra deste celular
-        enviadas = conexao.execute(SQL_ENVIADAS_HOJE, {"remetente": remetente}).fetchone()["total"]
-        if enviadas >= limite:
-            log.info("Celular %s já enviou %s mensagens hoje (limite %s): as outras ficam para amanhã.",
-                     remetente, enviadas, limite)
-            continue
-        # Uma por vez (com intervalo); sem intervalo configurado (0), todas as que couberem no limite.
-        pendentes = list(grupo)
-        lista = pendentes[: 1 if espaco_max > 0 else limite - enviadas]
-
-        if modo == "teste":
-            for e in lista:
-                mensagem = mensagem_de(e)
-                log.info("[modo teste] De +55%s para +55%s:\n%s", remetente, e["celular"], mensagem)
-                registrar(conexao, e, mensagem, "teste")
-        else:
-            whatsapp = EvolutionAPI(remetente)
-            try:
-                conectado = whatsapp.conectado()
-            except ErroEnvio as erro:
-                # Evolution fora do ar (ou ainda subindo): não gasta o envio, tenta de novo na próxima verificação.
-                log.warning("%s. Tento de novo na próxima verificação.", erro)
-                return
-            if not conectado:
-                motivo = f"WhatsApp de {remetente} desconectado: rode 'python lembretes.py conectar {remetente}'"
-                log.error(motivo)
-                for e in lista:
-                    registrar(conexao, e, mensagem_de(e), "erro", motivo)
-                continue
-            for i, e in enumerate(lista):
-                mensagem = mensagem_de(e)
-                try:
-                    whatsapp.enviar(e["celular"], mensagem)
-                    registrar(conexao, e, mensagem, "enviado")
-                    log.info("Enviada para %s (+55%s).", e["nome"], e["celular"])
-                except ErroEnvio as erro:
-                    registrar(conexao, e, mensagem, "erro", str(erro))
-                    log.warning("Não enviada para %s (+55%s): %s", e["nome"], e["celular"], erro)
-                # Sem intervalo configurado: pequena pausa entre uma e outra, como uma pessoa faria.
-                if i < len(lista) - 1:
-                    time.sleep(random.uniform(4, 9))
-
-        # Próxima mensagem deste celular só depois de um intervalo sorteado (não fica um padrão fixo).
-        if espaco_max > 0:
-            espera = random.uniform(espaco_min, espaco_max)
-            PROXIMO_LIBERADO[remetente] = time.monotonic() + espera
-            if len(pendentes) > len(lista):
-                log.info("Próxima mensagem de %s em %.0f minuto(s).", remetente, espera / 60)
-
-
-def verificar(conexao, modo: str) -> int:
-    """Envia as mensagens cujo horário já chegou. Devolve quantas processou."""
-    envios = conexao.execute(SQL_PENDENTES).fetchall()
-    if not envios:
-        return 0
-    log.info("%s mensagem(ns) com o horário de envio vencido.", len(envios))
-    processar(conexao, envios, modo)
-    return len(envios)
 
 
 def so_digitos(valor: str) -> str:
@@ -287,15 +109,12 @@ def conectar(celular: str, minutos: int = 5) -> int:
 
 
 def main() -> int:
-    # Acentos certos no terminal do Windows (o log vai para o stderr)
+    # Acentos certos no terminal do Windows
     sys.stdout.reconfigure(encoding="utf-8")
-    sys.stderr.reconfigure(encoding="utf-8")
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(message)s", datefmt="%d/%m %H:%M:%S")
     carregar_env()
 
-    parser = argparse.ArgumentParser(description="Mensagens automáticas de manutenção pelo WhatsApp.")
-    parser.add_argument("--uma-vez", action="store_true", help="verifica uma vez e termina")
-    comandos = parser.add_subparsers(dest="comando")
+    parser = argparse.ArgumentParser(description="Ferramentas do WhatsApp do Órion (o envio automático é feito pela API).")
+    comandos = parser.add_subparsers(dest="comando", required=True)
     comando_conectar = comandos.add_parser("conectar", help="conecta o WhatsApp de um celular (código ou QR Code)")
     comando_conectar.add_argument("celular")
     testar = comandos.add_parser("testar", help="envia uma mensagem de teste agora")
@@ -308,37 +127,16 @@ def main() -> int:
         if args.comando == "conectar":
             return conectar(so_digitos(args.celular))
 
-        if args.comando == "testar":
-            whatsapp = EvolutionAPI(so_digitos(args.remetente))
-            if not whatsapp.conectado():
-                print(f"WhatsApp desconectado. Rode: python lembretes.py conectar {so_digitos(args.remetente)}")
-                return 1
-            whatsapp.enviar(so_digitos(args.destino), args.mensagem)
-            print("Mensagem enviada.")
-            return 0
+        whatsapp = EvolutionAPI(so_digitos(args.remetente))
+        if not whatsapp.conectado():
+            print(f"WhatsApp desconectado. Rode: python lembretes.py conectar {so_digitos(args.remetente)}")
+            return 1
+        whatsapp.enviar(so_digitos(args.destino), args.mensagem)
+        print("Mensagem enviada.")
+        return 0
     except ErroEnvio as erro:
         print(f"Não deu certo: {erro}")
         return 1
-
-    banco = os.environ.get("ORION_BANCO")
-    if not banco:
-        print("Configure ORION_BANCO no arquivo .env (veja .env.exemplo).")
-        return 1
-    modo = os.environ.get("WHATSAPP_MODO", "web").lower()
-    segundos = int(os.environ.get("VERIFICAR_A_CADA_SEGUNDOS", "60"))
-    log.info("Robô de mensagens automáticas iniciado (modo %s, verifica a cada %s segundos).", modo, segundos)
-
-    while True:
-        try:
-            with psycopg.connect(banco, row_factory=dict_row) as conexao:
-                verificar(conexao, modo)
-        except Exception:  # o robô não pode parar por causa de uma falha passageira (banco fora, Evolution reiniciando...)
-            log.exception("Falha ao verificar os envios agendados")
-            if args.uma_vez:
-                return 1
-        if args.uma_vez:
-            return 0
-        time.sleep(segundos)
 
 
 if __name__ == "__main__":

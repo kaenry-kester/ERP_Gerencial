@@ -32,6 +32,12 @@ public class Produto
     public string? Voltagem { get; set; }
     public string? Observacao { get; set; }
 
+    /// <summary>Unidade de venda (UN, KG, M, CX...).</summary>
+    public string Unidade { get; set; } = "UN";
+    /// <summary>Abaixo disso, o produto aparece como "estoque baixo".</summary>
+    public decimal EstoqueMinimo { get; set; }
+
+
     public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
     public DateTime AtualizadoEm { get; set; } = DateTime.UtcNow;
 }

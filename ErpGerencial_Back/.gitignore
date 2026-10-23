@@ -480,3 +480,7 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Site compilado (npm run build:api no ErpGerencial_Front); a pasta fica (vazia) para a API sempre achá-la
+Orion.Api/wwwroot/*
+!Orion.Api/wwwroot/.gitkeep

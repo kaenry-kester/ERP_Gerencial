@@ -21,6 +21,7 @@ import FaixaPagina from './FaixaPagina'
 import { MODULOS } from './modulos'
 import SecaoPagina from './SecaoPagina'
 import SemAcesso from './SemAcesso'
+import { avisarSalvo } from '../../components/aviso-salvo/avisarSalvo'
 import '../../styles/acesso.css'
 
 type Campo = 'nome' | 'email' | 'telefone' | 'senha'
@@ -101,6 +102,9 @@ export default function UsuarioFormPage() {
       else if (!emailValido(email)) erros.email = 'E-mail inválido'
       if (!senha) erros.senha = 'Crie uma senha'
       else if (requisitosSenha(senha).some((r) => !r.atendido)) erros.senha = 'Faltam requisitos'
+    } else if (senha && requisitosSenha(senha).some((r) => !r.atendido)) {
+      // Na edição, a senha nova é opcional (vazio = mantém a atual)
+      erros.senha = 'Faltam requisitos'
     }
     return erros
   }
@@ -123,10 +127,10 @@ export default function UsuarioFormPage() {
       if (novo) {
         await criarUsuario(sessao.token, { nome, email, telefone, senha, administrador })
       } else {
-        await editarUsuario(sessao.token, id!, { nome, telefone, administrador, ativo })
+        await editarUsuario(sessao.token, id!, { nome, telefone, administrador, ativo, novaSenha: senha || null })
       }
-      const texto = novo ? 'Usuário criado.' : 'Usuário atualizado.'
-      navigate('/app/usuarios', { state: { aviso: { tipo: 'ok', texto } } })
+      avisarSalvo(novo ? 'Usuário cadastrado com sucesso' : 'Alterações feitas com sucesso', 'Usuário')
+      navigate('/app/usuarios')
     } catch (erro) {
       if (sessaoExpirada(erro)) return
       if (erro instanceof ErroApi && erro.campo === 'email') {
@@ -216,6 +220,22 @@ export default function UsuarioFormPage() {
                   erro={erros.senha}
                 />
                 <RequisitosSenha id="requisitos-senha" senha={senha} />
+              </>
+            )}
+
+            {/* Sem e-mail de recuperação: quem esquece a senha pede ao administrador, que define uma nova aqui */}
+            {!novo && (
+              <>
+                <CampoSenha
+                  id="senha"
+                  rotulo="Nova senha (deixe em branco para manter a atual)"
+                  autoComplete="new-password"
+                  descricaoId="requisitos-senha"
+                  valor={senha}
+                  onChange={setSenha}
+                  erro={erros.senha}
+                />
+                {senha && <RequisitosSenha id="requisitos-senha" senha={senha} />}
               </>
             )}
           </div>

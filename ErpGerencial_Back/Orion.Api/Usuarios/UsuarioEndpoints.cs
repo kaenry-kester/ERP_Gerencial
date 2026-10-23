@@ -9,7 +9,8 @@ namespace Orion.Api.Usuarios;
 
 public record CriarUsuarioRequest(string Nome, string Email, string? Telefone, string Senha, bool Administrador);
 
-public record EditarUsuarioRequest(string Nome, string? Telefone, bool Administrador, bool Ativo);
+/// <summary>NovaSenha: o administrador define uma senha nova para a pessoa (vazio = mantém a atual).</summary>
+public record EditarUsuarioRequest(string Nome, string? Telefone, bool Administrador, bool Ativo, string? NovaSenha = null);
 
 /// <summary>
 /// "Usuários e permissões" (como em Preferências → Usuários do Bling): o administrador
@@ -79,7 +80,7 @@ public static class UsuarioEndpoints
     }
 
     private static async Task<IResult> Editar(
-        Guid id, EditarUsuarioRequest req, ClaimsPrincipal user, OrionDbContext db)
+        Guid id, EditarUsuarioRequest req, ClaimsPrincipal user, OrionDbContext db, IPasswordHasher<Usuario> hasher)
     {
         var (admin, negado) = await Administrador(user, db);
         if (admin is null) return negado!;
@@ -88,6 +89,7 @@ public static class UsuarioEndpoints
         if (alvo is null) return Results.NotFound();
 
         var erros = Validacao.EdicaoUsuario(req);
+        if (!string.IsNullOrEmpty(req.NovaSenha)) Validacao.Senha(erros, "novaSenha", req.NovaSenha);
         if (erros.Count > 0) return Results.ValidationProblem(erros);
 
         // Quem edita a si mesmo não pode se tirar de administrador nem se desativar (ficaria sem acesso).
@@ -99,6 +101,8 @@ public static class UsuarioEndpoints
         alvo.Administrador = req.Administrador;
         alvo.Permissoes = Permissoes.De(req.Administrador);
         alvo.Ativo = req.Ativo;
+        // Sem e-mail de recuperação (programa da loja), quem esquece a senha pede ao administrador
+        if (!string.IsNullOrEmpty(req.NovaSenha)) alvo.SenhaHash = hasher.HashPassword(alvo, req.NovaSenha);
 
         await db.SaveChangesAsync();
         return Results.Ok(UsuarioAtual.Dto(alvo));

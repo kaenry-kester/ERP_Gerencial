@@ -18,7 +18,9 @@ public record ProdutoRequest(
     string? Modelo,
     string? Cor,
     string? Voltagem,
-    string? Observacao);
+    string? Observacao,
+    string? Unidade = null,
+    decimal? EstoqueMinimo = null);
 
 public record ProdutoDto(
     Guid Id,
@@ -38,7 +40,11 @@ public record ProdutoDto(
     DateTime CriadoEm,
     DateTime AtualizadoEm,
     /// <summary>Ids das imagens na ordem da galeria; a primeira é a capa (endereço: /api/produtos/imagens/{id}).</summary>
-    List<Guid> Imagens);
+    List<Guid> Imagens,
+    string Unidade,
+    decimal EstoqueMinimo,
+    /// <summary>Quantidade no mínimo ou abaixo dele.</summary>
+    bool EstoqueBaixo);
 
 public record ListaProdutos(List<ProdutoDto> Itens, int Total, int Pagina, int TamanhoPagina);
 
@@ -63,7 +69,8 @@ public static class ProdutoEndpoints
     }
 
     /// <summary>Lista paginada (50 por página), mais novos primeiro; busca por nome, código, código de barras, marca ou modelo.</summary>
-    private static async Task<IResult> Listar(ClaimsPrincipal user, OrionDbContext db, string? busca, int? pagina)
+    private static async Task<IResult> Listar(
+        ClaimsPrincipal user, OrionDbContext db, string? busca, int? pagina)
     {
         var (usuario, negado) = await Permissoes.Exigir(user, db, Permissoes.Produtos);
         if (usuario is null) return negado!;
@@ -82,8 +89,11 @@ public static class ProdutoEndpoints
 
         var numeroPagina = Math.Max(1, pagina ?? 1);
         var total = await consulta.CountAsync();
+        // O produto com o código (ou código de barras) igual ao buscado vem primeiro (ex.: leitura do leitor).
+        var exato = busca?.Trim() ?? "";
         var itens = await consulta
-            .OrderByDescending(p => p.Numero)
+            .OrderByDescending(p => p.CodigoBarras == exato || p.Codigo == exato)
+            .ThenByDescending(p => p.Numero)
             .Skip((numeroPagina - 1) * TamanhoPagina)
             .Take(TamanhoPagina)
             .ToListAsync();
@@ -111,6 +121,10 @@ public static class ProdutoEndpoints
         var produto = new Produto { EmpresaId = usuario.EmpresaId, Nome = "" };
         Preencher(produto, req);
         db.Produtos.Add(produto);
+        // O estoque inicial também fica no histórico de movimentações
+        var inicial = produto.Quantidade;
+        produto.Quantidade = 0;
+        if (inicial != 0) Estoque.Movimentar(db, produto, "inicial", inicial, usuario, produto.PrecoCusto);
 
         // O ID sequencial é o maior da empresa + 1; se dois cadastros chegarem juntos, tenta de novo.
         for (var tentativa = 0; ; tentativa++)
@@ -143,7 +157,13 @@ public static class ProdutoEndpoints
         var erros = Validar(req);
         if (erros.Count > 0) return Results.ValidationProblem(erros);
 
+        var quantidadeAntes = produto.Quantidade;
         Preencher(produto, req);
+        // Quantidade mudada no cadastro: vira um ajuste no histórico
+        var novaQuantidade = produto.Quantidade;
+        produto.Quantidade = quantidadeAntes;
+        if (novaQuantidade != quantidadeAntes)
+            Estoque.Movimentar(db, produto, "ajuste", novaQuantidade - quantidadeAntes, usuario, observacao: "Alterado no cadastro do produto");
         produto.AtualizadoEm = DateTime.UtcNow;
         try
         {
@@ -215,7 +235,11 @@ public static class ProdutoEndpoints
         Valor("precoCusto", req.PrecoCusto);
         Valor("precoVendaPf", req.PrecoVendaPf);
         Valor("precoVendaPj", req.PrecoVendaPj);
-        Valor("quantidade", req.Quantidade);
+        if (req.Quantidade is < -999_999_999m or > 999_999_999m) erros["quantidade"] = ["Quantidade inválida"];
+        Valor("estoqueMinimo", req.EstoqueMinimo);
+
+        var unidade = req.Unidade?.Trim() ?? "";
+        if (unidade.Length > 6) erros["unidade"] = ["Máximo de 6 letras"];
         return erros;
     }
 
@@ -234,11 +258,14 @@ public static class ProdutoEndpoints
         p.Cor = Opcional(req.Cor);
         p.Voltagem = Opcional(req.Voltagem);
         p.Observacao = Opcional(req.Observacao);
+        p.Unidade = Opcional(req.Unidade)?.ToUpperInvariant() ?? "UN";
+        p.EstoqueMinimo = Math.Round(req.EstoqueMinimo ?? 0, 3);
     }
 
     private static ProdutoDto Dto(Produto p, List<Guid>? imagens) =>
         new(p.Id, p.Numero, p.Nome, p.Codigo, p.CodigoBarras, p.PrecoCusto, p.PrecoVendaPf, p.PrecoVendaPj, p.Quantidade,
-            p.Marca, p.Modelo, p.Cor, p.Voltagem, p.Observacao, p.CriadoEm, p.AtualizadoEm, imagens ?? []);
+            p.Marca, p.Modelo, p.Cor, p.Voltagem, p.Observacao, p.CriadoEm, p.AtualizadoEm, imagens ?? [],
+            p.Unidade, p.EstoqueMinimo, Estoque.Baixo(p));
 
     private static async Task<ProdutoDto> DtoComImagens(OrionDbContext db, Produto p) =>
         Dto(p, (await ProdutoImagemEndpoints.IdsPorProduto(db, [p.Id])).GetValueOrDefault(p.Id));

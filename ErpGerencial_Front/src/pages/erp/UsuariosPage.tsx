@@ -56,7 +56,7 @@ export default function UsuariosPage() {
   }
 
   const novoUsuario = (
-    <Link to="/app/usuarios/novo" className="pagina-botao marrom">
+    <Link to="/app/usuarios/novo" className="pagina-botao marinho">
       <IconeCadastro tamanho={20} />
       Novo usuário
     </Link>

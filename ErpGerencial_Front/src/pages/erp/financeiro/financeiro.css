@@ -1,0 +1,436 @@
+/*
+  Financeiro: filtros numa linha, indicadores grandes com desenho, gráficos de uma série só
+  (uma cor: o azul da marca), rankings e o registro de vendas. Sem bordas: cartões brancos sobre o fundo.
+*/
+
+.pagina.tema-financeiro {
+  --pg-faixa-1: #2b2c2e;
+  --pg-faixa-2: var(--preto);
+  --pg-suave: #cfd6db;
+  --pg-lado: #d9e0e5;
+  --pg-cor: var(--cinza-escuro);
+  --pg-titulo: var(--preto);
+  --pg-zebra: #f5f7f8;
+  /* Cor da série nos gráficos (contraste alto sobre o branco) */
+  --serie: var(--azul);
+  --serie-ativa: var(--azul-escuro);
+}
+
+/* Fundo da página um pouco mais escuro que o resto do site: os cartões brancos se destacam mais */
+.pagina.tema-financeiro {
+  background: #e1e6ea;
+}
+
+/* ---------- Filtros ---------- */
+
+.fin-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem 0.9rem;
+  padding: 0.75rem var(--erp-lado);
+  background: var(--pg-lado);
+}
+
+.fin-atalhos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-right: auto;
+}
+
+.fin-atalho {
+  min-height: 40px;
+  padding: 0.3rem 0.85rem;
+  border: none;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--cinza-escuro);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.25s ease,
+    filter 0.25s ease;
+}
+
+.fin-atalho:hover {
+  filter: brightness(0.96);
+}
+
+.fin-atalho.marcado {
+  background: var(--grad-escuro);
+  color: var(--branco);
+}
+
+.fin-filtro {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.fin-filtro span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--texto-suave);
+}
+
+.fin-filtro input,
+.fin-filtro select,
+.fin-registro-acoes select {
+  min-height: 40px;
+  padding: 0.25rem 0.6rem;
+  border: none;
+  border-radius: 3px;
+  background: #fff;
+  color: var(--texto);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+/* ---------- Corpo ---------- */
+
+.fin-corpo {
+  display: grid;
+  gap: 1rem;
+}
+
+.fin-periodo {
+  font-weight: 700;
+  color: var(--texto-suave);
+}
+
+/* Indicadores: cinco quadros do mesmo tamanho — desenho + título numa linha, valor grande na largura toda */
+.fin-indicadores {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
+  gap: 0.75rem;
+}
+
+.fin-indicador {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem 0.9rem;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.fin-indicador-topo {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.fin-indicador-emoji {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 4px;
+  background: var(--pg-lado);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.fin-indicador-rotulo {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--texto-suave);
+}
+
+.fin-indicador-valor {
+  margin-top: 0.15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(1.15rem, 1.35vw, 1.5rem);
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--texto);
+  font-variant-numeric: tabular-nums;
+}
+
+.fin-indicador-variacao,
+.fin-indicador-extra {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  color: var(--texto-suave);
+}
+
+.fin-indicador-variacao {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: var(--pg-lado);
+  font-weight: 700;
+}
+
+.fin-indicador-variacao.sobe {
+  background: #dcf1e2;
+  color: #1e6b3a;
+}
+
+.fin-indicador-variacao.desce {
+  background: var(--erro-fundo);
+  color: var(--erro);
+}
+
+/* 5 por linha só em telas largas; em notebooks 3 em cima e 2 mais largos embaixo; 2 no celular (o valor nunca é cortado) */
+@media (max-width: 1499px) {
+  .fin-indicadores {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .fin-indicadores > * {
+    grid-column: span 2;
+  }
+
+  .fin-indicadores > :nth-child(n + 4) {
+    grid-column: span 3;
+  }
+}
+
+@media (max-width: 640px) {
+  .fin-indicadores {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .fin-indicadores > *,
+  .fin-indicadores > :nth-child(n + 4) {
+    grid-column: span 1;
+  }
+
+  /* O quinto quadro sozinho na última linha: largura toda */
+  .fin-indicadores > :nth-child(5) {
+    grid-column: 1 / -1;
+  }
+
+  .fin-indicador {
+    padding: 0.7rem 0.75rem;
+  }
+
+  .fin-indicador-valor {
+    font-size: clamp(0.9rem, 4.1vw, 1.1rem);
+  }
+
+  .fin-indicador-rotulo {
+    font-size: 0.68rem;
+    letter-spacing: 0.02em;
+  }
+
+  .fin-indicador-topo {
+    gap: 0.4rem;
+  }
+
+  .fin-indicador-emoji {
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  /* No celular, título e detalhe podem ir para a segunda linha */
+  .fin-indicador-rotulo,
+  .fin-indicador-extra {
+    white-space: normal;
+  }
+}
+
+.fin-cartao {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.fin-cartao h2 {
+  font-size: 1.02rem;
+  color: var(--texto);
+}
+
+.fin-cartao-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.fin-dica {
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+}
+
+.fin-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: 1rem;
+}
+
+.fin-registro-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.fin-registro-acoes select {
+  background: var(--pg-lado);
+}
+
+/* ---------- Gráfico de colunas ---------- */
+
+.grafico {
+  position: relative;
+  width: 100%;
+}
+
+.grafico svg {
+  display: block;
+  max-width: 100%;
+}
+
+.grafico-grade {
+  stroke: #e6eaed;
+  stroke-width: 1;
+}
+
+.grafico-base {
+  stroke: #b9c2c9;
+  stroke-width: 1;
+}
+
+.grafico-eixo {
+  fill: var(--texto-suave);
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
+.grafico-barra {
+  fill: var(--serie);
+  transition: fill 0.2s ease;
+}
+
+.grafico-barra.ativa {
+  fill: var(--serie-ativa);
+}
+
+.grafico-alvo.clicavel {
+  cursor: pointer;
+}
+
+.grafico-dica {
+  position: absolute;
+  top: 0;
+  z-index: 3;
+  display: grid;
+  gap: 0.05rem;
+  min-width: 9rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 4px;
+  background: var(--grad-escuro);
+  color: var(--branco);
+  font-size: 0.82rem;
+  box-shadow: var(--sombra);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.grafico-dica strong {
+  text-transform: capitalize;
+}
+
+.grafico-vazio {
+  color: var(--texto-suave);
+}
+
+/* ---------- Ranking (barras horizontais) ---------- */
+
+.ranking {
+  list-style: none;
+  display: grid;
+  gap: 0.6rem;
+  padding: 0;
+  margin: 0;
+}
+
+.ranking li {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.ranking-textos {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.ranking-nome {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ranking-valor {
+  flex-shrink: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.ranking-trilho {
+  height: 10px;
+  border-radius: 999px;
+  background: #eef1f3;
+  overflow: hidden;
+}
+
+.ranking-barra {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--serie);
+}
+
+.ranking-extra {
+  font-size: 0.76rem;
+  color: var(--texto-suave);
+}
+
+@media (max-width: 700px) {
+  .fin-atalhos {
+    margin-right: 0;
+    width: 100%;
+  }
+
+  .fin-filtro {
+    flex: 1 1 8rem;
+  }
+
+  .fin-grade {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Registro de vendas: sem tabela na tela, só o total do filtro (o registro completo sai na planilha) */
+.fin-registro-resumo {
+  font-size: 0.92rem;
+  color: var(--texto-suave);
+}

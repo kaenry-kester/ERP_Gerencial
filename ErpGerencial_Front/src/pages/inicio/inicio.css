@@ -27,7 +27,7 @@
   /* Topo menor que o da área clara: o logo fica no canto superior esquerdo */
   padding: clamp(1rem, 3.5vh, 2rem) clamp(1.5rem, 5vw, 5rem) clamp(1.5rem, 6vh, 4rem)
     clamp(1.5rem, 7vw, 7rem);
-  background: var(--preto);
+  background: linear-gradient(160deg, var(--preto) 0%, #0e1318 60%, #141b26 100%);
   color: var(--branco);
 }
 
@@ -190,7 +190,7 @@
 .botao-grande.secundario .botao-grande-imagem {
   width: 80px;
   height: 80px;
-  background: var(--creme-claro);
+  background: var(--gelo-claro);
 }
 
 .botao-grande.secundario .botao-grande-descricao {

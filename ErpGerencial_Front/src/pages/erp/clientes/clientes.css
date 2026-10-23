@@ -67,34 +67,192 @@
   filter: brightness(0.95);
 }
 
-/* Prévia: balão de conversa, como o cliente vai ver */
+/* Prévia da mensagem (página Mensagem automática) */
 .mensagem-previa {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 0.35rem;
-  padding: 0.9rem 1rem;
-  border-radius: 4px;
-  background: var(--creme-claro);
+  gap: 0.4rem;
 }
 
-.mensagem-previa-rotulo {
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--marrom-escuro);
+/* ---------- Prévia no estilo do WhatsApp (BalaoMensagem) ---------- */
+
+/* Fundo da conversa, como no WhatsApp */
+.whatsapp-conversa {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.9rem;
+  border-radius: 4px;
+  background: #efeae2;
 }
 
-.mensagem-balao {
-  max-width: 34rem;
-  padding: 0.55rem 0.8rem;
+/* Mensagem enviada (verde do WhatsApp): a foto em cima, o texto de legenda e o horário */
+.whatsapp-balao {
+  position: relative;
+  max-width: min(100%, 22rem);
+  padding: 0.3rem 0.3rem 1.2rem;
+  border-radius: 6px 0 6px 6px;
+  background: #d9fdd3;
+  box-shadow: 0 1px 1px rgba(11, 10, 9, 0.13);
+}
+
+.whatsapp-balao img {
+  display: block;
+  width: 100%;
+  max-height: 240px;
+  object-fit: cover;
   border-radius: 4px;
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(11, 10, 9, 0.12);
-  line-height: 1.5;
+}
+
+.whatsapp-balao p {
+  padding: 0.3rem 0.45rem 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  color: #111b21;
+}
+
+.whatsapp-hora {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.25rem;
+  font-size: 0.68rem;
+  color: #667781;
+}
+
+.whatsapp-vazio {
+  width: 100%;
+  font-size: 0.86rem;
+  text-align: center;
+  color: var(--texto-suave);
+}
+
+/* ---------- Emojis e imagem da mensagem ---------- */
+
+.mensagem-extras {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+/* Botões grandes e ilustrados, lado a lado */
+.mensagem-ferramentas {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.mensagem-ferramenta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 64px;
+  padding: 0.6rem 0.9rem;
+  border: none;
+  border-radius: 4px;
+  background: var(--azul-claro);
+  font: inherit;
+  text-align: left;
+  color: var(--azul-escuro);
+  cursor: pointer;
+  transition: filter 0.25s ease, background-color 0.25s ease;
+}
+
+.mensagem-ferramenta:hover {
+  filter: brightness(0.96);
+}
+
+.mensagem-ferramenta.ativa {
+  background: var(--grad-azul);
+  color: #fff;
+}
+
+.mensagem-ferramenta:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.mensagem-ferramenta-icone {
+  flex-shrink: 0;
+  font-size: 1.9rem;
+  line-height: 1;
+}
+
+.mensagem-ferramenta strong {
+  display: block;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.mensagem-ferramenta small {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+/* Seletor de emojis (emoji-picker-element) logo abaixo dos botões, ocupando a linha toda (não fica cortado na janela) */
+.mensagem-emojis {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--cinza-claro);
+}
+
+.mensagem-emojis emoji-picker {
+  --num-columns: 10;
+  --emoji-size: 1.5rem;
+  --border-radius: 4px;
+  --border-color: transparent;
+  --indicator-color: var(--azul);
+  --input-border-radius: 3px;
+  --outline-color: var(--azul-vivo);
+  width: 100%;
+  height: 320px;
+}
+
+.mensagem-imagem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mensagem-imagem img {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--cinza-claro);
+}
+
+.mensagem-imagem-remover {
+  padding: 0.2rem 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--erro);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.mensagem-extras-erro {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--erro);
+}
+
+@media (max-width: 600px) {
+  .mensagem-ferramentas {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mensagem-emojis emoji-picker {
+    --num-columns: 8;
+  }
 }
 
 /* Histórico dos envios */
@@ -135,8 +293,8 @@
   color: var(--erro);
 }
 
-/* Mensagem personalizada do cliente: trechos e contagem de letras na mesma linha */
-.mensagem-dialogo-linha {
+/* Janela da mensagem: trechos e contagem de letras na mesma linha */
+.janela-mensagem-linha {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -144,7 +302,7 @@
   gap: 0.5rem 1rem;
 }
 
-.mensagem-dialogo-contagem {
+.janela-mensagem-contagem {
   font-size: 0.84rem;
   font-variant-numeric: tabular-nums;
   color: var(--texto-suave);
@@ -253,23 +411,411 @@
 /* ---------- Ficha do cliente (o visual da ficha vem de ../ficha.css) ---------- */
 
 /* Preenchido pela busca do CEP (até a pessoa mexer) */
-.ficha-campo.do-cep {
+.ficha-campo.do-cep > input {
   background: #eef3f6;
 }
 
-/* Prévia do envio: só leitura, em destaque */
-.ficha-previa {
-  background: #f7fafb;
+/* Topo: foto à esquerda (como no registro em papel), dados pessoais e telefones à direita */
+.ficha-topo {
+  display: grid;
+  grid-template-columns: clamp(118px, 12vw, 142px) minmax(0, 1fr);
+  gap: 0.75rem 1rem;
+  align-items: start;
 }
 
-.ficha-previa-valor {
-  min-height: 1.3rem;
+/* Base: endereço à esquerda e o calendário (maior) no canto direito */
+.ficha-base {
+  display: grid;
+  grid-template-columns: minmax(0, 5.7fr) minmax(0, 6.3fr);
+  gap: 0.75rem 1rem;
+  align-items: stretch;
+}
+
+/* ---------- Foto do cliente: o quadro abre a janela "Tirar foto" / "Fazer upload" ---------- */
+
+.foto-cliente {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+/* Retrato 3×4, com a mesma linha fina dos campos; o quadro inteiro é o botão */
+.foto-cliente-quadro {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  max-height: clamp(140px, 25vh, 200px);
+  padding: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.92rem;
+  border: 1px dashed var(--ficha-linha);
+  border-radius: 2px;
+  background: var(--azul-claro);
+  font: inherit;
+  cursor: pointer;
+  transition: filter 0.25s ease;
+}
+
+.foto-cliente-quadro:hover {
+  filter: brightness(0.96);
+}
+
+.foto-cliente-quadro:focus-visible {
+  outline: 2px solid var(--foco);
+  outline-offset: 2px;
+}
+
+.foto-cliente.com-erro .foto-cliente-quadro {
+  border-color: var(--erro);
+}
+
+.foto-cliente-quadro img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.foto-cliente-vazio {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: var(--azul-escuro);
+}
+
+/* "Trocar foto" aparece embaixo da foto ao passar o mouse */
+.foto-cliente-trocar {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 0.25rem;
+  background: rgba(15, 66, 85, 0.85);
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.foto-cliente-quadro:is(:hover, :focus-visible) .foto-cliente-trocar {
+  opacity: 1;
+}
+
+.foto-cliente-erro {
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--erro);
+}
+
+/* Janela da foto (mesmo visual da janela de envios) */
+.janela-foto {
+  width: min(560px, calc(100vw - 2rem));
+}
+
+.janela-foto-opcoes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+/* Botões grandes e ilustrados */
+.janela-foto-opcao {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 1.25rem 0.75rem;
+  border: none;
+  border-radius: 4px;
+  background: var(--azul-claro);
+  font: inherit;
+  color: var(--azul-escuro);
+  cursor: pointer;
+  transition: filter 0.25s ease;
+}
+
+.janela-foto-opcao:hover {
+  filter: brightness(0.95);
+}
+
+.janela-foto-opcao:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.janela-foto-opcao strong {
+  font-size: 1.05rem;
+}
+
+.janela-foto-opcao span {
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+}
+
+.janela-foto-camera {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Vídeo em retrato 3×4 (o mesmo recorte da foto salva), espelhado como um espelho */
+.janela-foto-video {
+  width: min(300px, 100%);
+  aspect-ratio: 3 / 4;
+  margin-inline: auto;
+  overflow: hidden;
+  border-radius: 4px;
+  background: linear-gradient(160deg, #15191e 0%, var(--preto) 100%);
+}
+
+.janela-foto-video video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+/* Escolha da webcam (quando o computador tem mais de uma) */
+.janela-foto-cameras {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--texto-suave);
+}
+
+.janela-foto-cameras select {
+  max-width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--borda);
+  border-radius: 3px;
+  background: #fff;
+  font: inherit;
+  font-weight: 500;
+  color: var(--texto);
+}
+
+.janela-foto-acoes {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.janela-foto-remover {
+  margin-top: 0.75rem;
+  padding: 0.3rem 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--erro);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.janela-foto-aviso {
+  margin-top: 0.75rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--erro);
+}
+
+/* ---------- Calendário do envio automático (canto inferior direito) ---------- */
+
+.ficha-envio {
+  display: flex;
+  flex-direction: column;
+  background: #f5f9fb;
+}
+
+.ficha-envio .ficha-topico {
+  margin-top: 0;
+}
+
+/* Calendário à esquerda; horário, datas agendadas e o botão de cancelar à direita */
+.ficha-envio-corpo {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 0.6rem;
+  padding: 0.35rem 0.6rem 0.45rem;
+}
+
+.calendario {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.1rem, 0.3vh, 0.25rem);
+}
+
+.calendario:focus {
+  outline: none;
+}
+
+.calendario-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.95rem;
+  color: var(--azul-escuro);
+}
+
+.calendario-topo button {
+  width: 32px;
+  height: clamp(20px, 2.8vh, 30px);
+  border: none;
+  border-radius: 2px;
+  background: var(--azul-claro);
+  font-size: 1.2rem;
+  line-height: 1;
+  color: var(--azul-escuro);
+  cursor: pointer;
+}
+
+.calendario-topo button:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
+.calendario-grade {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: clamp(1px, 0.3vh, 3px);
+}
+
+.calendario-semana {
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-align: center;
+  color: var(--texto-suave);
+}
+
+.calendario-dia {
+  height: clamp(22px, calc(5vh - 11px), 40px);
+  padding: 0;
+  border: none;
+  border-radius: 2px;
+  background: #fff;
+  font: inherit;
+  font-size: clamp(0.8rem, 1.5vh, 0.95rem);
+  font-variant-numeric: tabular-nums;
+  color: var(--texto);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.calendario-dia:hover:not(:disabled) {
+  background: var(--azul-claro);
+}
+
+.calendario-dia:disabled {
+  background: transparent;
+  color: #aab4bb;
+  cursor: default;
+}
+
+.calendario-dia.hoje {
+  box-shadow: inset 0 0 0 1px var(--azul);
+}
+
+/* Envios seguintes (a cada N meses) */
+.calendario-dia.agendado {
+  background: #c7dfe8;
+  font-weight: 700;
+  color: var(--azul-escuro);
+}
+
+/* O próximo envio, escolhido */
+.calendario-dia.escolhido {
+  background: var(--grad-azul);
+  font-weight: 800;
+  color: #fff;
+}
+
+.calendario.com-erro .calendario-grade {
+  outline: 1px solid var(--erro);
+}
+
+.ficha-envio-agenda {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  line-height: 1.3;
+  color: var(--texto-suave);
+}
+
+/* Horário: caixa estreita (só "09:30" e o relógio) */
+.ficha-envio-agenda .ficha-campo > input {
+  max-width: 8.5rem;
+}
+
+/* Coluna estreita: o rótulo do horário e o botão de cancelar quebram linha em vez de cortar */
+.ficha-envio-agenda .ficha-rotulo {
+  white-space: normal;
+}
+
+.ficha-envio-cancelar {
+  margin-top: auto;
+  min-height: 30px;
+  padding: 0.25rem 0.4rem;
+  border: none;
+  border-radius: 4px;
+  background: var(--erro);
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  transition: filter 0.25s ease;
+}
+
+.ficha-envio-cancelar:hover {
+  filter: brightness(0.94);
+}
+
+.ficha-envio-cancelar:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+/* Tablets e celulares: a base em uma coluna (calendário embaixo do endereço) */
+@media (max-width: 900px) {
+  .ficha-base {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Celular: a foto em cima dos dados; o calendário em cima do horário */
+@media (max-width: 600px) {
+  .ficha-topo,
+  .ficha-envio-corpo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .foto-cliente {
+    width: 150px;
+  }
+
+  .janela-foto-opcoes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* A nota fica dentro da grade do endereço (sem a margem de cima) */
+.ficha-grade > .ficha-nota {
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
 }
 
 .ficha-cep {
@@ -279,4 +825,354 @@
 
 .ficha-cep.erro {
   color: var(--erro);
+}
+
+/* ---------- Detalhes do cliente: foto ao lado dos contatos e dados pessoais ---------- */
+.detalhe-com-foto {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.detalhe-foto {
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--azul-claro);
+}
+
+.detalhe-foto img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.detalhe-foto span {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--azul-escuro);
+}
+
+.detalhe-grupos {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (max-width: 600px) {
+  .detalhe-com-foto {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .detalhe-foto {
+    width: 150px;
+  }
+}
+
+/* ---------- Página do cliente: ficha à esquerda, WhatsApp automático à direita ---------- */
+
+.cliente-detalhe {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.cliente-detalhe-ficha {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Painel do WhatsApp: superfície clara do tema, sem borda */
+.cliente-whatsapp {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem 1.1rem 1.1rem;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.cliente-whatsapp-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.cliente-whatsapp-topo h2 {
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pg-titulo);
+}
+
+.cliente-whatsapp-situacao {
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: var(--cinza-claro);
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--cinza-escuro);
+}
+
+.cliente-whatsapp-situacao.ativo {
+  background: #d9fdd3;
+  color: #1f5b2e;
+}
+
+.cliente-whatsapp-dados {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.cliente-whatsapp-dados > div {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.cliente-whatsapp-dados dt {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--texto-suave);
+}
+
+.cliente-whatsapp-dados dd {
+  font-weight: 700;
+  color: var(--texto);
+}
+
+.cliente-whatsapp-seguintes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0;
+  list-style: none;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--texto-suave);
+}
+
+.cliente-whatsapp-mensagem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.cliente-whatsapp-rotulo {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pg-titulo, var(--azul-escuro));
+}
+
+.cliente-whatsapp-dica {
+  font-size: 0.84rem;
+  color: var(--texto-suave);
+}
+
+.cliente-whatsapp-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cliente-whatsapp-acoes .pagina-botao {
+  flex: 1 1 auto;
+}
+
+@media (max-width: 1000px) {
+  .cliente-detalhe {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- Janela da mensagem do WhatsApp (Editar cliente) ---------- */
+
+.janela-mensagem {
+  width: min(980px, calc(100vw - 2rem));
+}
+
+/* Escrever à esquerda, prévia à direita */
+.janela-mensagem-corpo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.janela-mensagem-editor,
+.janela-mensagem-previa {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.janela-mensagem-rodape {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--superficie);
+}
+
+@media (max-width: 760px) {
+  .janela-mensagem-corpo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Botão "Mensagem do WhatsApp" na faixa do Calendário (Editar cliente) */
+/* Mensagem do WhatsApp: botão do tamanho dos outros, no pé da coluna do horário (alinhado ao fim do calendário) */
+.ficha-envio-mensagem {
+  margin-top: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.55rem;
+  width: 100%;
+  min-height: clamp(40px, 6vh, 48px);
+  padding: 0.35rem 0.75rem;
+  border: none;
+  border-radius: 4px;
+  background: var(--grad-azul);
+  font: inherit;
+  font-size: clamp(0.78rem, 0.95vw, 0.9rem);
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: left;
+  color: #fff;
+  cursor: pointer;
+  transition: filter 0.25s ease;
+}
+
+.ficha-envio-mensagem img {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+}
+
+.ficha-envio-mensagem:hover {
+  filter: brightness(0.94);
+}
+
+/* ---------- Conexão do WhatsApp que envia (Mensagem automática, seção 1) ---------- */
+.whatsapp-conexao {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.whatsapp-conexao-situacao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #f4f6f8 0%, var(--cinza-claro) 100%);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.whatsapp-conexao-situacao small {
+  flex-basis: 100%;
+  font-weight: 500;
+  color: var(--texto-suave);
+}
+
+.whatsapp-conexao.conectado .whatsapp-conexao-situacao {
+  background: linear-gradient(135deg, #e6f5ea 0%, #d4eedb 100%);
+  color: #1e6b3a;
+}
+
+.whatsapp-conexao.desconectado .whatsapp-conexao-situacao,
+.whatsapp-conexao.indisponivel .whatsapp-conexao-situacao {
+  background: linear-gradient(135deg, #fdf3e6 0%, #fbe7cc 100%);
+  color: #7a4a0c;
+}
+
+.whatsapp-conectar {
+  justify-self: start;
+}
+
+.whatsapp-conectar img {
+  width: 22px;
+  height: 22px;
+}
+
+/* QR Code ao lado dos passos (no celular, um embaixo do outro) */
+.whatsapp-qr {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  padding: 1rem;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #f7fafb 0%, var(--azul-claro) 100%);
+}
+
+.whatsapp-qr-imagem {
+  grid-row: span 2;
+  width: 240px;
+  height: 240px;
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+}
+
+.whatsapp-qr-imagem img {
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+.whatsapp-qr-passos {
+  display: grid;
+  gap: 0.4rem;
+  padding-left: 1.2rem;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.whatsapp-qr-codigo {
+  font-size: 1.15rem;
+  letter-spacing: 0.12em;
+  color: var(--azul);
+}
+
+.whatsapp-qr > .pagina-botao {
+  justify-self: start;
+}
+
+.whatsapp-conexao-erro {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--erro);
+}
+
+@media (max-width: 700px) {
+  .whatsapp-qr {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .whatsapp-qr-imagem {
+    grid-row: auto;
+    justify-self: center;
+  }
 }

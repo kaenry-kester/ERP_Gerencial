@@ -22,7 +22,7 @@ public class EmailService(IConfiguration config, IWebHostEnvironment ambiente, I
         && (string.IsNullOrWhiteSpace(config["Email:Usuario"]) || !string.IsNullOrWhiteSpace(config["Email:Senha"]));
 
     /// <summary>True quando o e-mail foi entregue ao servidor SMTP (ou mostrado no terminal, em desenvolvimento).</summary>
-    public async Task<bool> Enviar(string para, string assunto, string html, string texto, CancellationToken ct)
+    public virtual async Task<bool> Enviar(string para, string assunto, string html, string texto, CancellationToken ct)
     {
         if (!Configurado)
         {

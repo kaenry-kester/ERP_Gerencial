@@ -3,16 +3,20 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Orion.Api.Data;
-using Orion.Api.WhatsApp;
 
 namespace Orion.Api.Auth;
 
 public record CadastroRequest(string Nome, string Email, string Telefone, string NomeEmpresa, string Senha);
-/// <summary>Dispositivo: token do "Lembrar de quem sou", quando o navegador tem um.</summary>
-public record LoginRequest(string Email, string Senha, string? Dispositivo);
-public record VerificarCodigoRequest(Guid DesafioId, string Codigo, bool Lembrar);
-/// <summary>Canal: "email" ou "whatsapp"; vazio no "Reenviar código" = o mesmo da última vez.</summary>
-public record EnviarCodigoRequest(Guid DesafioId, string? Canal);
+/// <summary>Entra com e-mail ou com o celular (o mesmo cadastrado em Minha conta) e a senha.</summary>
+public record LoginRequest(string? Email, string? Telefone, string Senha);
+
+/// <summary>"Esqueci minha senha": o e-mail ou o celular da conta.</summary>
+public record EsqueciSenhaRequest(string? Email, string? Telefone);
+public record RedefinirSenhaRequest(Guid DesafioId, string Codigo, string NovaSenha);
+public record ReenviarSenhaRequest(Guid DesafioId);
+
+/// <summary>Resposta do "Esqueci minha senha": igual exista ou não a conta (não revela quem tem cadastro).</summary>
+public record EsqueciSenhaResponse(Guid DesafioId, int ReenviarEmSegundos);
 
 public static class AuthEndpoints
 {
@@ -23,9 +27,97 @@ public static class AuthEndpoints
         var grupo = app.MapGroup("/api/auth");
         grupo.MapPost("/cadastro", Cadastrar);
         grupo.MapPost("/login", Entrar).RequireRateLimiting(Politicas.Login);
-        grupo.MapPost("/login/verificar", VerificarCodigo).RequireRateLimiting(Politicas.Codigo);
-        grupo.MapPost("/login/enviar", EnviarCodigo).RequireRateLimiting(Politicas.Codigo);
         grupo.MapGet("/eu", Eu).RequireAuthorization();
+        grupo.MapPost("/renovar", Renovar).RequireAuthorization();
+        grupo.MapPost("/senha/esqueci", EsqueciSenha).RequireRateLimiting(Politicas.Codigo);
+        grupo.MapPost("/senha/reenviar", ReenviarSenha).RequireRateLimiting(Politicas.Codigo);
+        grupo.MapPost("/senha/redefinir", RedefinirSenha).RequireRateLimiting(Politicas.Codigo);
+    }
+
+    /// <summary>Sessão nova (mais 8 horas) para quem está usando o sistema; o site chama sozinho antes de vencer.</summary>
+    private static async Task<IResult> Renovar(ClaimsPrincipal user, OrionDbContext db, TokenService tokens)
+    {
+        var usuario = await UsuarioAtual.Carregar(user, db);
+        return usuario is null ? Results.Unauthorized() : Results.Ok(UsuarioAtual.Sessao(usuario, tokens));
+    }
+
+    /// <summary>
+    /// 1ª etapa do "Esqueci minha senha": manda um código para o e-mail da conta. A resposta é a mesma
+    /// exista ou não a conta (um id qualquer, que só não vai aceitar código nenhum).
+    /// </summary>
+    private static async Task<IResult> EsqueciSenha(EsqueciSenhaRequest req, OrionDbContext db, EmailService email, CancellationToken ct)
+    {
+        var espera = (int)VerificacaoLogin.IntervaloReenvio.TotalSeconds;
+        var usuario = await ContaDoAcesso(db, req.Email, req.Telefone, ct);
+        if (usuario is null) return Results.Ok(new EsqueciSenhaResponse(Guid.CreateVersion7(), espera));
+
+        var verificacao = await VerificacaoLogin.EnviarCodigo(db, email, usuario, null, ct, redefinirSenha: true);
+        return verificacao is null
+            ? Results.Problem("Não foi possível enviar o código por e-mail. Tente de novo em instantes.", statusCode: 503)
+            : Results.Ok(new EsqueciSenhaResponse(verificacao.DesafioId, espera));
+    }
+
+    /// <summary>A conta do e-mail; ou do celular, quando só uma conta usa esse celular.</summary>
+    private static async Task<Usuario?> ContaDoAcesso(OrionDbContext db, string? emailDigitado, string? telefoneDigitado, CancellationToken ct)
+    {
+        var emailLimpo = emailDigitado?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrEmpty(emailLimpo))
+            return await db.Usuarios.SingleOrDefaultAsync(u => u.Email == emailLimpo && u.Ativo, ct);
+        var telefone = Validacao.Telefone(telefoneDigitado);
+        if (telefone.Length is not (10 or 11)) return null;
+        var contas = await db.Usuarios.Where(u => u.Telefone == telefone && u.Ativo).Take(2).ToListAsync(ct);
+        return contas.Count == 1 ? contas[0] : null;
+    }
+
+    private static async Task<IResult> ReenviarSenha(ReenviarSenhaRequest req, OrionDbContext db, EmailService email, CancellationToken ct)
+    {
+        var desafio = await db.CodigosLogin.Include(c => c.Usuario)
+            .SingleOrDefaultAsync(c => c.Id == req.DesafioId && c.Finalidade == "senha" && c.UsadoEm == null, ct);
+        var espera = (int)VerificacaoLogin.IntervaloReenvio.TotalSeconds;
+        if (desafio is null) return Results.Ok(new EsqueciSenhaResponse(req.DesafioId, espera));
+
+        var falta = desafio.EnviadoEm + VerificacaoLogin.IntervaloReenvio - DateTime.UtcNow;
+        if (falta > TimeSpan.Zero)
+            return Results.Json(new { erro = $"Aguarde {Math.Ceiling(falta.TotalSeconds)} segundos para pedir outro código." },
+                statusCode: StatusCodes.Status429TooManyRequests);
+        var verificacao = await VerificacaoLogin.EnviarCodigo(db, email, desafio.Usuario!, desafio, ct);
+        return verificacao is null
+            ? Results.Problem("Não foi possível enviar o código por e-mail. Tente de novo em instantes.", statusCode: 503)
+            : Results.Ok(new EsqueciSenhaResponse(desafio.Id, espera));
+    }
+
+    /// <summary>2ª etapa: o código certo + a senha nova trocam a senha e já entram no sistema.</summary>
+    private static async Task<IResult> RedefinirSenha(
+        RedefinirSenhaRequest req, OrionDbContext db, IPasswordHasher<Usuario> hasher, TokenService tokens, CancellationToken ct)
+    {
+        var erros = new Dictionary<string, string[]>();
+        Validacao.Senha(erros, "novaSenha", req.NovaSenha);
+        if (erros.Count > 0) return Results.ValidationProblem(erros);
+
+        static IResult Invalido(string mensagem) => Results.BadRequest(new { erro = mensagem, campo = "codigo" });
+        var desafio = await db.CodigosLogin.Include(c => c.Usuario).ThenInclude(u => u!.Empresa)
+            .SingleOrDefaultAsync(c => c.Id == req.DesafioId && c.Finalidade == "senha", ct);
+        // Sem conta (ou id inventado): a mesma mensagem de código errado
+        if (desafio is null) return Invalido("Código incorreto.");
+        if (desafio.UsadoEm is not null) return Invalido("Este código já foi usado. Peça outro.");
+        if (desafio.ExpiraEm < DateTime.UtcNow) return Invalido("O código expirou. Peça outro.");
+        if (desafio.Tentativas >= VerificacaoLogin.MaximoTentativas) return Invalido("Muitas tentativas erradas. Peça outro código.");
+        if (!VerificacaoLogin.CodigoConfere(desafio, req.Codigo ?? ""))
+        {
+            desafio.Tentativas++;
+            await db.SaveChangesAsync(ct);
+            var restantes = VerificacaoLogin.MaximoTentativas - desafio.Tentativas;
+            return Invalido(restantes > 0
+                ? $"Código incorreto. {(restantes == 1 ? "Resta 1 tentativa" : $"Restam {restantes} tentativas")}."
+                : "Muitas tentativas erradas. Peça outro código.");
+        }
+
+        var usuario = desafio.Usuario!;
+        if (!usuario.Ativo) return Invalido("Esta conta está desativada.");
+        usuario.SenhaHash = hasher.HashPassword(usuario, req.NovaSenha);
+        desafio.UsadoEm = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+        return Results.Ok(UsuarioAtual.Sessao(usuario, tokens));
     }
 
     /// <summary>
@@ -67,112 +159,43 @@ public static class AuthEndpoints
     }
 
     /// <summary>
-    /// 1ª etapa: confere a senha. No navegador lembrado, entra direto. Nos outros, responde 202 com a escolha
-    /// do canal (e-mail ou celular/WhatsApp); o código só é enviado depois da escolha (POST /login/enviar).
+    /// Login com e-mail ou com o celular e a senha: senha certa → sessão (sem código de verificação).
     /// </summary>
     private static async Task<IResult> Entrar(
-        LoginRequest req, OrionDbContext db, IPasswordHasher<Usuario> hasher, TokenService tokens,
-        EmailService servicoEmail, CancellationToken ct)
+        LoginRequest req, OrionDbContext db, IPasswordHasher<Usuario> hasher, TokenService tokens, CancellationToken ct)
     {
-        var email = req.Email?.Trim().ToLowerInvariant() ?? "";
-        var usuario = await db.Usuarios.Include(u => u.Empresa).SingleOrDefaultAsync(u => u.Email == email);
+        bool SenhaConfere(Usuario u) =>
+            hasher.VerifyHashedPassword(u, u.SenhaHash, req.Senha ?? "") != PasswordVerificationResult.Failed;
 
-        // Mesma resposta para e-mail inexistente e senha errada.
-        if (usuario is null
-            || hasher.VerifyHashedPassword(usuario, usuario.SenhaHash, req.Senha ?? "")
-                == PasswordVerificationResult.Failed)
-            return Results.Unauthorized();
+        Usuario? usuario;
+        var telefone = Validacao.SoDigitos(req.Telefone ?? "");
+        // Aceita com ou sem o +55 na frente
+        if (telefone.Length is 12 or 13 && telefone.StartsWith("55")) telefone = telefone[2..];
+        if (telefone.Length > 0)
+        {
+            // O celular não é único entre as contas: vale a conta desse celular cuja senha confere.
+            var contas = (await db.Usuarios.Include(u => u.Empresa).Where(u => u.Telefone == telefone).ToListAsync(ct))
+                .Where(SenhaConfere).ToList();
+            if (contas.Count > 1)
+                return Results.Json(new { erro = "Este celular está em mais de uma conta. Entre com o e-mail.", campo = "telefone" },
+                    statusCode: StatusCodes.Status409Conflict);
+            usuario = contas.SingleOrDefault();
+        }
+        else
+        {
+            var email = req.Email?.Trim().ToLowerInvariant() ?? "";
+            usuario = await db.Usuarios.Include(u => u.Empresa).SingleOrDefaultAsync(u => u.Email == email, ct);
+            if (usuario is not null && !SenhaConfere(usuario)) usuario = null;
+        }
+
+        // Mesma resposta para conta inexistente e senha errada.
+        if (usuario is null) return Results.Unauthorized();
 
         // Só depois de conferir a senha, para não revelar quais contas existem.
         if (!usuario.Ativo) return UsuarioDesativado();
 
-        if (await VerificacaoLogin.DispositivoLembrado(db, usuario, req.Dispositivo, ct))
-        {
-            await db.SaveChangesAsync(ct);
-            return Results.Ok(UsuarioAtual.Sessao(usuario, tokens));
-        }
-
-        return Results.Json(await VerificacaoLogin.NovaEscolha(db, usuario, ct), statusCode: StatusCodes.Status202Accepted);
+        return Results.Ok(UsuarioAtual.Sessao(usuario, tokens));
     }
-
-    /// <summary>2ª etapa: confere o código do e-mail e conclui o login.</summary>
-    private static async Task<IResult> VerificarCodigo(
-        VerificarCodigoRequest req, HttpContext http, OrionDbContext db, TokenService tokens, CancellationToken ct)
-    {
-        var desafio = await db.CodigosLogin
-            .Include(c => c.Usuario).ThenInclude(u => u!.Empresa)
-            .SingleOrDefaultAsync(c => c.Id == req.DesafioId, ct);
-
-        if (desafio is null || desafio.UsadoEm is not null || desafio.NovoEmail is not null)
-            return CodigoInvalido("Este código não vale mais. Entre de novo para receber outro.");
-        if (desafio.ExpiraEm < DateTime.UtcNow)
-            return CodigoInvalido("O código expirou. Peça um novo.");
-        if (desafio.Tentativas >= VerificacaoLogin.MaximoTentativas)
-            return CodigoInvalido("Muitas tentativas erradas. Entre de novo para receber outro código.");
-
-        if (!VerificacaoLogin.CodigoConfere(desafio, req.Codigo ?? ""))
-        {
-            desafio.Tentativas++;
-            await db.SaveChangesAsync(ct);
-            var restantes = VerificacaoLogin.MaximoTentativas - desafio.Tentativas;
-            return CodigoInvalido(restantes > 0
-                ? $"Código incorreto. {(restantes == 1 ? "Resta 1 tentativa" : $"Restam {restantes} tentativas")}."
-                : "Muitas tentativas erradas. Entre de novo para receber outro código.");
-        }
-
-        var usuario = desafio.Usuario!;
-        if (!usuario.Ativo) return UsuarioDesativado();
-
-        desafio.UsadoEm = DateTime.UtcNow;
-        var dispositivo = req.Lembrar
-            ? VerificacaoLogin.LembrarDispositivo(db, usuario, http.Request.Headers.UserAgent.ToString())
-            : null;
-        await db.SaveChangesAsync(ct);
-
-        var sessao = UsuarioAtual.Sessao(usuario, tokens);
-        return Results.Ok(new LoginVerificadoResponse(sessao.Token, sessao.Usuario, sessao.Empresa, dispositivo));
-    }
-
-    /// <summary>
-    /// Envia o código pelo canal escolhido: o primeiro envio, o "Reenviar código" e a troca de canal
-    /// (no máximo um envio a cada 60 segundos por desafio).
-    /// </summary>
-    private static async Task<IResult> EnviarCodigo(
-        EnviarCodigoRequest req, OrionDbContext db, EmailService email, WhatsAppService whatsapp, CancellationToken ct)
-    {
-        var desafio = await db.CodigosLogin
-            .Include(c => c.Usuario).ThenInclude(u => u!.Empresa)
-            .SingleOrDefaultAsync(c => c.Id == req.DesafioId, ct);
-        if (desafio is null || desafio.UsadoEm is not null || desafio.NovoEmail is not null
-            || desafio.Usuario is not { Ativo: true })
-            return CodigoInvalido("Entre de novo para receber outro código.");
-
-        var espera = desafio.EnviadoEm + VerificacaoLogin.IntervaloReenvio - DateTime.UtcNow;
-        if (espera > TimeSpan.Zero)
-            return Results.Json(new { erro = $"Aguarde {Math.Ceiling(espera.TotalSeconds)} segundos para pedir outro código." },
-                statusCode: StatusCodes.Status429TooManyRequests);
-
-        var canal = req.Canal ?? desafio.Canal ?? "email";
-        if (canal is not ("email" or "whatsapp"))
-            return Results.BadRequest(new { erro = "Escolha e-mail ou WhatsApp.", campo = "canal" });
-        if (canal == "whatsapp" && VerificacaoLogin.MotivoSemWhatsapp(desafio.Usuario) is { } motivo)
-            return Results.BadRequest(new { erro = $"{motivo} Receba por e-mail.", campo = "canal" });
-
-        var verificacao = await VerificacaoLogin.EnviarCodigo(db, email, whatsapp, desafio.Usuario, desafio, canal, ct);
-        return verificacao is null ? FalhaNoEnvio(canal) : Results.Ok(verificacao);
-    }
-
-    private static IResult CodigoInvalido(string mensagem) =>
-        Results.BadRequest(new { erro = mensagem, campo = "codigo" });
-
-    // 424 (não 5xx, que o site trata como "servidor fora do ar"): a tela mostra a mensagem e oferece o outro canal.
-    private static IResult FalhaNoEnvio(string canal) => Results.Json(new
-    {
-        erro = canal == "whatsapp"
-            ? "Não foi possível enviar pelo WhatsApp agora (o número da empresa pode estar desconectado). Receba por e-mail."
-            : "Não foi possível enviar o código por e-mail. Tente de novo em instantes.",
-        campo = "canal",
-    }, statusCode: StatusCodes.Status424FailedDependency);
 
     /// <summary>Sessão atualizada (empresa, administrador e permissões podem ter mudado).</summary>
     private static async Task<IResult> Eu(ClaimsPrincipal user, OrionDbContext db, TokenService tokens)

@@ -54,20 +54,28 @@ public class Cliente
     public string? Uf { get; set; }
 
     /// <summary>
-    /// Como a manutenção é marcada: "meses" (a cada N meses: a mensagem sai às 6h no mesmo dia do mês
-    /// em que o intervalo foi salvo, e se repete) ou "data" (uma data e hora específica, uma vez só).
+    /// Como a manutenção é marcada: "meses" (a cada N meses, no horário escolhido, e se repete) ou "data"
+    /// (cadastros antigos: uma data e hora específica, uma vez só). Hoje o cadastro sempre grava "meses".
     /// </summary>
     public string TipoIntervalo { get; set; } = "meses";
 
-    /// <summary>No tipo "meses": de quantos em quantos meses o cliente precisa de manutenção.</summary>
-    public int? IntervaloManutencaoMeses { get; set; }
+    /// <summary>
+    /// De quanto em quanto tempo a mensagem se repete (em IntervaloUnidade). Calculado pela diferença entre o momento
+    /// do cadastro e o próximo envio escolhido: hoje 16h30, envio 17h → 30 minutos; 14/10 → 14/12 → 2 meses.
+    /// Vazio: sem envios automáticos.
+    /// </summary>
+    public int? IntervaloQuantidade { get; set; }
+
+    /// <summary>"minutos", "horas", "dias", "semanas" ou "meses".</summary>
+    public string IntervaloUnidade { get; set; } = "meses";
 
     /// <summary>Mensagem de WhatsApp só deste cliente (vazia: usa a mensagem padrão da empresa).</summary>
     public string? MensagemWhatsapp { get; set; }
 
     /// <summary>
     /// Dia e hora do próximo envio da mensagem de WhatsApp (é também a próxima manutenção).
-    /// Depois do envio: no tipo "meses", o robô marca o seguinte (+ N meses, às 6h); no tipo "data", fica vazio.
+    /// Depois do envio: no tipo "meses", o robô marca o seguinte (+ o intervalo); no tipo "data", fica vazio.
+    /// Vazio: envios automáticos cancelados.
     /// </summary>
     public DateTime? EnvioEm { get; set; }
 

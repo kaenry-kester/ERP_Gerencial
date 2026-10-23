@@ -10,12 +10,7 @@ import {
   confirmarTrocaDeEmail,
   editarConta,
   ErroApi,
-  esquecerDispositivo,
-  esquecerLembrado,
-  esquecerTodosDispositivos,
   excluirConta,
-  lerLembrado,
-  listarDispositivos,
   mensagemDe,
   obterConta,
   pedirTrocaDeEmail,
@@ -23,7 +18,6 @@ import {
   sair,
   trocarSenha,
   type Conta,
-  type Dispositivo,
   type Verificacao,
 } from '../../services/api'
 import { emailValido, formatarTelefone, requisitosSenha, telefoneValido } from '../../utils/validacao'
@@ -32,25 +26,10 @@ import FaixaPagina from './FaixaPagina'
 import SecaoPagina from './SecaoPagina'
 import { useErp } from './contexto'
 import { MODULOS } from './modulos'
+import { avisarSalvo } from '../../components/aviso-salvo/avisarSalvo'
 import '../../styles/acesso.css'
 
 const MODULO = MODULOS.find((m) => m.id === 'conta')!
-
-const formatarData = (iso: string) => new Date(iso).toLocaleDateString('pt-BR')
-
-/** "Mozilla/5.0 (Windows NT 10.0...) Chrome/..." → "Chrome · Windows" */
-function descreverDispositivo(ua: string | null) {
-  if (!ua) return 'Navegador'
-  const navegador =
-    [['Edg/', 'Edge'], ['OPR/', 'Opera'], ['Chrome/', 'Chrome'], ['Firefox/', 'Firefox'], ['Safari/', 'Safari']].find(
-      ([marca]) => ua.includes(marca),
-    )?.[1] ?? 'Navegador'
-  const sistema =
-    [['Android', 'Android'], ['iPhone', 'iPhone'], ['iPad', 'iPad'], ['Windows', 'Windows'], ['Mac OS X', 'Mac'], ['Linux', 'Linux']].find(
-      ([marca]) => ua.includes(marca),
-    )?.[1] ?? ''
-  return sistema ? `${navegador} · ${sistema}` : navegador
-}
 
 type PropsSecaoConta = { numero: number; titulo: string; perigo?: boolean; children: ReactNode }
 
@@ -60,14 +39,12 @@ const Secao = ({ numero, titulo, perigo, children }: PropsSecaoConta) => (
   </SecaoPagina>
 )
 
-// Minha conta: dados, e-mail, senha, dispositivos lembrados e exclusão.
+// Minha conta: dados, e-mail, senha e exclusão.
 export default function ContaPage() {
   const { sessao, atualizarSessao } = useErp()
   const sessaoExpirada = useSessaoExpirada()
   const [conta, setConta] = useState<Conta | null>(null)
   const [erro, setErro] = useState<Aviso>(null)
-  // Ao trocar a senha, a lista de dispositivos é recarregada.
-  const [versaoDispositivos, setVersaoDispositivos] = useState(0)
 
   useEffect(() => {
     let ativo = true
@@ -101,13 +78,7 @@ export default function ContaPage() {
         <div className="pagina-secoes">
           <SecaoDados conta={conta} aoAtualizar={aoAtualizar} />
           <SecaoEmail conta={conta} aoAtualizar={aoAtualizar} />
-          <SecaoSenha
-            aoAtualizar={(c) => {
-              aoAtualizar(c)
-              setVersaoDispositivos((v) => v + 1)
-            }}
-          />
-          <SecaoDispositivos versao={versaoDispositivos} />
+          <SecaoSenha aoAtualizar={aoAtualizar} />
           <SecaoExcluir conta={conta} />
         </div>
       )}
@@ -148,7 +119,7 @@ function SecaoDados({ conta, aoAtualizar }: PropsSecao) {
     try {
       aoAtualizar(await editarConta(sessao.token, { nome, telefone }))
       setEnviado(false)
-      setAviso({ tipo: 'ok', texto: 'Salvo.' })
+      avisarSalvo('Alterações feitas com sucesso', 'Seus dados')
     } catch (erro) {
       if (!sessaoExpirada(erro)) setAviso({ tipo: 'erro', texto: mensagemDe(erro) })
     } finally {
@@ -254,10 +225,8 @@ function SecaoEmail({ conta, aoAtualizar }: PropsSecao) {
     try {
       const atualizada = await confirmarTrocaDeEmail(sessao.token, { desafioId: verificacao.desafioId, codigo })
       aoAtualizar(atualizada)
-      // O "Lembrar de quem sou" guardava o e-mail antigo para preencher o login.
-      if (lerLembrado()?.email === conta.email) esquecerLembrado()
       fechar()
-      setAviso({ tipo: 'ok', texto: 'E-mail alterado.' })
+      avisarSalvo('Alterações feitas com sucesso', 'E-mail alterado')
     } catch (erro) {
       setCodigo('')
       tratarErro(erro)
@@ -403,14 +372,12 @@ function SecaoSenha({ aoAtualizar }: Pick<PropsSecao, 'aoAtualizar'>) {
     setSalvando(true)
     try {
       const atualizada = await trocarSenha(sessao.token, { senhaAtual: atual, novaSenha: nova })
-      // A API esqueceu todos os dispositivos lembrados, inclusive este.
-      esquecerLembrado()
       aoAtualizar(atualizada)
       setAtual('')
       setNova('')
       setConfirmacao('')
       setEnviado(false)
-      setAviso({ tipo: 'ok', texto: 'Senha alterada.' })
+      avisarSalvo('Alterações feitas com sucesso', 'Senha alterada')
     } catch (erro) {
       if (sessaoExpirada(erro)) return
       if (erro instanceof ErroApi && erro.campo === 'senhaAtual') setErroAtual('Incorreta')
@@ -471,75 +438,6 @@ function SecaoSenha({ aoAtualizar }: Pick<PropsSecao, 'aoAtualizar'>) {
   )
 }
 
-// ---------- Dispositivos lembrados ----------
-
-function SecaoDispositivos({ versao }: { versao: number }) {
-  const { sessao } = useErp()
-  const sessaoExpirada = useSessaoExpirada()
-  const [dispositivos, setDispositivos] = useState<Dispositivo[] | null>(null)
-  const [aviso, setAviso] = useState<Aviso>(null)
-
-  useEffect(() => {
-    let ativo = true
-    listarDispositivos(sessao.token)
-      .then((lista) => ativo && setDispositivos(lista))
-      .catch((e) => ativo && !sessaoExpirada(e) && setAviso({ tipo: 'erro', texto: mensagemDe(e) }))
-    return () => {
-      ativo = false
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessao.token, versao])
-
-  const esquecer = async (d: Dispositivo | 'todos') => {
-    try {
-      if (d === 'todos') await esquecerTodosDispositivos(sessao.token)
-      else await esquecerDispositivo(sessao.token, d.id)
-      if (d === 'todos' || d.atual) esquecerLembrado()
-      setDispositivos((lista) => (d === 'todos' ? [] : (lista ?? []).filter((x) => x.id !== d.id)))
-      setAviso(null)
-    } catch (erro) {
-      if (!sessaoExpirada(erro)) setAviso({ tipo: 'erro', texto: mensagemDe(erro) })
-    }
-  }
-
-  return (
-    <Secao numero={4} titulo="Dispositivos lembrados">
-      {!dispositivos ? (
-        !aviso && <p className="erp-carregando">Carregando...</p>
-      ) : dispositivos.length === 0 ? (
-        <p className="erp-nota">Nenhum dispositivo.</p>
-      ) : (
-        <ul className="erp-lista">
-          {dispositivos.map((d) => (
-            <li key={d.id} className="erp-linha estatica">
-              <span className="erp-linha-textos">
-                <span className="erp-linha-titulo">
-                  {descreverDispositivo(d.descricao)}
-                  {d.atual && <span className="erp-etiqueta">Este</span>}
-                </span>
-                <span className="erp-linha-texto">Último acesso {formatarData(d.ultimoUsoEm)}</span>
-              </span>
-              <button type="button" className="ghost-button erp-botao-pequeno" onClick={() => esquecer(d)}>
-                Remover
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {((dispositivos && dispositivos.length > 1) || aviso) && (
-        <div className="erp-form-acoes">
-          {dispositivos && dispositivos.length > 1 && (
-            <button type="button" className="pagina-botao neutro" onClick={() => esquecer('todos')}>
-              Remover todos
-            </button>
-          )}
-          {aviso && <AvisoPagina aviso={aviso} />}
-        </div>
-      )}
-    </Secao>
-  )
-}
-
 // ---------- Excluir conta ----------
 
 function SecaoExcluir({ conta }: { conta: Conta }) {
@@ -569,7 +467,6 @@ function SecaoExcluir({ conta }: { conta: Conta }) {
       // A confirmação "EXCLUIR" é a própria escolha da pessoa neste formulário.
       await excluirConta(sessao.token, { senha, confirmacao: 'EXCLUIR' })
       sair()
-      esquecerLembrado()
       navigate('/login', { replace: true, state: { aviso: { tipo: 'ok', texto: 'Conta excluída.' } } })
     } catch (erro) {
       if (sessaoExpirada(erro)) return
@@ -580,7 +477,7 @@ function SecaoExcluir({ conta }: { conta: Conta }) {
   }
 
   return (
-    <Secao numero={5} titulo="Excluir conta" perigo>
+    <Secao numero={4} titulo="Excluir conta" perigo>
       <p className="erp-nota">{nota}</p>
       {!aberto ? (
         <div className="erp-form-acoes">

@@ -7,7 +7,7 @@ type Props = {
   onChange: (valor: string) => void
   onBlur?: () => void
   erro?: string
-  type?: 'text' | 'email' | 'tel' | 'datetime-local'
+  type?: 'text' | 'email' | 'tel' | 'date' | 'datetime-local'
   placeholder?: string
   autoComplete?: string
   inputMode?: HTMLAttributes<HTMLInputElement>['inputMode']
@@ -35,8 +35,9 @@ export default function CampoTexto({
   const idErro = `${id}-erro`
 
   return (
-    // "preenchido": usado pelos campos com o rótulo dentro (o rótulo sobe quando há texto)
-    <div className={['campo', valor && 'preenchido', className].filter(Boolean).join(' ')}>
+    // "preenchido": usado pelos campos com o rótulo dentro (o rótulo sobe quando há texto).
+    // Data sempre mostra "dd/mm/aaaa": o rótulo fica em cima para não ficar por cima disso.
+    <div className={['campo', (valor || type === 'date' || type === 'datetime-local') && 'preenchido', className].filter(Boolean).join(' ')}>
       <div className="campo-cabecalho">
         <label htmlFor={id} className="campo-rotulo">
           {rotulo}

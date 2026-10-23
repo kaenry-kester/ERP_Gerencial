@@ -17,6 +17,10 @@ public static class Permissoes
     public const string ClientesCadastrar = "clientes-cadastrar";
     public const string ClientesEditar = "clientes-editar";
     public const string Financeiro = "financeiro";
+    /// <summary>Emitir, consultar, imprimir e cancelar cupons e recibos (por enquanto só o administrador).</summary>
+    public const string CupomFiscal = "cupom-fiscal";
+    /// <summary>Histórico de cada cliente (página "Número de ordem de serviço"; por enquanto só o administrador).</summary>
+    public const string OrdemServico = "ordem-servico";
 
     /// <summary>Tudo o que um funcionário pode fazer (fixo: não depende do que estiver gravado no usuário).</summary>
     public static readonly IReadOnlyList<string> Funcionario = [Produtos, Clientes, ClientesCadastrar];

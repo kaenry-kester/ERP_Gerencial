@@ -9,9 +9,13 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
     public DbSet<Produto> Produtos => Set<Produto>();
     public DbSet<ProdutoImagem> ProdutoImagens => Set<ProdutoImagem>();
     public DbSet<Cliente> Clientes => Set<Cliente>();
+    public DbSet<ClienteFoto> ClienteFotos => Set<ClienteFoto>();
     public DbSet<EnvioWhatsapp> EnviosWhatsapp => Set<EnvioWhatsapp>();
+    public DbSet<MensagemImagem> MensagemImagens => Set<MensagemImagem>();
     public DbSet<CodigoLogin> CodigosLogin => Set<CodigoLogin>();
-    public DbSet<DispositivoConfiavel> DispositivosConfiaveis => Set<DispositivoConfiavel>();
+    public DbSet<Cupom> Cupons => Set<Cupom>();
+    public DbSet<CupomItem> CupomItens => Set<CupomItem>();
+    public DbSet<MovimentoEstoque> MovimentosEstoque => Set<MovimentoEstoque>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -44,6 +48,9 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
             e.Property(emp => emp.Documento).HasColumnName("documento").HasMaxLength(14);
             e.Property(emp => emp.Email).HasColumnName("email").HasMaxLength(254);
             e.Property(emp => emp.Telefone).HasColumnName("telefone").HasMaxLength(11);
+            e.Property(emp => emp.Endereco).HasColumnName("endereco").HasMaxLength(200);
+            e.Property(emp => emp.Cidade).HasColumnName("cidade").HasMaxLength(100);
+            e.Property(emp => emp.Uf).HasColumnName("uf").HasMaxLength(2);
             e.Property(emp => emp.CriadoEm).HasColumnName("criado_em");
             e.Property(emp => emp.WhatsappRemetente).HasColumnName("whatsapp_remetente").HasMaxLength(11);
             e.Property(emp => emp.MensagemManutencao).HasColumnName("mensagem_manutencao").HasMaxLength(1000);
@@ -69,6 +76,8 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
             e.Property(p => p.Cor).HasColumnName("cor").HasMaxLength(50);
             e.Property(p => p.Voltagem).HasColumnName("voltagem").HasMaxLength(30);
             e.Property(p => p.Observacao).HasColumnName("observacao").HasMaxLength(2000);
+            e.Property(p => p.Unidade).HasColumnName("unidade").HasMaxLength(6).HasDefaultValue("UN");
+            e.Property(p => p.EstoqueMinimo).HasColumnName("estoque_minimo").HasPrecision(14, 3);
             e.Property(p => p.CriadoEm).HasColumnName("criado_em");
             e.Property(p => p.AtualizadoEm).HasColumnName("atualizado_em");
             // ID sequencial, código e código de barras não se repetem dentro da mesma empresa.
@@ -118,7 +127,8 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
             e.Property(c => c.Cidade).HasColumnName("cidade").HasMaxLength(100);
             e.Property(c => c.Uf).HasColumnName("uf").HasMaxLength(2);
             e.Property(c => c.TipoIntervalo).HasColumnName("tipo_intervalo").HasMaxLength(10).HasDefaultValue("meses");
-            e.Property(c => c.IntervaloManutencaoMeses).HasColumnName("intervalo_manutencao_meses");
+            e.Property(c => c.IntervaloQuantidade).HasColumnName("intervalo_quantidade");
+            e.Property(c => c.IntervaloUnidade).HasColumnName("intervalo_unidade").HasMaxLength(10).HasDefaultValue("meses");
             e.Property(c => c.MensagemWhatsapp).HasColumnName("mensagem_whatsapp").HasMaxLength(1000);
             e.Property(c => c.EnvioEm).HasColumnName("envio_em");
             e.Property(c => c.CriadoEm).HasColumnName("criado_em");
@@ -126,6 +136,35 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
             // ID sequencial não se repete dentro da mesma empresa.
             e.HasIndex(c => new { c.EmpresaId, c.Numero }).IsUnique();
             e.HasOne(c => c.Empresa).WithMany().HasForeignKey(c => c.EmpresaId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ClienteFoto>(e =>
+        {
+            e.ToTable("cliente_fotos");
+            e.Property(f => f.Id).HasColumnName("id");
+            e.Property(f => f.ClienteId).HasColumnName("cliente_id");
+            e.Property(f => f.TipoConteudo).HasColumnName("tipo_conteudo").HasMaxLength(20);
+            e.Property(f => f.Dados).HasColumnName("dados");
+            e.Property(f => f.CriadoEm).HasColumnName("criado_em");
+            // Uma foto por cliente; excluir o cliente apaga a foto.
+            e.HasIndex(f => f.ClienteId).IsUnique();
+            e.HasOne(f => f.Cliente).WithMany().HasForeignKey(f => f.ClienteId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MensagemImagem>(e =>
+        {
+            e.ToTable("mensagem_imagens");
+            e.Property(i => i.Id).HasColumnName("id");
+            e.Property(i => i.EmpresaId).HasColumnName("empresa_id");
+            e.Property(i => i.ClienteId).HasColumnName("cliente_id");
+            e.Property(i => i.TipoConteudo).HasColumnName("tipo_conteudo").HasMaxLength(20);
+            e.Property(i => i.Dados).HasColumnName("dados");
+            e.Property(i => i.CriadoEm).HasColumnName("criado_em");
+            // Uma imagem na mensagem padrão da empresa e uma na mensagem de cada cliente.
+            e.HasIndex(i => i.EmpresaId).IsUnique().HasFilter("cliente_id IS NULL");
+            e.HasIndex(i => i.ClienteId).IsUnique().HasFilter("cliente_id IS NOT NULL");
+            e.HasOne<Empresa>().WithMany().HasForeignKey(i => i.EmpresaId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Cliente>().WithMany().HasForeignKey(i => i.ClienteId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<EnvioWhatsapp>(e =>
@@ -148,6 +187,99 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
             e.HasOne<Empresa>().WithMany().HasForeignKey(w => w.EmpresaId).OnDelete(DeleteBehavior.Cascade);
         });
 
+        modelBuilder.Entity<Cupom>(e =>
+        {
+            e.ToTable("cupons");
+            e.Property(c => c.Id).HasColumnName("id");
+            e.Property(c => c.EmpresaId).HasColumnName("empresa_id");
+            e.Property(c => c.Numero).HasColumnName("numero");
+            e.Property(c => c.EmitenteNome).HasColumnName("emitente_nome").HasMaxLength(100);
+            e.Property(c => c.EmitenteRazaoSocial).HasColumnName("emitente_razao_social").HasMaxLength(150);
+            e.Property(c => c.EmitenteDocumento).HasColumnName("emitente_documento").HasMaxLength(14);
+            e.Property(c => c.EmitenteEndereco).HasColumnName("emitente_endereco").HasMaxLength(200);
+            e.Property(c => c.EmitenteCidade).HasColumnName("emitente_cidade").HasMaxLength(100);
+            e.Property(c => c.EmitenteUf).HasColumnName("emitente_uf").HasMaxLength(2);
+            e.Property(c => c.EmitenteTelefone).HasColumnName("emitente_telefone").HasMaxLength(11);
+            e.Property(c => c.ClienteId).HasColumnName("cliente_id");
+            e.Property(c => c.ClienteNome).HasColumnName("cliente_nome").HasMaxLength(200);
+            e.Property(c => c.ClienteDocumento).HasColumnName("cliente_documento").HasMaxLength(14);
+            e.Property(c => c.ClienteEndereco).HasColumnName("cliente_endereco").HasMaxLength(300);
+            e.Property(c => c.Subtotal).HasColumnName("subtotal").HasPrecision(14, 2);
+            e.Property(c => c.Desconto).HasColumnName("desconto").HasPrecision(14, 2);
+            e.Property(c => c.Total).HasColumnName("total").HasPrecision(14, 2);
+            e.Property(c => c.FormaPagamento).HasColumnName("forma_pagamento").HasMaxLength(20);
+            e.Property(c => c.ValorRecebido).HasColumnName("valor_recebido").HasPrecision(14, 2);
+            e.Property(c => c.ValorPagamento1).HasColumnName("valor_pagamento1").HasPrecision(14, 2);
+            e.Property(c => c.FormaPagamento2).HasColumnName("forma_pagamento2").HasMaxLength(20);
+            e.Property(c => c.ValorPagamento2).HasColumnName("valor_pagamento2").HasPrecision(14, 2);
+            e.Property(c => c.VendedorId).HasColumnName("vendedor_id");
+            e.Property(c => c.VendedorNome).HasColumnName("vendedor_nome").HasMaxLength(120);
+            e.Property(c => c.Referente).HasColumnName("referente").HasMaxLength(300);
+            e.Property(c => c.Observacao).HasColumnName("observacao").HasMaxLength(1000);
+            e.Property(c => c.EmitidoPor).HasColumnName("emitido_por").HasMaxLength(120);
+            e.Property(c => c.UsuarioId).HasColumnName("usuario_id");
+            e.Property(c => c.EmitidoEm).HasColumnName("emitido_em");
+            e.Property(c => c.CanceladoEm).HasColumnName("cancelado_em");
+            e.Property(c => c.MotivoCancelamento).HasColumnName("motivo_cancelamento").HasMaxLength(300);
+            e.Property(c => c.NotaTipo).HasColumnName("nota_tipo").HasMaxLength(5);
+            e.Property(c => c.NotaNumero).HasColumnName("nota_numero").HasMaxLength(30);
+            e.Property(c => c.NotaRegistradaEm).HasColumnName("nota_registrada_em");
+            // Nº sequencial não se repete dentro da mesma empresa.
+            e.HasIndex(c => new { c.EmpresaId, c.Numero }).IsUnique();
+            // Financeiro (vendas por período) e histórico do cliente
+            e.HasIndex(c => new { c.EmpresaId, c.EmitidoEm });
+            e.HasIndex(c => c.ClienteId);
+            e.HasOne(c => c.Empresa).WithMany().HasForeignKey(c => c.EmpresaId).OnDelete(DeleteBehavior.Cascade);
+            // Excluir o cliente ou o usuário não apaga os cupons (os dados ficaram copiados neles).
+            e.HasOne<Cliente>().WithMany().HasForeignKey(c => c.ClienteId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne<Usuario>().WithMany().HasForeignKey(c => c.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne<Usuario>().WithMany().HasForeignKey(c => c.VendedorId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<CupomItem>(e =>
+        {
+            e.ToTable("cupom_itens");
+            e.Property(i => i.Id).HasColumnName("id");
+            e.Property(i => i.CupomId).HasColumnName("cupom_id");
+            e.Property(i => i.Ordem).HasColumnName("ordem");
+            e.Property(i => i.ProdutoId).HasColumnName("produto_id");
+            e.Property(i => i.Descricao).HasColumnName("descricao").HasMaxLength(200);
+            e.Property(i => i.Codigo).HasColumnName("codigo").HasMaxLength(60);
+            e.Property(i => i.CodigoBarras).HasColumnName("codigo_barras").HasMaxLength(50);
+            e.Property(i => i.CustoUnitario).HasColumnName("custo_unitario").HasPrecision(14, 2);
+            e.Property(i => i.Quantidade).HasColumnName("quantidade").HasPrecision(14, 3);
+            e.Property(i => i.ValorUnitario).HasColumnName("valor_unitario").HasPrecision(14, 2);
+            e.Property(i => i.Total).HasColumnName("total").HasPrecision(14, 2);
+            e.HasIndex(i => new { i.CupomId, i.Ordem });
+            e.HasOne(i => i.Cupom).WithMany(c => c.Itens).HasForeignKey(i => i.CupomId).OnDelete(DeleteBehavior.Cascade);
+            // Excluir o produto não apaga o item (descrição e valores ficaram copiados).
+            e.HasOne<Produto>().WithMany().HasForeignKey(i => i.ProdutoId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<MovimentoEstoque>(e =>
+        {
+            e.ToTable("movimentos_estoque");
+            e.Property(m => m.Id).HasColumnName("id");
+            e.Property(m => m.EmpresaId).HasColumnName("empresa_id");
+            e.Property(m => m.ProdutoId).HasColumnName("produto_id");
+            e.Property(m => m.Tipo).HasColumnName("tipo").HasMaxLength(15);
+            e.Property(m => m.Quantidade).HasColumnName("quantidade").HasPrecision(14, 3);
+            e.Property(m => m.SaldoApos).HasColumnName("saldo_apos").HasPrecision(14, 3);
+            e.Property(m => m.CustoUnitario).HasColumnName("custo_unitario").HasPrecision(14, 2);
+            e.Property(m => m.Observacao).HasColumnName("observacao").HasMaxLength(300);
+            e.Property(m => m.CupomId).HasColumnName("cupom_id");
+            e.Property(m => m.UsuarioId).HasColumnName("usuario_id");
+            e.Property(m => m.UsuarioNome).HasColumnName("usuario_nome").HasMaxLength(120);
+            e.Property(m => m.CriadoEm).HasColumnName("criado_em");
+            e.HasIndex(m => new { m.EmpresaId, m.CriadoEm });
+            e.HasIndex(m => new { m.ProdutoId, m.CriadoEm });
+            e.HasOne<Empresa>().WithMany().HasForeignKey(m => m.EmpresaId).OnDelete(DeleteBehavior.Cascade);
+            // Excluir o produto apaga o histórico dele
+            e.HasOne<Produto>().WithMany().HasForeignKey(m => m.ProdutoId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Cupom>().WithMany().HasForeignKey(m => m.CupomId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne<Usuario>().WithMany().HasForeignKey(m => m.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+        });
+
         modelBuilder.Entity<CodigoLogin>(e =>
         {
             e.ToTable("codigos_login");
@@ -159,23 +291,10 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
             e.Property(c => c.Tentativas).HasColumnName("tentativas");
             e.Property(c => c.NovoEmail).HasColumnName("novo_email").HasMaxLength(254);
             e.Property(c => c.Canal).HasColumnName("canal").HasMaxLength(10);
+            e.Property(c => c.Finalidade).HasColumnName("finalidade").HasMaxLength(10);
             e.Property(c => c.UsadoEm).HasColumnName("usado_em");
             e.Property(c => c.CriadoEm).HasColumnName("criado_em");
             e.HasOne(c => c.Usuario).WithMany().HasForeignKey(c => c.UsuarioId).OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<DispositivoConfiavel>(e =>
-        {
-            e.ToTable("dispositivos_confiaveis");
-            e.Property(d => d.Id).HasColumnName("id");
-            e.Property(d => d.UsuarioId).HasColumnName("usuario_id");
-            e.Property(d => d.TokenHash).HasColumnName("token_hash").HasMaxLength(64);
-            e.Property(d => d.Descricao).HasColumnName("descricao").HasMaxLength(300);
-            e.Property(d => d.ExpiraEm).HasColumnName("expira_em");
-            e.Property(d => d.CriadoEm).HasColumnName("criado_em");
-            e.Property(d => d.UltimoUsoEm).HasColumnName("ultimo_uso_em");
-            e.HasIndex(d => d.TokenHash).IsUnique();
-            e.HasOne(d => d.Usuario).WithMany().HasForeignKey(d => d.UsuarioId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

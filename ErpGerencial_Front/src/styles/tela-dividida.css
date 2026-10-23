@@ -2,7 +2,7 @@
   Estrutura compartilhada das telas de acesso (login e cadastro):
   página inteira dividida em duas áreas de cor, sem caixa.
   - Painel preto (mais estreito) com logo, título e texto.
-  - Área branca com faixa cinza de ponta a ponta e o conteúdo da tela.
+  - Área branca com faixa azul-marinho de ponta a ponta e o conteúdo da tela.
 
   Sem rolagem: a página tem exatamente a altura da janela e os tamanhos
   (campos, espaços, botões) acompanham a altura disponível.
@@ -33,7 +33,7 @@
   align-items: flex-start;
   /* Topo menor: o logo fica no canto superior esquerdo, como na tela inicial */
   padding: clamp(1rem, 3.5vh, 2rem) clamp(1.5rem, 4vw, 4rem) var(--tela-base) clamp(1.5rem, 5vw, 5rem);
-  background: var(--preto);
+  background: linear-gradient(160deg, var(--preto) 0%, #0e1318 60%, #141b26 100%);
   color: var(--branco);
 }
 
@@ -73,7 +73,7 @@
   color: #c3cad0;
 }
 
-/* Ilustração do painel, sobre um fundo creme (cor da fita da caixa do logo) */
+/* Ilustração do painel, sobre um fundo azul-gelo */
 .tela-painel-arte {
   margin-top: clamp(1.25rem, 5vh, 3rem);
   width: clamp(150px, min(18vw, 28vh), 240px);
@@ -81,7 +81,7 @@
   display: grid;
   place-items: center;
   border-radius: 18px;
-  background: var(--creme-claro);
+  background: var(--gelo-claro);
 }
 
 .tela-painel-arte :is(svg, img) {
@@ -235,7 +235,7 @@
 
 /* Celulares: textos e espaços compactos para tudo caber na altura da tela */
 @media (max-width: 600px) {
-  /* Na faixa estreita, o título sai (a faixa cinza logo abaixo já orienta a tela) */
+  /* Na faixa estreita, o título sai (a faixa azul-marinho logo abaixo já orienta a tela) */
   .tela-titulo {
     display: none;
   }

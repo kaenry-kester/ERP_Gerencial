@@ -4,7 +4,7 @@
   Os requisitos da senha ficam em components/formulario/requisitos-senha.css.
 */
 
-/* Formulário centralizado (na largura e na altura) só na área branca, abaixo da faixa cinza */
+/* Formulário centralizado (na largura e na altura) só na área branca, abaixo da faixa azul-marinho */
 .cadastro-form {
   width: min(760px, calc(100% - var(--area-esquerda) - var(--area-direita)));
   margin: auto;

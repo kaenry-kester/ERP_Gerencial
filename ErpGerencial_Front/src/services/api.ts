@@ -5,6 +5,7 @@
 // O administrador cria os outros usuários da empresa, cada um com login e permissões próprios.
 
 const SESSAO_KEY = 'orion-sessao'
+/** "Lembrar de quem sou" de versões anteriores (o login não pede mais código): apagado ao sair. */
 const LEMBRAR_KEY = 'orion-lembrar'
 
 export type Usuario = {
@@ -27,6 +28,10 @@ export type Empresa = EmpresaResumo & {
   documento: string | null
   email: string | null
   telefone: string | null
+  /** Rua, número e bairro (impresso no cupom e no recibo). */
+  endereco: string | null
+  cidade: string | null
+  uf: string | null
   criadoEm: string
 }
 
@@ -115,48 +120,52 @@ export const cadastrar = (dados: {
   senha: string
 }) => requisicao<Sessao>('POST', '/api/auth/cadastro', { corpo: dados })
 
-export type CanalCodigo = 'email' | 'whatsapp'
-
-/** Login em duas etapas: depois da senha, o código de 6 dígitos vai por e-mail ou WhatsApp (a não ser no navegador lembrado). */
+/** Código de 6 dígitos enviado por e-mail (confirmação da troca de e-mail em Minha conta). */
 export type Verificacao = {
   desafioId: string
-  canal: CanalCodigo
-  /** Para onde foi, com parte escondida: "an•••@gmail.com" ou "(16) •••••-9268" */
+  canal: 'email'
+  /** Para onde foi, com parte escondida: "an•••@gmail.com" */
   destino: string
   expiraEm: string
   reenviarEmSegundos: number
 }
 
-/**
- * Depois da senha, a pessoa escolhe por onde receber o código (com parte escondida). whatsapp null: o celular não
- * pode ser usado, e semWhatsapp diz o porquê (a opção aparece desativada).
- */
-export type EscolhaCanal = { desafioId: string; email: string; whatsapp: string | null; semWhatsapp: string | null }
-
-/** Resposta da 1ª etapa: a sessão (navegador lembrado) ou a escolha do canal do código. */
-export type RespostaLogin = Sessao | EscolhaCanal
-
-export const precisaEscolherCanal = (r: RespostaLogin): r is EscolhaCanal => 'desafioId' in r
-
-export const entrar = (dados: { email: string; senha: string }) =>
+/** Entra com e-mail ou com o celular (o mesmo cadastrado em Minha conta) e a senha. */
+export const entrar = (dados: { email: string; senha: string } | { telefone: string; senha: string }) =>
   login(
-    requisicao<RespostaLogin>('POST', '/api/auth/login', {
-      // Token do "Lembrar de quem sou": neste navegador, o código não é pedido.
-      corpo: { ...dados, dispositivo: lerLembrado()?.token ?? null },
-    }),
-    'E-mail ou senha incorretos',
+    requisicao<Sessao>('POST', '/api/auth/login', { corpo: dados }),
+    'telefone' in dados ? 'Celular ou senha incorretos' : 'E-mail ou senha incorretos',
   )
-
-/** 2ª etapa: o código do e-mail. Com "lembrar", a resposta traz o token deste navegador. */
-export const verificarCodigo = (dados: { desafioId: string; codigo: string; lembrar: boolean }) =>
-  requisicao<Sessao & { dispositivo: string | null }>('POST', '/api/auth/login/verificar', { corpo: dados })
-
-/** Envia o código pelo canal (o primeiro envio, a troca de canal ou o reenvio; sem canal = o mesmo de antes). */
-export const enviarCodigo = (desafioId: string, canal?: CanalCodigo) =>
-  requisicao<Verificacao>('POST', '/api/auth/login/enviar', { corpo: { desafioId, canal: canal ?? null } })
 
 /** Sessão atualizada (permissões, empresa e status podem ter mudado). */
 export const sessaoAtual = (token: string) => requisicao<Sessao>('GET', '/api/auth/eu', { token })
+
+/** Quando o token vence (milissegundos), lido do próprio token; null se não der para ler. */
+export function expiracaoDoToken(token: string): number | null {
+  try {
+    const parte = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    const { exp } = JSON.parse(atob(parte.padEnd(parte.length + ((4 - (parte.length % 4)) % 4), '='))) as { exp?: number }
+    return typeof exp === 'number' ? exp * 1000 : null
+  } catch {
+    return null
+  }
+}
+
+/** Sessão nova (mais 8 horas); o ERP chama sozinho enquanto está aberto. */
+export const renovarSessao = (token: string) => requisicao<Sessao>('POST', '/api/auth/renovar', { token })
+
+// ---------- Esqueci minha senha ----------
+
+export type PedidoSenha = { desafioId: string; reenviarEmSegundos: number }
+
+export const pedirCodigoDeSenha = (acesso: { email: string } | { telefone: string }) =>
+  requisicao<PedidoSenha>('POST', '/api/auth/senha/esqueci', { corpo: acesso })
+
+export const reenviarCodigoDeSenha = (desafioId: string) =>
+  requisicao<PedidoSenha>('POST', '/api/auth/senha/reenviar', { corpo: { desafioId } })
+
+export const redefinirSenha = (dados: { desafioId: string; codigo: string; novaSenha: string }) =>
+  requisicao<Sessao>('POST', '/api/auth/senha/redefinir', { corpo: dados })
 
 // ---------- Empresa ----------
 
@@ -168,6 +177,9 @@ export type DadosEmpresa = {
   documento: string
   email: string
   telefone: string
+  endereco: string
+  cidade: string
+  uf: string
 }
 
 export const editarEmpresa = (token: string, dados: DadosEmpresa) =>
@@ -185,7 +197,7 @@ export const criarUsuario = (
 export const editarUsuario = (
   token: string,
   id: string,
-  dados: { nome: string; telefone: string; administrador: boolean; ativo: boolean },
+  dados: { nome: string; telefone: string; administrador: boolean; ativo: boolean; novaSenha?: string | null },
 ) => requisicao<Usuario>('PUT', `/api/usuarios/${id}`, { corpo: dados, token })
 
 // ---------- Produtos ----------
@@ -210,6 +222,11 @@ export type Produto = {
   atualizadoEm: string
   /** Ids das imagens na ordem da galeria; a primeira é a capa (ver urlImagemProduto). */
   imagens: string[]
+  /** UN, KG, M, CX... */
+  unidade: string
+  estoqueMinimo: number
+  /** Quantidade no mínimo ou abaixo dele. */
+  estoqueBaixo: boolean
 }
 
 export type DadosProduto = {
@@ -225,16 +242,14 @@ export type DadosProduto = {
   cor: string
   voltagem: string
   observacao: string
+  unidade: string
+  estoqueMinimo: number | null
 }
 
 export type ListaProdutos = { itens: Produto[]; total: number; pagina: number; tamanhoPagina: number }
 
 export const listarProdutos = (token: string, busca = '', pagina = 1) =>
-  requisicao<ListaProdutos>(
-    'GET',
-    `/api/produtos?pagina=${pagina}${busca.trim() ? `&busca=${encodeURIComponent(busca.trim())}` : ''}`,
-    { token },
-  )
+  requisicao<ListaProdutos>('GET', `/api/produtos?${parametros({ busca: busca.trim(), pagina })}`, { token })
 
 export const obterProduto = async (token: string, id: string) => {
   const produto = await requisicao<Produto>('GET', `/api/produtos/${id}`, { token })
@@ -322,16 +337,21 @@ export type Cliente = {
   bairro: string | null
   cidade: string | null
   uf: string | null
-  /** "meses" (a cada N meses, às 6h, e se repete) ou "data" (data e hora específica, uma vez só). */
+  /** "meses" (a cada N meses, no horário escolhido, e se repete) ou "data" (cadastros antigos: uma vez só). */
   tipoIntervalo: TipoIntervalo
-  /** No tipo "meses": de quantos em quantos meses o cliente precisa de manutenção. */
-  intervaloManutencaoMeses: number | null
+  /** De quanto em quanto tempo a mensagem se repete (em intervaloUnidade); null: sem envios automáticos. */
+  intervaloQuantidade: number | null
+  intervaloUnidade: UnidadeIntervalo
   /** Dia do próximo envio ("2026-12-08"); null quando não há envio marcado. */
   proximaManutencao: string | null
   /** Mensagem de WhatsApp só deste cliente (null: usa a mensagem padrão da empresa). */
   mensagemWhatsapp: string | null
   /** Próximo envio da mensagem de WhatsApp (ISO, UTC). */
   envioEm: string | null
+  /** Foto do cliente (ver urlFotoCliente); null quando não tem. */
+  fotoId: string | null
+  /** Imagem da mensagem personalizada (ver urlImagemMensagem); null quando não tem. */
+  mensagemImagemId: string | null
   criadoEm: string
   atualizadoEm: string
 }
@@ -359,13 +379,18 @@ export type DadosCliente = {
   bairro: string
   cidade: string
   uf: string
-  tipoIntervalo: TipoIntervalo
-  intervaloManutencaoMeses: number | null
-  /** Só no tipo "data" (no tipo "meses" o servidor calcula: hoje + N meses, às 6h). */
+  /**
+   * Data e hora do próximo envio (ISO). O servidor calcula o intervalo por ela: hoje 14/10 e próximo envio 14/12 →
+   * a cada 2 meses. null: sem envios automáticos.
+   */
   envioEm: string | null
+  /** Edição sem mexer no calendário: o servidor mantém o envio e o intervalo como estão (envioEm é ignorado). */
+  manterEnvio?: boolean
 }
 
 export type TipoIntervalo = 'meses' | 'data'
+
+export type UnidadeIntervalo = 'minutos' | 'horas' | 'dias' | 'semanas' | 'meses'
 
 export type ListaClientes = { itens: Cliente[]; total: number; pagina: number; tamanhoPagina: number }
 
@@ -390,6 +415,23 @@ export const salvarMensagemCliente = (token: string, id: string, mensagem: strin
 
 export const excluirCliente = (token: string, id: string) =>
   requisicao<void>('DELETE', `/api/clientes/${id}`, { token })
+
+/** Botão "Cancelar envios automáticos": nada mais é enviado para o cliente. */
+export const cancelarEnviosCliente = (token: string, id: string) =>
+  requisicao<Cliente>('POST', `/api/clientes/${id}/cancelar-envios`, { token })
+
+/** Endereço da foto para a tag <img> (aberto: o id é aleatório, não dá para adivinhar). */
+export const urlFotoCliente = (id: string) => `/api/clientes/fotos/${id}`
+
+/** Envia (ou troca) a foto do cliente, tirada pela webcam. */
+export const salvarFotoCliente = (token: string, clienteId: string, foto: Blob) => {
+  const corpo = new FormData()
+  corpo.append('arquivo', foto, 'foto.jpg')
+  return rotaDeImagem(requisicao<{ id: string }>('PUT', `/api/clientes/${clienteId}/foto`, { corpo, token }))
+}
+
+export const excluirFotoCliente = (token: string, clienteId: string) =>
+  requisicao<void>('DELETE', `/api/clientes/${clienteId}/foto`, { token })
 
 /** Endereço de um CEP (ViaCEP, serviço público e gratuito). */
 export type EnderecoCep = { logradouro: string; bairro: string; cidade: string; uf: string }
@@ -425,6 +467,8 @@ export type ConfiguracaoWhatsapp = {
   /** Número remetente, só dígitos com DDD. */
   remetente: string | null
   mensagem: string | null
+  /** Imagem da mensagem padrão (ver urlImagemMensagem); null quando não tem. */
+  imagemId: string | null
   /** Últimos envios: os 15 clientes que receberam a mensagem mais recentemente (um envio por cliente). */
   envios: EnvioWhatsapp[]
 }
@@ -436,9 +480,302 @@ export const obterWhatsapp = (token: string) => requisicao<ConfiguracaoWhatsapp>
 export const salvarWhatsapp = (token: string, dados: DadosWhatsapp) =>
   requisicao<ConfiguracaoWhatsapp>('PUT', '/api/whatsapp', { corpo: dados, token })
 
+/** Situação do WhatsApp que envia; ao conectar, vem o QR Code (imagem) e o código de 8 letras. */
+export type ConexaoWhatsapp = {
+  remetente: string | null
+  estado: 'sem-numero' | 'conectado' | 'aguardando' | 'desconectado' | 'indisponivel'
+  qrCode: string | null
+  codigo: string | null
+  mensagem: string | null
+}
+
+export const obterConexaoWhatsapp = (token: string) => requisicao<ConexaoWhatsapp>('GET', '/api/whatsapp/conexao', { token })
+/** Gera um QR Code novo para conectar o celular do número salvo (o QR vale ~20 segundos). */
+export const conectarWhatsapp = (token: string) => requisicao<ConexaoWhatsapp>('POST', '/api/whatsapp/conexao', { token })
+
+/** Mensagem automática programada para hoje (tela inicial), uma por cliente: enviada, não saiu ou ainda vai sair. */
+/** Cópias de segurança do programa da loja (aviso na tela inicial). */
+export type SituacaoBackup = { ativo: boolean; pasta: string; ultima: string | null }
+
+export const obterSituacaoBackup = (token: string) => requisicao<SituacaoBackup>('GET', '/api/sistema/backup', { token })
+
+export type MensagemHoje = {
+  clienteId: string
+  nome: string
+  celular: string
+  /** Horário do envio (feito) ou o marcado no cliente (agendada). */
+  horario: string
+  situacao: 'enviada' | 'teste' | 'erro' | 'agendada'
+  erro: string | null
+  /** Quantas já saíram hoje (cliente com intervalo de minutos/horas recebe mais de uma por dia). */
+  enviadas: number
+}
+
+export const listarMensagensHoje = (token: string) => requisicao<MensagemHoje[]>('GET', '/api/whatsapp/hoje', { token })
+
+/** Endereço da imagem da mensagem para a tag <img> (aberto: o id é aleatório, não dá para adivinhar). */
+export const urlImagemMensagem = (id: string) => `/api/whatsapp/imagens/${id}`
+
+/**
+ * Envia (ou troca) a imagem da mensagem: a da mensagem padrão (sem clienteId) ou a da mensagem de um cliente.
+ * Ela vai como foto, com o texto de legenda.
+ */
+export const salvarImagemMensagem = (token: string, imagem: Blob, clienteId?: string) => {
+  const corpo = new FormData()
+  corpo.append('arquivo', imagem, 'imagem.jpg')
+  const caminho = clienteId ? `/api/clientes/${clienteId}/mensagem/imagem` : '/api/whatsapp/imagem'
+  return rotaDeImagem(requisicao<{ id: string }>('PUT', caminho, { corpo, token }))
+}
+
+export const excluirImagemMensagem = (token: string, clienteId?: string) =>
+  requisicao<void>('DELETE', clienteId ? `/api/clientes/${clienteId}/mensagem/imagem` : '/api/whatsapp/imagem', { token })
+
 /** Todo o histórico de envios da mensagem automática para um cliente (mais novos primeiro). */
 export const listarEnviosCliente = (token: string, clienteId: string) =>
   requisicao<EnvioWhatsapp[]>('GET', `/api/clientes/${clienteId}/envios`, { token })
+
+// ---------- Cupons e recibos (não fiscais) ----------
+
+export type FormaPagamento = 'dinheiro' | 'pix' | 'cartao-credito' | 'cartao-debito' | 'boleto' | 'transferencia' | 'outro'
+
+export const FORMAS_PAGAMENTO: { valor: FormaPagamento; rotulo: string }[] = [
+  { valor: 'dinheiro', rotulo: 'Dinheiro' },
+  { valor: 'pix', rotulo: 'Pix' },
+  { valor: 'cartao-credito', rotulo: 'Cartão de crédito' },
+  { valor: 'cartao-debito', rotulo: 'Cartão de débito' },
+  { valor: 'boleto', rotulo: 'Boleto' },
+  { valor: 'transferencia', rotulo: 'Transferência' },
+  { valor: 'outro', rotulo: 'Outro' },
+]
+
+export const rotuloPagamento = (forma: string) => FORMAS_PAGAMENTO.find((f) => f.valor === forma)?.rotulo ?? forma
+
+export type CupomItem = {
+  id: string
+  /** Produto do cadastro; null no item avulso. */
+  produtoId: string | null
+  descricao: string
+  codigo: string | null
+  codigoBarras: string | null
+  quantidade: number
+  valorUnitario: number
+  total: number
+}
+
+/** Cupom de venda / recibo. Emitente e cliente são copiados na emissão (a reimpressão sai igual). */
+export type Cupom = {
+  id: string
+  /** Nº sequencial dentro da empresa. */
+  numero: number
+  emitenteNome: string
+  emitenteRazaoSocial: string | null
+  emitenteDocumento: string | null
+  emitenteEndereco: string | null
+  emitenteCidade: string | null
+  emitenteUf: string | null
+  emitenteTelefone: string | null
+  clienteId: string | null
+  clienteNome: string | null
+  clienteDocumento: string | null
+  clienteEndereco: string | null
+  itens: CupomItem[]
+  subtotal: number
+  desconto: number
+  total: number
+  formaPagamento: FormaPagamento
+  /** Quanto foi pago na 1ª forma (null nos cupons antigos: o total). */
+  valorPagamento1: number | null
+  /** 2ª forma (venda paga em duas partes). */
+  formaPagamento2: FormaPagamento | null
+  valorPagamento2: number | null
+  /** Total pago (soma das formas). */
+  valorRecebido: number | null
+  troco: number | null
+  /** "Correspondente a" do recibo. */
+  referente: string | null
+  observacao: string | null
+  emitidoPor: string
+  vendedorNome: string | null
+  emitidoEm: string
+  canceladoEm: string | null
+  motivoCancelamento: string | null
+  /** Nota emitida no site do governo e anotada aqui: 'cupom' (consumidor) ou 'nota' (empresa). */
+  notaTipo: TipoNota | null
+  notaNumero: string | null
+  notaRegistradaEm: string | null
+}
+
+export type DadosCupom = {
+  clienteId: string | null
+  clienteNome: string | null
+  clienteDocumento: string | null
+  clienteEndereco: string | null
+  itens: { produtoId: string | null; descricao: string | null; quantidade: number; valorUnitario: number }[]
+  /** Valor do recibo avulso (sem itens). */
+  valor: number | null
+  desconto: number | null
+  formaPagamento: FormaPagamento
+  valorRecebido: number | null
+  referente: string | null
+  observacao: string | null
+  valorPagamento1?: number | null
+  formaPagamento2?: FormaPagamento | null
+  valorPagamento2?: number | null
+  /** Vendedor (usuário da empresa); sem ele, quem está emitindo. */
+  vendedorId?: string | null
+}
+
+export type ListaCupons = { itens: Cupom[]; total: number; pagina: number; tamanhoPagina: number }
+
+/** Filtros do Financeiro (datas "2026-10-21", no horário de Brasília). */
+export type FiltrosVendas = { de?: string; ate?: string; forma?: string; vendedorId?: string; situacao?: string }
+
+const parametros = (valores: Record<string, string | number | undefined>) =>
+  new URLSearchParams(
+    Object.entries(valores)
+      .filter(([, v]) => v !== undefined && v !== '')
+      .map(([k, v]) => [k, String(v)]),
+  )
+
+export const listarCupons = (token: string, busca = '', pagina = 1, filtros: FiltrosVendas = {}) =>
+  requisicao<ListaCupons>('GET', `/api/cupons?${parametros({ busca: busca.trim(), pagina, ...filtros })}`, { token })
+
+export const obterCupom = (token: string, id: string) => requisicao<Cupom>('GET', `/api/cupons/${id}`, { token })
+
+export const emitirCupom = (token: string, dados: DadosCupom) =>
+  requisicao<Cupom>('POST', '/api/cupons', { corpo: dados, token })
+
+export const cancelarCupom = (token: string, id: string, motivo: string) =>
+  requisicao<Cupom>('POST', `/api/cupons/${id}/cancelar`, { corpo: { motivo }, token })
+
+export type TipoNota = 'cupom' | 'nota'
+
+
+// ---------- Estoque ----------
+
+export type TipoMovimento = 'inicial' | 'ajuste' | 'venda' | 'cancelamento'
+
+export type MovimentoEstoque = {
+  id: string
+  produtoId: string
+  produtoNome: string
+  produtoCodigo: string | null
+  tipo: TipoMovimento
+  /** Positivo entra, negativo sai. */
+  quantidade: number
+  saldoApos: number
+  custoUnitario: number | null
+  observacao: string | null
+  cupomId: string | null
+  usuarioNome: string
+  criadoEm: string
+}
+
+export type ListaMovimentos = { itens: MovimentoEstoque[]; total: number; pagina: number; tamanhoPagina: number }
+
+export const listarMovimentos = (
+  token: string,
+  filtros: { produtoId?: string; tipo?: string; de?: string; ate?: string; pagina?: number } = {},
+) => requisicao<ListaMovimentos>('GET', `/api/estoque/movimentos?${parametros(filtros)}`, { token })
+
+export const ajustarEstoque = (token: string, produtoId: string, novaQuantidade: number, motivo: string) =>
+  requisicao<{ quantidade: number }>('POST', `/api/estoque/produtos/${produtoId}/ajuste`, { corpo: { novaQuantidade, motivo }, token })
+
+// ---------- Financeiro ----------
+
+export type TotaisVendas = {
+  faturamento: number
+  vendas: number
+  ticketMedio: number
+  itensVendidos: number
+  descontos: number
+  custo: number
+  /** Faturamento menos o custo dos produtos (preço de custo na hora da venda). */
+  lucroBruto: number
+  cancelados: number
+  valorCancelado: number
+}
+
+export type FatiaVendas = { chave: string; nome: string; valor: number; quantidade: number }
+
+export type ResumoFinanceiro = {
+  de: string
+  ate: string
+  /** "dia" (até 3 meses) ou "mes". */
+  agrupamento: 'dia' | 'mes'
+  totais: TotaisVendas
+  /** O período anterior do mesmo tamanho (para comparar). */
+  anterior: TotaisVendas
+  noTempo: { periodo: string; faturamento: number; vendas: number }[]
+  formasPagamento: FatiaVendas[]
+  produtos: FatiaVendas[]
+  clientes: FatiaVendas[]
+  vendedores: FatiaVendas[]
+  /** 0 = domingo. */
+  diasSemana: number[]
+  horas: number[]
+  anos: number[]
+  equipe: FatiaVendas[]
+}
+
+export const obterResumoFinanceiro = (token: string, filtros: FiltrosVendas) =>
+  requisicao<ResumoFinanceiro>('GET', `/api/financeiro/resumo?${parametros(filtros)}`, { token })
+
+// ---------- Histórico dos clientes ("Número de ordem de serviço") ----------
+
+export type ClienteHistoricoResumo = {
+  id: string
+  numero: number
+  nome: string
+  celular: string
+  documento: string | null
+  compras: number
+  totalGasto: number
+  mensagens: number
+  ultimaAtividade: string
+}
+
+export type ListaClientesHistorico = { itens: ClienteHistoricoResumo[]; total: number; pagina: number; tamanhoPagina: number }
+
+export type EventoHistorico = {
+  tipo: 'venda' | 'cancelamento' | 'mensagem' | 'cadastro'
+  data: string
+  titulo: string
+  detalhe: string | null
+  valor: number | null
+  cupomId: string | null
+  /** Venda: "cancelado"; mensagem: enviado, teste ou erro. */
+  status: string | null
+  itens: { descricao: string; codigo: string | null; codigoBarras: string | null; quantidade: number; valorUnitario: number; total: number }[]
+}
+
+export type HistoricoCliente = {
+  id: string
+  numero: number
+  nome: string
+  celular: string
+  documento: string | null
+  endereco: string | null
+  proximoEnvio: string | null
+  criadoEm: string
+  resumo: {
+    compras: number
+    totalGasto: number
+    ticketMedio: number
+    itensComprados: number
+    mensagensEnviadas: number
+    mensagensComErro: number
+    primeiraCompra: string | null
+    ultimaCompra: string | null
+  }
+  eventos: EventoHistorico[]
+}
+
+export const listarHistoricoClientes = (token: string, busca = '', pagina = 1) =>
+  requisicao<ListaClientesHistorico>('GET', `/api/historico/clientes?${parametros({ busca: busca.trim(), pagina })}`, { token })
+
+export const obterHistoricoCliente = (token: string, id: string) =>
+  requisicao<HistoricoCliente>('GET', `/api/historico/clientes/${id}`, { token })
 
 // ---------- Minha conta ----------
 
@@ -454,16 +791,6 @@ export type Conta = {
   empresa: string | null
   criadoEm: string
   exclusao: TipoExclusao
-}
-
-export type Dispositivo = {
-  id: string
-  descricao: string | null
-  criadoEm: string
-  ultimoUsoEm: string
-  expiraEm: string
-  /** É este navegador */
-  atual: boolean
 }
 
 export const obterConta = (token: string) => requisicao<Conta>('GET', '/api/conta', { token })
@@ -483,19 +810,6 @@ export const confirmarTrocaDeEmail = (token: string, dados: { desafioId: string;
 
 export const reenviarCodigoDoEmail = (token: string, desafioId: string) =>
   requisicao<Verificacao>('POST', '/api/conta/email/reenviar', { corpo: { desafioId }, token })
-
-export const listarDispositivos = (token: string) =>
-  requisicao<Dispositivo[]>('GET', '/api/conta/dispositivos', {
-    token,
-    // Para a API marcar qual é "este computador"
-    cabecalhos: lerLembrado() ? { 'X-Dispositivo': lerLembrado()!.token } : undefined,
-  })
-
-export const esquecerDispositivo = (token: string, id: string) =>
-  requisicao<void>('DELETE', `/api/conta/dispositivos/${id}`, { token })
-
-export const esquecerTodosDispositivos = (token: string) =>
-  requisicao<void>('DELETE', '/api/conta/dispositivos', { token })
 
 export const excluirConta = (token: string, dados: { senha: string; confirmacao: string }) =>
   requisicao<{ excluida: TipoExclusao }>('POST', '/api/conta/excluir', { corpo: dados, token })
@@ -525,35 +839,6 @@ export function sair() {
   try {
     localStorage.removeItem(SESSAO_KEY)
     localStorage.removeItem('orion-sessao-loja') // sessão das lojas, de versões anteriores
-  } catch {
-    // nada a limpar
-  }
-}
-
-// ---------- "Lembrar de quem sou" ----------
-
-/** Navegador lembrado: o e-mail já vem preenchido e o login não pede o código (por 30 dias). */
-export type Lembrado = { email: string; token: string }
-
-export function lerLembrado(): Lembrado | null {
-  try {
-    const bruto = localStorage.getItem(LEMBRAR_KEY)
-    return bruto ? (JSON.parse(bruto) as Lembrado) : null
-  } catch {
-    return null
-  }
-}
-
-export function salvarLembrado(lembrado: Lembrado) {
-  try {
-    localStorage.setItem(LEMBRAR_KEY, JSON.stringify(lembrado))
-  } catch {
-    // Sem armazenamento: o código volta a ser pedido no próximo login.
-  }
-}
-
-export function esquecerLembrado() {
-  try {
     localStorage.removeItem(LEMBRAR_KEY)
   } catch {
     // nada a limpar

@@ -28,6 +28,9 @@ public class CodigoLogin
     /// <summary>Por onde o código atual foi enviado: "email" ou "whatsapp" (vazio enquanto a pessoa não escolheu).</summary>
     public string? Canal { get; set; }
 
+    /// <summary>"senha" no "Esqueci minha senha"; vazio nos outros usos.</summary>
+    public string? Finalidade { get; set; }
+
     public DateTime? UsadoEm { get; set; }
     public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
 }

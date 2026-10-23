@@ -1,4 +1,4 @@
-/* Galeria de imagens do produto (cadastro/edição e página do produto). Cores do tema da página (marrom/creme). */
+/* Galeria de imagens do produto (cadastro/edição e página do produto). Cores do tema da página (azul-marinho). */
 
 .imagens {
   display: flex;
@@ -19,7 +19,7 @@
 
 /* Fotos sendo arrastadas do computador por cima da galeria */
 .imagens-grade.recebendo {
-  background: var(--pg-suave, var(--creme));
+  background: var(--pg-suave, var(--gelo));
 }
 
 .imagens-item {
@@ -28,7 +28,7 @@
   min-width: 0;
   overflow: hidden;
   border-radius: 4px;
-  background: var(--pg-zebra, #fbf8ef);
+  background: var(--pg-zebra, #f6f8fc);
 }
 
 .imagens-item:not(.adicionar) {
@@ -47,9 +47,9 @@
   user-select: none;
 }
 
-/* A capa ganha um fundo creme mais forte, além do selo */
+/* A capa ganha um fundo azul-gelo mais forte, além do selo */
 .imagens-item.capa {
-  background: var(--pg-suave, var(--creme));
+  background: var(--pg-suave, var(--gelo));
 }
 
 .imagens-item.arrastando {
@@ -62,7 +62,7 @@
   left: 0.45rem;
   padding: 0.15rem 0.55rem;
   border-radius: 2px;
-  background: var(--pg-cor, var(--marrom));
+  background: var(--pg-cor, var(--marinho));
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -90,7 +90,7 @@
   border: none;
   border-radius: 2px;
   background: rgba(255, 255, 255, 0.92);
-  color: var(--pg-titulo, var(--marrom-escuro));
+  color: var(--pg-titulo, var(--marinho-escuro));
   cursor: pointer;
   transition: background-color 0.25s ease;
 }
@@ -123,18 +123,18 @@
   width: 100%;
   height: 100%;
   padding: 0.75rem;
-  border: 2px dashed var(--pg-cor, var(--marrom));
+  border: 2px dashed var(--pg-cor, var(--marinho));
   border-radius: 14px;
   background: none;
   text-align: center;
-  color: var(--pg-titulo, var(--marrom-escuro));
+  color: var(--pg-titulo, var(--marinho-escuro));
   cursor: pointer;
   transition: border-color 0.25s ease, background-color 0.25s ease;
 }
 
 .imagens-item.adicionar button:hover:not(:disabled) {
-  border-color: var(--pg-titulo, var(--marrom-escuro));
-  background: rgba(138, 102, 59, 0.05);
+  border-color: var(--pg-titulo, var(--marinho-escuro));
+  background: rgba(39, 70, 124, 0.05);
 }
 
 .imagens-item.adicionar button:disabled {
@@ -187,7 +187,7 @@
 }
 
 .ficha-imagens .imagens-grade {
-  grid-template-columns: repeat(auto-fill, 84px);
+  grid-template-columns: repeat(auto-fill, 76px);
   gap: 0.5rem;
 }
 

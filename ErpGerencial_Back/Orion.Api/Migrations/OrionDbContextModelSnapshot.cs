@@ -95,9 +95,17 @@ namespace Orion.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("envio_em");
 
-                    b.Property<int?>("IntervaloManutencaoMeses")
+                    b.Property<int?>("IntervaloQuantidade")
                         .HasColumnType("integer")
-                        .HasColumnName("intervalo_manutencao_meses");
+                        .HasColumnName("intervalo_quantidade");
+
+                    b.Property<string>("IntervaloUnidade")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("meses")
+                        .HasColumnName("intervalo_unidade");
 
                     b.Property<string>("Logradouro")
                         .HasMaxLength(150)
@@ -170,6 +178,40 @@ namespace Orion.Api.Migrations
                     b.ToTable("clientes", (string)null);
                 });
 
+            modelBuilder.Entity("Orion.Api.Data.ClienteFoto", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ClienteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cliente_id");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<byte[]>("Dados")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("dados");
+
+                    b.Property<string>("TipoConteudo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tipo_conteudo");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClienteId")
+                        .IsUnique();
+
+                    b.ToTable("cliente_fotos", (string)null);
+                });
+
             modelBuilder.Entity("Orion.Api.Data.CodigoLogin", b =>
                 {
                     b.Property<Guid>("Id")
@@ -200,6 +242,11 @@ namespace Orion.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("expira_em");
 
+                    b.Property<string>("Finalidade")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("finalidade");
+
                     b.Property<string>("NovoEmail")
                         .HasMaxLength(254)
                         .HasColumnType("character varying(254)")
@@ -224,48 +271,251 @@ namespace Orion.Api.Migrations
                     b.ToTable("codigos_login", (string)null);
                 });
 
-            modelBuilder.Entity("Orion.Api.Data.DispositivoConfiavel", b =>
+            modelBuilder.Entity("Orion.Api.Data.Cupom", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<DateTime>("CriadoEm")
+                    b.Property<DateTime?>("CanceladoEm")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("criado_em");
+                        .HasColumnName("cancelado_em");
 
-                    b.Property<string>("Descricao")
+                    b.Property<string>("ClienteDocumento")
+                        .HasMaxLength(14)
+                        .HasColumnType("character varying(14)")
+                        .HasColumnName("cliente_documento");
+
+                    b.Property<string>("ClienteEndereco")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)")
-                        .HasColumnName("descricao");
+                        .HasColumnName("cliente_endereco");
 
-                    b.Property<DateTime>("ExpiraEm")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("expira_em");
+                    b.Property<Guid?>("ClienteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cliente_id");
 
-                    b.Property<string>("TokenHash")
+                    b.Property<string>("ClienteNome")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("cliente_nome");
+
+                    b.Property<decimal>("Desconto")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("desconto");
+
+                    b.Property<string>("EmitenteCidade")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("emitente_cidade");
+
+                    b.Property<string>("EmitenteDocumento")
+                        .HasMaxLength(14)
+                        .HasColumnType("character varying(14)")
+                        .HasColumnName("emitente_documento");
+
+                    b.Property<string>("EmitenteEndereco")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("emitente_endereco");
+
+                    b.Property<string>("EmitenteNome")
                         .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("token_hash");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("emitente_nome");
 
-                    b.Property<DateTime>("UltimoUsoEm")
+                    b.Property<string>("EmitenteRazaoSocial")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("emitente_razao_social");
+
+                    b.Property<string>("EmitenteTelefone")
+                        .HasMaxLength(11)
+                        .HasColumnType("character varying(11)")
+                        .HasColumnName("emitente_telefone");
+
+                    b.Property<string>("EmitenteUf")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasColumnName("emitente_uf");
+
+                    b.Property<DateTime>("EmitidoEm")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("ultimo_uso_em");
+                        .HasColumnName("emitido_em");
 
-                    b.Property<Guid>("UsuarioId")
+                    b.Property<string>("EmitidoPor")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("emitido_por");
+
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<string>("FormaPagamento")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("forma_pagamento");
+
+                    b.Property<string>("FormaPagamento2")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("forma_pagamento2");
+
+                    b.Property<string>("MotivoCancelamento")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("motivo_cancelamento");
+
+                    b.Property<string>("NotaNumero")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("nota_numero");
+
+                    b.Property<DateTime?>("NotaRegistradaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("nota_registrada_em");
+
+                    b.Property<string>("NotaTipo")
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)")
+                        .HasColumnName("nota_tipo");
+
+                    b.Property<int>("Numero")
+                        .HasColumnType("integer")
+                        .HasColumnName("numero");
+
+                    b.Property<string>("Observacao")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("observacao");
+
+                    b.Property<string>("Referente")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("referente");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("subtotal");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("total");
+
+                    b.Property<Guid?>("UsuarioId")
                         .HasColumnType("uuid")
                         .HasColumnName("usuario_id");
 
+                    b.Property<decimal?>("ValorPagamento1")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("valor_pagamento1");
+
+                    b.Property<decimal?>("ValorPagamento2")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("valor_pagamento2");
+
+                    b.Property<decimal?>("ValorRecebido")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("valor_recebido");
+
+                    b.Property<Guid?>("VendedorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("vendedor_id");
+
+                    b.Property<string>("VendedorNome")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("vendedor_nome");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("TokenHash")
-                        .IsUnique();
+                    b.HasIndex("ClienteId");
 
                     b.HasIndex("UsuarioId");
 
-                    b.ToTable("dispositivos_confiaveis", (string)null);
+                    b.HasIndex("VendedorId");
+
+                    b.HasIndex("EmpresaId", "EmitidoEm");
+
+                    b.HasIndex("EmpresaId", "Numero")
+                        .IsUnique();
+
+                    b.ToTable("cupons", (string)null);
+                });
+
+            modelBuilder.Entity("Orion.Api.Data.CupomItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Codigo")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("codigo");
+
+                    b.Property<string>("CodigoBarras")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("codigo_barras");
+
+                    b.Property<Guid>("CupomId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cupom_id");
+
+                    b.Property<decimal>("CustoUnitario")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("custo_unitario");
+
+                    b.Property<string>("Descricao")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("descricao");
+
+                    b.Property<int>("Ordem")
+                        .HasColumnType("integer")
+                        .HasColumnName("ordem");
+
+                    b.Property<Guid?>("ProdutoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("produto_id");
+
+                    b.Property<decimal>("Quantidade")
+                        .HasPrecision(14, 3)
+                        .HasColumnType("numeric(14,3)")
+                        .HasColumnName("quantidade");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("total");
+
+                    b.Property<decimal>("ValorUnitario")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("valor_unitario");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProdutoId");
+
+                    b.HasIndex("CupomId", "Ordem");
+
+                    b.ToTable("cupom_itens", (string)null);
                 });
 
             modelBuilder.Entity("Orion.Api.Data.Empresa", b =>
@@ -274,6 +524,11 @@ namespace Orion.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<string>("Cidade")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("cidade");
 
                     b.Property<DateTime>("CriadoEm")
                         .HasColumnType("timestamp with time zone")
@@ -288,6 +543,11 @@ namespace Orion.Api.Migrations
                         .HasMaxLength(254)
                         .HasColumnType("character varying(254)")
                         .HasColumnName("email");
+
+                    b.Property<string>("Endereco")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("endereco");
 
                     b.Property<string>("MensagemManutencao")
                         .HasMaxLength(1000)
@@ -309,6 +569,11 @@ namespace Orion.Api.Migrations
                         .HasMaxLength(11)
                         .HasColumnType("character varying(11)")
                         .HasColumnName("telefone");
+
+                    b.Property<string>("Uf")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasColumnName("uf");
 
                     b.Property<string>("WhatsappRemetente")
                         .HasMaxLength(11)
@@ -389,6 +654,121 @@ namespace Orion.Api.Migrations
                     b.ToTable("envios_whatsapp", (string)null);
                 });
 
+            modelBuilder.Entity("Orion.Api.Data.MensagemImagem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ClienteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cliente_id");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<byte[]>("Dados")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("dados");
+
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<string>("TipoConteudo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tipo_conteudo");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClienteId")
+                        .IsUnique()
+                        .HasFilter("cliente_id IS NOT NULL");
+
+                    b.HasIndex("EmpresaId")
+                        .IsUnique()
+                        .HasFilter("cliente_id IS NULL");
+
+                    b.ToTable("mensagem_imagens", (string)null);
+                });
+
+            modelBuilder.Entity("Orion.Api.Data.MovimentoEstoque", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<Guid?>("CupomId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cupom_id");
+
+                    b.Property<decimal?>("CustoUnitario")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("custo_unitario");
+
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<string>("Observacao")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("observacao");
+
+                    b.Property<Guid>("ProdutoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("produto_id");
+
+                    b.Property<decimal>("Quantidade")
+                        .HasPrecision(14, 3)
+                        .HasColumnType("numeric(14,3)")
+                        .HasColumnName("quantidade");
+
+                    b.Property<decimal>("SaldoApos")
+                        .HasPrecision(14, 3)
+                        .HasColumnType("numeric(14,3)")
+                        .HasColumnName("saldo_apos");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)")
+                        .HasColumnName("tipo");
+
+                    b.Property<Guid?>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.Property<string>("UsuarioNome")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("usuario_nome");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CupomId");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.HasIndex("EmpresaId", "CriadoEm");
+
+                    b.HasIndex("ProdutoId", "CriadoEm");
+
+                    b.ToTable("movimentos_estoque", (string)null);
+                });
+
             modelBuilder.Entity("Orion.Api.Data.Produto", b =>
                 {
                     b.Property<Guid>("Id")
@@ -422,6 +802,11 @@ namespace Orion.Api.Migrations
                     b.Property<Guid>("EmpresaId")
                         .HasColumnType("uuid")
                         .HasColumnName("empresa_id");
+
+                    b.Property<decimal>("EstoqueMinimo")
+                        .HasPrecision(14, 3)
+                        .HasColumnType("numeric(14,3)")
+                        .HasColumnName("estoque_minimo");
 
                     b.Property<string>("Marca")
                         .HasMaxLength(80)
@@ -467,6 +852,14 @@ namespace Orion.Api.Migrations
                         .HasPrecision(14, 3)
                         .HasColumnType("numeric(14,3)")
                         .HasColumnName("quantidade");
+
+                    b.Property<string>("Unidade")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)")
+                        .HasDefaultValue("UN")
+                        .HasColumnName("unidade");
 
                     b.Property<string>("Voltagem")
                         .HasMaxLength(30)
@@ -599,6 +992,17 @@ namespace Orion.Api.Migrations
                     b.Navigation("Empresa");
                 });
 
+            modelBuilder.Entity("Orion.Api.Data.ClienteFoto", b =>
+                {
+                    b.HasOne("Orion.Api.Data.Cliente", "Cliente")
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cliente");
+                });
+
             modelBuilder.Entity("Orion.Api.Data.CodigoLogin", b =>
                 {
                     b.HasOne("Orion.Api.Data.Usuario", "Usuario")
@@ -610,15 +1014,46 @@ namespace Orion.Api.Migrations
                     b.Navigation("Usuario");
                 });
 
-            modelBuilder.Entity("Orion.Api.Data.DispositivoConfiavel", b =>
+            modelBuilder.Entity("Orion.Api.Data.Cupom", b =>
                 {
-                    b.HasOne("Orion.Api.Data.Usuario", "Usuario")
+                    b.HasOne("Orion.Api.Data.Cliente", null)
                         .WithMany()
-                        .HasForeignKey("UsuarioId")
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Orion.Api.Data.Empresa", "Empresa")
+                        .WithMany()
+                        .HasForeignKey("EmpresaId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Usuario");
+                    b.HasOne("Orion.Api.Data.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Orion.Api.Data.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("VendedorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Empresa");
+                });
+
+            modelBuilder.Entity("Orion.Api.Data.CupomItem", b =>
+                {
+                    b.HasOne("Orion.Api.Data.Cupom", "Cupom")
+                        .WithMany("Itens")
+                        .HasForeignKey("CupomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Orion.Api.Data.Produto", null)
+                        .WithMany()
+                        .HasForeignKey("ProdutoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Cupom");
                 });
 
             modelBuilder.Entity("Orion.Api.Data.EnvioWhatsapp", b =>
@@ -636,6 +1071,45 @@ namespace Orion.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Cliente");
+                });
+
+            modelBuilder.Entity("Orion.Api.Data.MensagemImagem", b =>
+                {
+                    b.HasOne("Orion.Api.Data.Cliente", null)
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Orion.Api.Data.Empresa", null)
+                        .WithMany()
+                        .HasForeignKey("EmpresaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Orion.Api.Data.MovimentoEstoque", b =>
+                {
+                    b.HasOne("Orion.Api.Data.Cupom", null)
+                        .WithMany()
+                        .HasForeignKey("CupomId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Orion.Api.Data.Empresa", null)
+                        .WithMany()
+                        .HasForeignKey("EmpresaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Orion.Api.Data.Produto", null)
+                        .WithMany()
+                        .HasForeignKey("ProdutoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Orion.Api.Data.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("Orion.Api.Data.Produto", b =>
@@ -669,6 +1143,11 @@ namespace Orion.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Empresa");
+                });
+
+            modelBuilder.Entity("Orion.Api.Data.Cupom", b =>
+                {
+                    b.Navigation("Itens");
                 });
 
             modelBuilder.Entity("Orion.Api.Data.Empresa", b =>

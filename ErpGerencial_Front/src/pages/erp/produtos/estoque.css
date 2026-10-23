@@ -1,0 +1,144 @@
+/*
+  Estoque (Produtos): atalhos e movimentações.
+  Cores do tema de Produtos (azul-marinho), sem bordas: separação por cor de fundo.
+*/
+
+.estoque-atalhos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  padding: 0.6rem var(--erp-lado);
+  background: var(--pg-lado);
+}
+
+.estoque-atalho {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 40px;
+  padding: 0.3rem 0.9rem;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--pg-titulo);
+  font-size: 0.9rem;
+  font-weight: 700;
+  transition: filter 0.25s ease;
+}
+
+.estoque-atalho:hover {
+  filter: brightness(0.96);
+}
+
+/* ---------- Páginas de estoque ---------- */
+
+.estoque-corpo {
+  display: grid;
+  gap: 1rem;
+}
+
+.estoque-cartao {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem 1.1rem;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.estoque-cartao h2 {
+  font-size: 1.02rem;
+}
+
+.estoque-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.75rem;
+}
+
+.estoque-linha-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.estoque-dica {
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+}
+
+/* Tabela simples (itens da entrada, movimentações, categorias) */
+.estoque-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.estoque-tabela th {
+  padding: 0.5rem 0.6rem;
+  background: var(--pg-lado);
+  color: var(--pg-titulo);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.estoque-tabela td {
+  padding: 0.5rem 0.6rem;
+  vertical-align: middle;
+}
+
+.estoque-tabela tbody tr:nth-child(even) {
+  background: var(--pg-zebra);
+}
+
+.estoque-tabela .numero {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.estoque-tabela-area {
+  overflow-x: auto;
+}
+
+/* Tipo do movimento: um selo com cor e desenho */
+.mov-tipo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.05rem 0.55rem;
+  border-radius: 999px;
+  background: var(--cinza-claro);
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.mov-tipo.inicial,
+.mov-tipo.cancelamento {
+  background: #dcf1e2;
+  color: #1e6b3a;
+}
+
+.mov-tipo.venda {
+  background: var(--azul-claro);
+  color: var(--azul-escuro);
+}
+
+.mov-tipo.ajuste {
+  background: var(--gelo);
+  color: var(--marinho-escuro);
+}
+
+.mov-quantidade.entra {
+  color: #1e6b3a;
+  font-weight: 800;
+}
+
+.mov-quantidade.sai {
+  color: var(--erro);
+  font-weight: 800;
+}

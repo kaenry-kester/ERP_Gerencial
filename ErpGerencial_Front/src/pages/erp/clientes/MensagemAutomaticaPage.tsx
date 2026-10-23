@@ -1,11 +1,21 @@
 import { useEffect, useState, type SubmitEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import CampoArea from '../../../components/formulario/CampoArea'
 import CampoTexto from '../../../components/formulario/CampoTexto'
 import type { Aviso } from '../../../components/formulario/FaixaAviso'
-import { IconeCheck, IconeMensagem } from '../../../components/icones/Icones'
+import { IconeCheck, IconeMensagem, IconeVoltar } from '../../../components/icones/Icones'
 import { IlustracaoClientes } from '../../../components/icones/Ilustracoes'
 import { useSessaoExpirada } from '../../../hooks/useSessaoExpirada'
-import { ErroApi, mensagemDe, obterWhatsapp, salvarWhatsapp, type ConfiguracaoWhatsapp } from '../../../services/api'
+import {
+  ErroApi,
+  excluirImagemMensagem,
+  mensagemDe,
+  obterWhatsapp,
+  salvarImagemMensagem,
+  salvarWhatsapp,
+  urlImagemMensagem,
+  type ConfiguracaoWhatsapp,
+} from '../../../services/api'
 import { formatarTelefone, telefoneValido } from '../../../utils/validacao'
 import AvisoPagina from '../AvisoPagina'
 import { useErp } from '../contexto'
@@ -14,7 +24,11 @@ import { tem } from '../modulos'
 import SecaoPagina from '../SecaoPagina'
 import SemAcesso from '../SemAcesso'
 import { MENSAGEM_MAXIMO as MAXIMO, TRECHOS_MENSAGEM as TRECHOS } from './formatos'
+import BalaoMensagem from './BalaoMensagem'
+import ConexaoWhatsapp from './ConexaoWhatsapp'
+import ExtrasMensagem from './ExtrasMensagem'
 import JanelaEnvios from './JanelaEnvios'
+import { avisarSalvo } from '../../../components/aviso-salvo/avisarSalvo'
 import '../../../styles/acesso.css'
 import './clientes.css'
 
@@ -29,6 +43,7 @@ type Campo = 'remetente' | 'mensagem'
 export default function MensagemAutomaticaPage() {
   const { sessao } = useErp()
   const sessaoExpirada = useSessaoExpirada()
+  const navigate = useNavigate()
   const [config, setConfig] = useState<ConfiguracaoWhatsapp | null>(null)
   const [remetente, setRemetente] = useState('')
   const [mensagem, setMensagem] = useState('')
@@ -90,7 +105,7 @@ export default function MensagemAutomaticaPage() {
     try {
       aplicar(await salvarWhatsapp(sessao.token, { remetente, mensagem }))
       setEnviado(false)
-      setAviso({ tipo: 'ok', texto: 'Salvo.' })
+      avisarSalvo('Alterações feitas com sucesso', 'Mensagem automática')
     } catch (erro) {
       if (sessaoExpirada(erro)) return
       if (erro instanceof ErroApi && (erro.campo === 'remetente' || erro.campo === 'mensagem'))
@@ -100,12 +115,6 @@ export default function MensagemAutomaticaPage() {
       setSalvando(false)
     }
   }
-
-  // Prévia com um cliente de exemplo, do jeito que o robô vai montar a mensagem.
-  const previa = mensagem
-    .replace(/\{nome\}/gi, 'Maria')
-    .replace(/\{data\}/gi, new Date().toLocaleDateString('pt-BR'))
-    .replace(/\{empresa\}/gi, sessao.empresa.nome)
 
   return (
     <div className="pagina tema-clientes">
@@ -149,6 +158,8 @@ export default function MensagemAutomaticaPage() {
               erro={erros.remetente}
             />
           </div>
+          {/* Conectar o celular deste número: QR Code aqui mesmo */}
+          <ConexaoWhatsapp salvo={config.remetente} digitado={remetente} />
         </SecaoPagina>
 
         <SecaoPagina id="whatsapp-mensagem" numero={2} titulo="Mensagem">
@@ -162,6 +173,34 @@ export default function MensagemAutomaticaPage() {
               mudou()
             }}
             erro={erros.mensagem}
+          />
+          <ExtrasMensagem
+            idCampo="whatsapp-mensagem"
+            valor={mensagem}
+            maximo={MAXIMO}
+            onChange={(v) => {
+              setMensagem(v)
+              mudou()
+            }}
+            imagemUrl={config.imagemId ? urlImagemMensagem(config.imagemId) : null}
+            onImagem={async (imagem) => {
+              try {
+                const { id } = await salvarImagemMensagem(sessao.token, imagem)
+                setConfig((c) => c && { ...c, imagemId: id })
+                return null
+              } catch (erro) {
+                return sessaoExpirada(erro) ? null : mensagemDe(erro)
+              }
+            }}
+            onRemoverImagem={async () => {
+              try {
+                await excluirImagemMensagem(sessao.token)
+                setConfig((c) => c && { ...c, imagemId: null })
+                return null
+              } catch (erro) {
+                return sessaoExpirada(erro) ? null : mensagemDe(erro)
+              }
+            }}
           />
           <div className="mensagem-trechos">
             <span>Inserir:</span>
@@ -180,18 +219,30 @@ export default function MensagemAutomaticaPage() {
               </button>
             ))}
           </div>
-          {mensagem.trim() && (
-            <div className="mensagem-previa">
-              <span className="mensagem-previa-rotulo">Como o cliente recebe</span>
-              <p className="mensagem-balao">{previa}</p>
-            </div>
-          )}
+          <div className="mensagem-previa">
+            <span className="cliente-whatsapp-rotulo">Como o cliente recebe (exemplo com a cliente Maria)</span>
+            <BalaoMensagem
+              texto={mensagem}
+              imagemUrl={config.imagemId ? urlImagemMensagem(config.imagemId) : null}
+              nome="Maria"
+              empresa={sessao.empresa.nome}
+            />
+          </div>
         </SecaoPagina>
 
         <div className="pagina-barra">
           <button type="submit" className="pagina-botao" disabled={salvando}>
             <IconeCheck tamanho={20} />
             {salvando ? 'Salvando...' : 'Salvar'}
+          </button>
+          {/* Volta para a tela de onde veio (ex.: a ficha do cliente); aberta direto, vai para Clientes */}
+          <button
+            type="button"
+            className="pagina-botao neutro"
+            onClick={() => ((window.history.state as { idx?: number } | null)?.idx ? navigate(-1) : navigate('/app/clientes'))}
+          >
+            <IconeVoltar tamanho={20} />
+            Voltar
           </button>
           {aviso && <AvisoPagina aviso={aviso} />}
         </div>

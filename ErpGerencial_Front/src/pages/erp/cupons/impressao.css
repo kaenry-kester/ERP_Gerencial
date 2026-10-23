@@ -1,0 +1,134 @@
+/*
+  Documento impresso: cupom de 80 mm (impressora térmica).
+  Na impressão só o documento aparece; na tela, os mesmos componentes servem de pré-visualização.
+*/
+
+/* Na tela fica montado fora da área visível (dá para medir a altura do cupom antes de imprimir) */
+.impressao {
+  position: absolute;
+  top: 0;
+  left: -10000px;
+  pointer-events: none;
+}
+
+@media print {
+  body.imprimindo > :not(.impressao) {
+    display: none !important;
+  }
+
+  body.imprimindo .impressao {
+    position: static;
+  }
+
+  html,
+  body.imprimindo {
+    background: #fff !important;
+    min-height: 0 !important;
+  }
+
+  .impressao * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* ---------- Cupom 80 mm ---------- */
+
+.ct {
+  position: relative;
+  width: 72mm;
+  padding: 3mm 0;
+  margin: 0 auto;
+  background: #fff;
+  color: #000;
+  font-family: Arial, "Helvetica Neue", sans-serif;
+  font-size: 11.5px;
+  line-height: 1.35;
+  letter-spacing: 0;
+  word-spacing: 0;
+}
+
+.ct p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ct hr {
+  margin: 2mm 0;
+  border: none;
+  border-top: 1px dashed #000;
+}
+
+.ct-centro {
+  text-align: center;
+}
+
+/* Logo da loja no topo do cupom */
+.ct-logo {
+  display: block;
+  max-width: 56mm;
+  max-height: 22mm;
+  margin: 0 auto 2mm;
+  object-fit: contain;
+}
+
+.ct-empresa {
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ct-titulo {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.ct-linha {
+  display: flex;
+  justify-content: space-between;
+  gap: 2mm;
+}
+
+.ct-linha span:last-child {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ct-itens {
+  list-style: none;
+  display: grid;
+  gap: 1.2mm;
+  padding: 0;
+  margin: 0;
+}
+
+.ct-suave {
+  color: #444;
+}
+
+.ct-total {
+  margin: 1mm 0 !important;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.ct-rodape {
+  margin-top: 2mm !important;
+  font-weight: 700;
+}
+
+.ct-cancelado {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-24deg);
+  padding: 1mm 4mm;
+  border: 3px solid #b42318;
+  color: #b42318;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  opacity: 0.75;
+  pointer-events: none;
+}

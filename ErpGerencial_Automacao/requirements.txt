@@ -1,1 +1,1 @@
-psycopg[binary]>=3.2
+# Os comandos conectar/testar só usam a biblioteca padrão do Python (o envio automático é feito pela API).

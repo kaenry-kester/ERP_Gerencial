@@ -168,6 +168,12 @@ export function mascaraQuantidade(valor: string) {
   return resto.length > 0 ? `${inteiro.slice(0, 10)},${decimais}` : inteiro.slice(0, 10)
 }
 
+/** Como mascaraQuantidade, mas aceita o sinal de menos na frente (estoque negativo: vendeu sem ter no estoque). */
+export function mascaraQuantidadeComSinal(valor: string) {
+  const negativo = valor.trim().startsWith('-')
+  return (negativo ? '-' : '') + mascaraQuantidade(valor)
+}
+
 /** "1,5" → 1.5 ("" → null) */
 export const quantidadeParaNumero = (valor: string): number | null =>
   valor.trim() ? Number(valor.replace(',', '.')) || 0 : null

@@ -10,6 +10,7 @@ Configuração no .env: EVOLUTION_URL (padrão http://localhost:8080) e EVOLUTIO
 do evolution-api/.env).
 """
 
+import base64
 import json
 import os
 import urllib.error
@@ -95,10 +96,10 @@ class EvolutionAPI:
         _, resposta = self._chamar("GET", f"/instance/connect/{self.instancia}?number=55{self.remetente}")
         return resposta if isinstance(resposta, dict) else {}
 
-    def enviar(self, destino: str, mensagem: str) -> None:
+    def enviar(self, destino: str, mensagem: str, imagem: bytes | None = None, tipo_imagem: str = "image/jpeg") -> None:
         """
-        Envia a mensagem para um celular brasileiro (só dígitos, com DDD).
-        Lança ErroEnvio se o número não tiver WhatsApp ou a Evolution não aceitar o envio.
+        Envia a mensagem para um celular brasileiro (só dígitos, com DDD). Com imagem, ela vai como foto e o texto
+        como legenda. Lança ErroEnvio se o número não tiver WhatsApp ou a Evolution não aceitar o envio.
         """
         # Confere se o número tem WhatsApp (a Evolution também acerta o nono dígito dos celulares).
         codigo, resposta = self._chamar("POST", f"/chat/whatsappNumbers/{self.instancia}", {"numbers": [f"55{destino}"]})
@@ -109,8 +110,16 @@ class EvolutionAPI:
             raise ErroEnvio("Este celular não tem WhatsApp ou o número está errado")
 
         # "delay": mostra "digitando..." por um instante antes de enviar, como uma pessoa faria.
-        codigo, resposta = self._chamar("POST", f"/message/sendText/{self.instancia}", {
-            "number": numero.get("jid") or f"55{destino}", "text": mensagem, "delay": 1500,
-        })
+        para = numero.get("jid") or f"55{destino}"
+        if imagem:
+            extensao = {"image/png": "png", "image/webp": "webp"}.get(tipo_imagem, "jpg")
+            codigo, resposta = self._chamar("POST", f"/message/sendMedia/{self.instancia}", {
+                "number": para, "mediatype": "image", "mimetype": tipo_imagem, "caption": mensagem,
+                "media": base64.b64encode(imagem).decode(), "fileName": f"imagem.{extensao}", "delay": 1500,
+            }, segundos=120)
+        else:
+            codigo, resposta = self._chamar("POST", f"/message/sendText/{self.instancia}", {
+                "number": para, "text": mensagem, "delay": 1500,
+            })
         if codigo >= 300 or not (resposta.get("key") or {}).get("id"):
             raise ErroEnvio(f"O WhatsApp não aceitou a mensagem: {_detalhe(resposta)}")
