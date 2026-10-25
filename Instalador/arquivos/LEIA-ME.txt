@@ -3,7 +3,8 @@
 
 1) ABRIR
    Dê dois cliques em "Iniciar Orion".
-   Na primeira vez ele prepara tudo sozinho (leva cerca de 1 minuto).
+   Na primeira vez ele prepara tudo sozinho (leva cerca de 1 minuto) e cria o atalho
+   "Órion" (com o logo da loja) na Área de Trabalho: depois é só abrir por ele.
    O sistema abre no navegador em:  http://localhost:5000
    Na primeira vez, clique em "Criar minha conta" e cadastre a loja.
 

@@ -196,8 +196,29 @@ function Processo([string]$arquivoPid) {
   return Get-Process -Id $id -ErrorAction SilentlyContinue
 }
 
+# Atalho "Órion" na Área de Trabalho, com o ícone da loja: criado na primeira vez e corrigido se a pasta mudar de lugar
+function CriarAtalho {
+  if ($env:ORION_SEM_NAVEGADOR) { return }
+  try {
+    $shell = New-Object -ComObject WScript.Shell
+    $arquivo = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Órion.lnk'
+    $destino = Join-Path $raiz 'Iniciar Orion.bat'
+    if ((Test-Path $arquivo) -and $shell.CreateShortcut($arquivo).TargetPath -eq $destino) { return }
+    $atalho = $shell.CreateShortcut($arquivo)
+    $atalho.TargetPath = $destino
+    $atalho.WorkingDirectory = $raiz
+    $atalho.IconLocation = (Join-Path $sistema 'orion.ico') + ',0'
+    $atalho.Description = 'Abrir o Órion'
+    $atalho.Save()
+    Escrever 'Atalho "Órion" criado na Área de Trabalho.' 'Green'
+  } catch {
+    # Sem atalho o programa funciona igual (abre pelo "Iniciar Orion")
+  }
+}
+
 function Iniciar {
   PrimeiraVez
+  CriarAtalho
   $config = LerConfig
   LigarBanco $config
   if (ApiNoAr $config) {
