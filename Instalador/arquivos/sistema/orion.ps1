@@ -309,6 +309,16 @@ function TrocarSenha {
   }
 }
 
+# Pasta de modelo (Instalador\arquivos, ou uma cópia do projeto baixada do GitHub): não tem o banco, o Órion nem o WhatsApp
+if (-not (Test-Path (Join-Path $pgBin 'initdb.exe')) -or -not (Test-Path $api)) {
+  Escrever "`nEsta pasta ainda não é o programa completo." 'Yellow'
+  Escrever 'Ela é só o modelo usado para montar o programa (faltam o banco de dados, o Órion e o WhatsApp).'
+  Escrever 'Use o arquivo Orion.zip: extraia ele e clique em "Iniciar Orion" dentro da pasta extraída.'
+  Escrever 'Para gerar o Orion.zip: na pasta Instalador, rode  powershell -ExecutionPolicy Bypass -File montar-pacote.ps1'
+  Escrever '(o arquivo fica em pacote\Orion.zip, na pasta do projeto).'
+  exit 1
+}
+
 try {
   switch ($acao) {
     'iniciar' { Iniciar }
