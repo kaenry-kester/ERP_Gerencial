@@ -83,6 +83,53 @@
   font-size: 1.05rem;
 }
 
+/* PDF: baixar e encaminhar pelo WhatsApp, lado a lado */
+.cupom-pdf-botoes {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.cupom-pdf-botoes .pagina-botao {
+  justify-content: center;
+}
+
+/* Verde do WhatsApp, com o ícone dele */
+.cupom-botao-whatsapp {
+  background: #1f9d55;
+  color: #fff;
+}
+
+.cupom-botao-whatsapp:hover:not(:disabled) {
+  background: #17834a;
+}
+
+.cupom-botao-whatsapp img {
+  width: 1.3rem;
+  height: 1.3rem;
+}
+
+.cupom-whatsapp {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.9rem 1rem;
+  border-radius: 4px;
+  background: #e8f6ee;
+}
+
+/* Cupom do PDF: margem branca em volta do papel */
+.cupom-pdf-papel {
+  width: fit-content;
+  padding: 4mm;
+  background: #fff;
+}
+
+.cupom-whatsapp-erro {
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--erro);
+}
+
 .cupom-detalhe-dados {
   display: grid;
   gap: 0.35rem;

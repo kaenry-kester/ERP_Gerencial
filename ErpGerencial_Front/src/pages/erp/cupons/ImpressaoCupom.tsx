@@ -54,6 +54,13 @@ export function CupomTermico({ cupom, logoUrl }: { cupom: Cupom; logoUrl?: strin
                     .join(' · ')}
                 </p>
               )}
+              {(item.observacao || item.data) && (
+                <p className="ct-suave">
+                  {[item.data && `Data: ${item.data.split('-').reverse().join('/')}`, item.observacao]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </p>
+              )}
               <p className="ct-linha">
                 <span>
                   {formatarQuantidade(item.quantidade)} x {formatarMoeda(item.valorUnitario)}

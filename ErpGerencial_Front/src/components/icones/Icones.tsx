@@ -253,3 +253,25 @@ export function IconeOrdemServico({ tamanho = 24 }: IconeProps) {
     </svg>
   )
 }
+
+/** Seta para baixo (abrir/fechar uma lista: gira para cima quando aberta). */
+export function IconeChevron({ tamanho = 24 }: IconeProps) {
+  return (
+    <svg {...base(tamanho)}>
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  )
+}
+
+/** Planilha com linhas (Orçamento). */
+export function IconeOrcamento({ tamanho = 24 }: IconeProps) {
+  return (
+    <svg {...base(tamanho)}>
+      <rect x="3.5" y="3" width="17" height="18" rx="2" />
+      <line x1="3.5" y1="8.5" x2="20.5" y2="8.5" />
+      <line x1="3.5" y1="13.5" x2="20.5" y2="13.5" />
+      <line x1="10" y1="8.5" x2="10" y2="21" />
+      <line x1="15.5" y1="17" x2="18" y2="17" />
+    </svg>
+  )
+}

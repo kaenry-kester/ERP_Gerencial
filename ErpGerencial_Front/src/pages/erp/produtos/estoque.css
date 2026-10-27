@@ -142,3 +142,46 @@
   color: var(--erro);
   font-weight: 800;
 }
+
+/* Título das movimentações com o botão de abrir/fechar a lista (a seta gira quando aberta) */
+.estoque-titulo-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.estoque-recolher {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--pg-suave, var(--gelo));
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--pg-titulo, var(--marinho-escuro));
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.estoque-recolher:hover {
+  background: var(--pg-lado, var(--gelo));
+}
+
+.estoque-recolher svg {
+  transition: transform 0.25s ease;
+}
+
+.estoque-recolher.aberta svg {
+  transform: rotate(180deg);
+}
+
+/* Ficha do produto na página de detalhes: sem a margem de fora (já está dentro do corpo da página) */
+.produto-detalhe-ficha {
+  width: 100%;
+  margin: 0 0 0.5rem;
+}

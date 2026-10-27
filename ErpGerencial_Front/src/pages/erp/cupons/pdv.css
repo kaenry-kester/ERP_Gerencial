@@ -264,7 +264,7 @@
 }
 
 .pdv-qtd label,
-.pdv-descricao span {
+.pdv-descricao label {
   font-size: 0.8rem;
   font-weight: 700;
   opacity: 0.85;
@@ -280,14 +280,29 @@
   text-align: center;
 }
 
-.pdv-descricao p {
+/* Descrição: um título grande e editável (o texto que sai no cupom) */
+.pdv .pdv-descricao input {
+  width: 100%;
   min-height: 52px;
-  display: flex;
-  align-items: center;
+  padding: 0 0.5rem;
+  border: none;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  font: inherit;
   font-size: 1.35rem;
   font-weight: 700;
   line-height: 1.25;
-  overflow-wrap: anywhere;
+  color: var(--branco);
+}
+
+.pdv .pdv-descricao input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+}
+
+.pdv .pdv-descricao input:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 1px;
 }
 
 /* Foto do produto + valor unitário e total do item (o código de barras fica em cima, na largura toda) */
@@ -669,11 +684,11 @@
   }
 
   .pdv .pdv-qtd input,
-  .pdv-descricao p {
+  .pdv .pdv-descricao input {
     min-height: 44px;
   }
 
-  .pdv-descricao p {
+  .pdv .pdv-descricao input {
     font-size: 1.15rem;
   }
 

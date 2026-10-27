@@ -16,9 +16,14 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
     public DbSet<Cupom> Cupons => Set<Cupom>();
     public DbSet<CupomItem> CupomItens => Set<CupomItem>();
     public DbSet<MovimentoEstoque> MovimentosEstoque => Set<MovimentoEstoque>();
+    public DbSet<Orcamento> Orcamentos => Set<Orcamento>();
+    public DbSet<OrcamentoItem> OrcamentoItens => Set<OrcamentoItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // Busca sem diferenciar acentos ("agua" acha "Água"); ILIKE já ignora maiúsculas e minúsculas
+        modelBuilder.HasPostgresExtension("unaccent");
+
         modelBuilder.Entity<Usuario>(e =>
         {
             e.ToTable("usuarios");
@@ -118,6 +123,10 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
             e.Property(c => c.TelefoneComercial).HasColumnName("telefone_comercial").HasMaxLength(11);
             e.Property(c => c.Celular2).HasColumnName("celular2").HasMaxLength(11);
             e.Property(c => c.Conjuge).HasColumnName("conjuge").HasMaxLength(200);
+            e.Property(c => c.Item).HasColumnName("item").HasMaxLength(120);
+            e.Property(c => c.Marca).HasColumnName("marca").HasMaxLength(80);
+            e.Property(c => c.Modelo).HasColumnName("modelo").HasMaxLength(80);
+            e.Property(c => c.Observacao).HasColumnName("observacao").HasMaxLength(2000);
             e.Property(c => c.DataCompra).HasColumnName("data_compra");
             e.Property(c => c.Cep).HasColumnName("cep").HasMaxLength(8);
             e.Property(c => c.Logradouro).HasColumnName("logradouro").HasMaxLength(150);
@@ -246,6 +255,8 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
             e.Property(i => i.Descricao).HasColumnName("descricao").HasMaxLength(200);
             e.Property(i => i.Codigo).HasColumnName("codigo").HasMaxLength(60);
             e.Property(i => i.CodigoBarras).HasColumnName("codigo_barras").HasMaxLength(50);
+            e.Property(i => i.Observacao).HasColumnName("observacao").HasMaxLength(500);
+            e.Property(i => i.Data).HasColumnName("data");
             e.Property(i => i.CustoUnitario).HasColumnName("custo_unitario").HasPrecision(14, 2);
             e.Property(i => i.Quantidade).HasColumnName("quantidade").HasPrecision(14, 3);
             e.Property(i => i.ValorUnitario).HasColumnName("valor_unitario").HasPrecision(14, 2);
@@ -254,6 +265,47 @@ public class OrionDbContext(DbContextOptions<OrionDbContext> options) : DbContex
             e.HasOne(i => i.Cupom).WithMany(c => c.Itens).HasForeignKey(i => i.CupomId).OnDelete(DeleteBehavior.Cascade);
             // Excluir o produto não apaga o item (descrição e valores ficaram copiados).
             e.HasOne<Produto>().WithMany().HasForeignKey(i => i.ProdutoId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Orcamento>(e =>
+        {
+            e.ToTable("orcamentos");
+            e.Property(o => o.Id).HasColumnName("id");
+            e.Property(o => o.EmpresaId).HasColumnName("empresa_id");
+            e.Property(o => o.Numero).HasColumnName("numero");
+            e.Property(o => o.ClienteId).HasColumnName("cliente_id");
+            e.Property(o => o.ClienteNome).HasColumnName("cliente_nome").HasMaxLength(200);
+            e.Property(o => o.Observacao).HasColumnName("observacao").HasMaxLength(1000);
+            e.Property(o => o.Total).HasColumnName("total").HasPrecision(14, 2);
+            e.Property(o => o.Situacao).HasColumnName("situacao").HasMaxLength(12);
+            e.Property(o => o.CupomId).HasColumnName("cupom_id");
+            e.Property(o => o.CupomNumero).HasColumnName("cupom_numero");
+            e.Property(o => o.FinalizadoEm).HasColumnName("finalizado_em");
+            e.Property(o => o.CriadoPor).HasColumnName("criado_por").HasMaxLength(120);
+            e.Property(o => o.UsuarioId).HasColumnName("usuario_id");
+            e.Property(o => o.CriadoEm).HasColumnName("criado_em");
+            e.Property(o => o.AtualizadoEm).HasColumnName("atualizado_em");
+            e.HasIndex(o => new { o.EmpresaId, o.Numero }).IsUnique();
+            e.HasOne<Empresa>().WithMany().HasForeignKey(o => o.EmpresaId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Cliente>().WithMany().HasForeignKey(o => o.ClienteId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne<Cupom>().WithMany().HasForeignKey(o => o.CupomId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne<Usuario>().WithMany().HasForeignKey(o => o.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<OrcamentoItem>(e =>
+        {
+            e.ToTable("orcamento_itens");
+            e.Property(i => i.Id).HasColumnName("id");
+            e.Property(i => i.OrcamentoId).HasColumnName("orcamento_id");
+            e.Property(i => i.Ordem).HasColumnName("ordem");
+            e.Property(i => i.Servico).HasColumnName("servico").HasMaxLength(200);
+            e.Property(i => i.Observacao).HasColumnName("observacao").HasMaxLength(500);
+            e.Property(i => i.Preco).HasColumnName("preco").HasPrecision(14, 2);
+            e.Property(i => i.Quantidade).HasColumnName("quantidade").HasPrecision(14, 3);
+            e.Property(i => i.Data).HasColumnName("data");
+            e.Property(i => i.Total).HasColumnName("total").HasPrecision(14, 2);
+            e.HasIndex(i => new { i.OrcamentoId, i.Ordem });
+            e.HasOne(i => i.Orcamento).WithMany(o => o.Itens).HasForeignKey(i => i.OrcamentoId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<MovimentoEstoque>(e =>

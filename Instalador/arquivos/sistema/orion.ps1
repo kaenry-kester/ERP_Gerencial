@@ -108,7 +108,7 @@ function PrimeiraVez {
   # Banco de dados novo (só aceita conexões deste computador)
   $senhaArquivo = Join-Path $dados 'senha.tmp'
   Set-Content -Path $senhaArquivo -Value $config.senhaBanco -NoNewline -Encoding ASCII
-  Nativo { & (Join-Path $pgBin 'initdb.exe') -D $pastaBanco -U postgres --pwfile=$senhaArquivo -A scram-sha-256 -E UTF8 --locale=C *> (Join-Path $logs 'initdb.log') }
+  Nativo { & (Join-Path $pgBin 'initdb.exe') -D $pastaBanco -U postgres --pwfile=$senhaArquivo -A scram-sha-256 -E UTF8 --locale=C --locale-provider=builtin --builtin-locale=C.UTF-8 *> (Join-Path $logs 'initdb.log') }
   Remove-Item $senhaArquivo -Force
   if ($LASTEXITCODE -ne 0) { throw "Não foi possível criar o banco de dados. Veja $logs\initdb.log" }
   Add-Content -Path (Join-Path $pastaBanco 'postgresql.conf') -Value "`nlisten_addresses = 'localhost'`nport = $($config.portaBanco)`n"

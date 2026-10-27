@@ -53,6 +53,8 @@
   --modulo-cupom-fiscal-fundo: #98bed4;
   --modulo-ordem-servico: #2e6b47;
   --modulo-ordem-servico-fundo: #c3e8c8;
+  --modulo-orcamento: #1d6f73;
+  --modulo-orcamento-fundo: #b2dede;
 
   /* Estrutura (neutros frios, combinando com preto e azul) */
   --cinza-escuro: #1c2329;
@@ -217,6 +219,12 @@ a {
   --tema: var(--modulo-ordem-servico);
   --tema-texto: #1f4a31;
   --tema-fundo: var(--modulo-ordem-servico-fundo);
+}
+
+.tema-orcamento {
+  --tema: var(--modulo-orcamento);
+  --tema-texto: #124a4d;
+  --tema-fundo: var(--modulo-orcamento-fundo);
 }
 
 /* Ilustrações em imagem: encaixadas no quadrado do desenho, sem distorcer */

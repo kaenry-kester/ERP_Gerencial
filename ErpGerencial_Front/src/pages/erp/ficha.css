@@ -85,8 +85,8 @@
   color: var(--erro);
 }
 
-/* A caixa do campo (input, lista, texto longo ou campo com ícone) */
-.ficha-campo > :is(input, select, textarea),
+/* A caixa do campo (input, lista, texto longo ou campo com ícone); .ficha-valor é a mesma caixa só para ver */
+.ficha-campo > :is(input, select, textarea, .ficha-valor),
 .ficha-com-icone {
   width: 100%;
   min-height: clamp(1.85rem, 4.2vh, 2.15rem);
@@ -206,4 +206,34 @@
 /* Data e horário: a caixa inteira abre o seletor (ver CampoFicha) */
 .ficha-campo input:is([type='date'], [type='time'], [type='datetime-local']) {
   cursor: pointer;
+}
+
+/* Detalhes (só para ver): o valor salvo na mesma caixa do cadastro */
+.ficha-valor {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.ficha-valor > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ficha-valor img {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+}
+
+.ficha-valor.longo {
+  align-items: flex-start;
+  padding-block: 0.3rem;
+}
+
+.ficha-valor.longo > span {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }

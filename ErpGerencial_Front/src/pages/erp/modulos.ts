@@ -5,6 +5,7 @@ import {
   IconeClientes,
   IconeCracha,
   IconeLoja,
+  IconeOrcamento,
   IconeOrdemServico,
   IconeRecibo,
   IconeUsuario,
@@ -15,6 +16,7 @@ import {
   IlustracaoCupomFiscal,
   IlustracaoEmpresa,
   IlustracaoFinanceiro,
+  IlustracaoOrcamento,
   IlustracaoOrdemServico,
   IlustracaoProdutos,
   IlustracaoUsuarios,
@@ -49,6 +51,8 @@ export type Modulo = {
   /** Botão de cadastro mostrado logo acima do botão grande, na tela inicial (para quem tem a permissão). */
   cadastro?: { rotulo: string; para: string; permissao: string }
   acesso: Acesso
+  /** Permissão que libera o módulo, quando não é o próprio id (ex.: Orçamento usa a de cupons). */
+  permissao?: string
 }
 
 /** Os botões grandes da tela inicial, na ordem em que aparecem. */
@@ -82,7 +86,7 @@ export const MODULOS_PRINCIPAIS: Modulo[] = [
     Ilustracao: IlustracaoFinanceiro,
     acesso: 'permissao',
   },
-  // Módulos novos: só o administrador vê por enquanto (o funcionário tem permissões fixas).
+  // Cupons e orçamentos: o administrador e o funcionário liberado para emitir cupons
   {
     id: 'cupom-fiscal',
     rotulo: 'Cupons e recibos',
@@ -92,6 +96,17 @@ export const MODULOS_PRINCIPAIS: Modulo[] = [
     Ilustracao: IlustracaoCupomFiscal,
     // Sem atalho acima do bloco: "Emitir cupom" fica na faixa do topo da tela principal
     acesso: 'permissao',
+  },
+  {
+    id: 'orcamento',
+    rotulo: 'Orçamento',
+    resumo: 'Serviços, preços e datas numa tabela',
+    descricao: 'Monte o orçamento e, ao finalizar, gere o cupom.',
+    Icone: IconeOrcamento,
+    Ilustracao: IlustracaoOrcamento,
+    cadastro: { rotulo: 'Novo orçamento', para: '/app/orcamento/novo', permissao: 'cupom-fiscal' },
+    acesso: 'permissao',
+    permissao: 'cupom-fiscal',
   },
   {
     id: 'ordem-servico',
@@ -147,7 +162,7 @@ export const caminhoDo = (modulo: Pick<Modulo, 'id'>) => `/app/${modulo.id}`
 export function podeAcessar(usuario: Usuario, modulo: Modulo) {
   if (modulo.acesso === 'todos' || usuario.administrador) return true
   if (modulo.acesso === 'admin') return false
-  return usuario.permissoes.includes(modulo.id)
+  return usuario.permissoes.includes(modulo.permissao ?? modulo.id)
 }
 
 /** Tem a permissão? (administrador tem todas; o servidor confere de novo em cada rota) */

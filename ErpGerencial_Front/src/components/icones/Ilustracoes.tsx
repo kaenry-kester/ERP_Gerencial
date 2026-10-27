@@ -60,6 +60,11 @@ export function IlustracaoCupomFiscal({ tamanho = 112 }: Props) {
   return <Imagem arquivo="cupom-fiscal" tamanho={tamanho} />
 }
 
+/** Planilha com lápis (Orçamento). */
+export function IlustracaoOrcamento({ tamanho = 112 }: Props) {
+  return <Imagem arquivo="orcamento" tamanho={tamanho} />
+}
+
 /** Documento com lupa (Número de ordem de serviço). */
 export function IlustracaoOrdemServico({ tamanho = 112 }: Props) {
   return <Imagem arquivo="ordem-servico" tamanho={tamanho} />

@@ -9,6 +9,7 @@ using Orion.Api.Auth;
 using Orion.Api.Clientes;
 using Orion.Api.Conta;
 using Orion.Api.Cupons;
+using Orion.Api.Orcamentos;
 using Orion.Api.Data;
 using Orion.Api.Empresas;
 using Orion.Api.Financeiro;
@@ -133,6 +134,7 @@ app.MapProdutoImagemEndpoints();
 app.MapClienteEndpoints();
 app.MapWhatsAppEndpoints();
 app.MapCupomEndpoints();
+app.MapOrcamentoEndpoints();
 app.MapEstoqueEndpoints();
 app.MapSistemaEndpoints();
 

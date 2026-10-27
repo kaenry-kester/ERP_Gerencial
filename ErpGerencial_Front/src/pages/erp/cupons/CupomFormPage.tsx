@@ -227,6 +227,33 @@ export default function CupomFormPage() {
     document.getElementById('pdv-codigo')?.focus()
   }
 
+  /** Descrição do item selecionado; sem item, cria um item avulso com o texto digitado. */
+  const mudarDescricao = (descricao: string) => {
+    if (atual) {
+      mudarItem(atual.chave, { descricao })
+      return
+    }
+    if (!descricao.trim()) return
+    const chave = proximaChave++
+    setItens((lista) => [
+      ...lista,
+      {
+        chave,
+        produtoId: null,
+        descricao,
+        detalhe: null,
+        codigo: null,
+        codigoBarras: null,
+        imagem: null,
+        estoque: null,
+        quantidade: mascaraQuantidade(formatarQuantidade(1)),
+        valor: '',
+      },
+    ])
+    setSelecionado(chave)
+    setErro(null)
+  }
+
   const mudarItem = (chave: number, mudanca: Partial<Item>) => {
     setItens((atual) => atual.map((i) => (i.chave === chave ? { ...i, ...mudanca } : i)))
     setErro(null)
@@ -287,6 +314,8 @@ export default function CupomFormPage() {
 
   const conferir = (): string | null => {
     if (itens.length === 0) return 'Adicione pelo menos um produto.'
+    const semDescricao = itens.findIndex((i) => !i.produtoId && !i.descricao.trim())
+    if (semDescricao >= 0) return `Item ${semDescricao + 1}: digite a descrição.`
     const indice = itens.findIndex((i) => !(quantidadeParaNumero(i.quantidade) ?? 0))
     if (indice >= 0) return `${itens[indice].descricao}: digite a quantidade.`
     if (forma2 && !pago2) return 'Digite o valor da 2ª forma de pagamento.'
@@ -312,7 +341,8 @@ export default function CupomFormPage() {
         clienteEndereco: cliente ? enderecoDo(cliente) || null : null,
         itens: itens.map((i) => ({
           produtoId: i.produtoId,
-          descricao: i.produtoId ? null : i.descricao,
+          // Texto livre: vale o que foi digitado (vazio no produto: o nome do cadastro)
+          descricao: i.descricao.trim() || null,
           quantidade: quantidadeParaNumero(i.quantidade) ?? 0,
           valorUnitario: moedaParaNumero(i.valor) ?? 0,
         })),
@@ -448,9 +478,19 @@ export default function CupomFormPage() {
                 onFocus={(e) => e.target.select()}
               />
             </div>
+            {/* Título do item no cupom: começa com o nome do produto, mas pode ser qualquer texto.
+                Sem produto, o que for digitado vira um item avulso (ex.: um serviço). */}
             <div className="pdv-descricao">
-              <span>Descrição</span>
-              <p>{atual ? atual.descricao : 'Aguardando produto...'}</p>
+              <label htmlFor="pdv-descricao">Descrição</label>
+              <input
+                id="pdv-descricao"
+                value={atual?.descricao ?? ''}
+                maxLength={200}
+                autoComplete="off"
+                placeholder="Digite o que vai sair no cupom"
+                title="O texto que sai no cupom para este item"
+                onChange={(e) => mudarDescricao(e.target.value)}
+              />
             </div>
           </div>
 
@@ -600,7 +640,7 @@ export default function CupomFormPage() {
                     <td>{item.codigo ?? '—'}</td>
                     <td className="pdv-item-barras">{item.codigoBarras ?? '—'}</td>
                     <td className="pdv-item-descricao">
-                      <strong>{item.descricao}</strong>
+                      <strong>{item.descricao || '(sem descrição)'}</strong>
                       {(item.detalhe || item.estoque !== null) && (
                         <span>
                           {[item.detalhe, item.estoque !== null && `Estoque: ${formatarQuantidade(item.estoque)}`]

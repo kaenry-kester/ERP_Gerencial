@@ -4,11 +4,14 @@ using Npgsql;
 using Orion.Api.Auth;
 using Orion.Api.Data;
 using Orion.Api.Produtos;
+using Orion.Api.WhatsApp;
 
 namespace Orion.Api.Cupons;
 
 /// <summary>Item do cupom: um produto do cadastro (ProdutoId) ou um item avulso (só a descrição).</summary>
-public record CupomItemRequest(Guid? ProdutoId, string? Descricao, decimal Quantidade, decimal ValorUnitario);
+public record CupomItemRequest(
+    Guid? ProdutoId, string? Descricao, decimal Quantidade, decimal ValorUnitario,
+    string? Observacao = null, DateOnly? Data = null);
 
 public record CupomRequest(
     Guid? ClienteId,
@@ -34,7 +37,7 @@ public record CancelarCupomRequest(string? Motivo);
 
 public record CupomItemDto(
     Guid Id, Guid? ProdutoId, string Descricao, string? Codigo, string? CodigoBarras,
-    decimal Quantidade, decimal ValorUnitario, decimal Total);
+    decimal Quantidade, decimal ValorUnitario, decimal Total, string? Observacao, DateOnly? Data);
 
 public record CupomDto(
     Guid Id,
@@ -76,6 +79,9 @@ public record CupomDto(
 
 public record AnotarNotaRequest(string? Tipo, string? Numero);
 
+/// <summary>PDF do cupom (feito pelo site, igual ao impresso) em base64; Numero vazio: o celular do cliente do cupom.</summary>
+public record EnviarCupomRequest(string? Numero, string? Pdf);
+
 public record ListaCupons(List<CupomDto> Itens, int Total, int Pagina, int TamanhoPagina);
 
 /// <summary>
@@ -99,6 +105,7 @@ public static class CupomEndpoints
         grupo.MapPost("/", Emitir);
         grupo.MapPost("/{id:guid}/cancelar", Cancelar);
         grupo.MapPut("/{id:guid}/nota", AnotarNota);
+        grupo.MapPost("/{id:guid}/whatsapp", EnviarWhatsapp);
     }
 
     /// <summary>
@@ -124,9 +131,9 @@ public static class CupomEndpoints
             var documento = Validacao.NormalizarDocumento(texto);
             consulta = consulta.Where(c =>
                 c.Numero == numero
-                || (c.ClienteNome != null && EF.Functions.ILike(c.ClienteNome, termo))
+                || (c.ClienteNome != null && EF.Functions.ILike(EF.Functions.Unaccent(c.ClienteNome), EF.Functions.Unaccent(termo)))
                 || (documento.Length >= 3 && c.ClienteDocumento != null && c.ClienteDocumento.Contains(documento))
-                || (c.Referente != null && EF.Functions.ILike(c.Referente, termo)));
+                || (c.Referente != null && EF.Functions.ILike(EF.Functions.Unaccent(c.Referente), EF.Functions.Unaccent(termo))));
         }
 
         var numeroPagina = Math.Max(1, pagina ?? 1);
@@ -184,8 +191,18 @@ public static class CupomEndpoints
         var (usuario, negado) = await Permissoes.Exigir(user, db, Permissoes.CupomFiscal);
         if (usuario is null) return negado!;
 
+        var (cupom, erro) = await Criar(usuario, req, db);
+        return cupom is null ? erro! : Results.Created($"/api/cupons/{cupom.Id}", Dto(cupom));
+    }
+
+    /// <summary>
+    /// Confere e grava o cupom (dá baixa no estoque). Usado na emissão pelo caixa e ao finalizar um orçamento.
+    /// Devolve o cupom salvo ou a resposta de erro.
+    /// </summary>
+    public static async Task<(Cupom? Cupom, IResult? Erro)> Criar(Usuario usuario, CupomRequest req, OrionDbContext db)
+    {
         var erros = Validar(req);
-        if (erros.Count > 0) return Results.ValidationProblem(erros);
+        if (erros.Count > 0) return (null, Results.ValidationProblem(erros));
 
         // Produtos do cadastro citados nos itens (só os da empresa)
         var idsProdutos = req.Itens!.Where(i => i.ProdutoId is not null).Select(i => i.ProdutoId!.Value).Distinct().ToList();
@@ -193,21 +210,21 @@ public static class CupomEndpoints
             .Where(p => p.EmpresaId == usuario.EmpresaId && idsProdutos.Contains(p.Id))
             .ToDictionaryAsync(p => p.Id);
         if (produtos.Count != idsProdutos.Count)
-            return Erro("itens", "Um dos produtos não existe mais. Tire-o e adicione de novo.");
+            return (null, Erro("itens", "Um dos produtos não existe mais. Tire-o e adicione de novo."));
 
         Cliente? cliente = null;
         if (req.ClienteId is { } clienteId)
         {
             cliente = await db.Clientes.SingleOrDefaultAsync(c => c.Id == clienteId && c.EmpresaId == usuario.EmpresaId);
             if (cliente is null)
-                return Erro("clienteNome", "Este cliente não existe mais");
+                return (null, Erro("clienteNome", "Este cliente não existe mais"));
         }
 
         var vendedor = usuario;
         if (req.VendedorId is { } idVendedor && idVendedor != usuario.Id)
         {
             vendedor = await db.Usuarios.SingleOrDefaultAsync(u => u.Id == idVendedor && u.EmpresaId == usuario.EmpresaId && u.Ativo);
-            if (vendedor is null) return Erro("vendedorId", "Este vendedor não existe mais");
+            if (vendedor is null) return (null, Erro("vendedorId", "Este vendedor não existe mais"));
         }
 
         var empresa = usuario.Empresa!;
@@ -247,6 +264,8 @@ public static class CupomEndpoints
                 Descricao = Opcional(item.Descricao) ?? produto!.Nome,
                 Codigo = produto?.Codigo,
                 CodigoBarras = produto?.CodigoBarras,
+                Observacao = Opcional(item.Observacao),
+                Data = item.Data,
                 Quantidade = quantidade,
                 ValorUnitario = unitario,
                 Total = Math.Round(quantidade * unitario, 2),
@@ -259,14 +278,14 @@ public static class CupomEndpoints
         cupom.Subtotal = cupom.Itens.Count > 0 ? cupom.Itens.Sum(i => i.Total) : Math.Round(req.Valor ?? 0, 2);
         cupom.Desconto = Math.Round(req.Desconto ?? 0, 2);
         if (cupom.Desconto > cupom.Subtotal)
-            return Erro("desconto", "Maior que o valor da venda");
+            return (null, Erro("desconto", "Maior que o valor da venda"));
         cupom.Total = cupom.Subtotal - cupom.Desconto;
 
         // Pagamento: uma forma (o valor pago pode passar do total: troco) ou duas (a venda dividida em duas partes)
         var valor1 = req.ValorPagamento1 ?? req.ValorRecebido;
         if (req.FormaPagamento2 is { } forma2)
         {
-            if (req.ValorPagamento2 is not > 0) return Erro("valorPagamento2", "Digite o valor da 2ª forma");
+            if (req.ValorPagamento2 is not > 0) return (null, Erro("valorPagamento2", "Digite o valor da 2ª forma"));
             cupom.FormaPagamento2 = forma2;
             cupom.ValorPagamento2 = Math.Round(req.ValorPagamento2.Value, 2);
             // Sem o valor da 1ª forma: ela paga o que falta
@@ -279,10 +298,10 @@ public static class CupomEndpoints
         if (cupom.ValorPagamento1 is not null)
         {
             var totalPago = cupom.ValorPagamento1.Value + (cupom.ValorPagamento2 ?? 0);
-            if (totalPago < cupom.Total) return Erro("valorPagamento1", "O valor pago é menor que o total");
+            if (totalPago < cupom.Total) return (null, Erro("valorPagamento1", "O valor pago é menor que o total"));
             // Troco só sai do dinheiro
             if (totalPago > cupom.Total && req.FormaPagamento != "dinheiro" && cupom.FormaPagamento2 != "dinheiro")
-                return Erro("valorPagamento1", "Troco só em dinheiro: o valor pago passou do total");
+                return (null, Erro("valorPagamento1", "Troco só em dinheiro: o valor pago passou do total"));
             cupom.ValorRecebido = totalPago;
         }
 
@@ -303,7 +322,7 @@ public static class CupomEndpoints
             }
         }
 
-        return Results.Created($"/api/cupons/{cupom.Id}", Dto(cupom));
+        return (cupom, null);
     }
 
     /// <summary>
@@ -334,6 +353,51 @@ public static class CupomEndpoints
         }
         await db.SaveChangesAsync();
         return Results.Ok(Dto(cupom));
+    }
+
+    /// <summary>"Encaminhar para o WhatsApp": manda o PDF do cupom pelo WhatsApp da loja (Evolution).</summary>
+    private static async Task<IResult> EnviarWhatsapp(
+        Guid id, EnviarCupomRequest req, ClaimsPrincipal user, OrionDbContext db, EvolutionApi evolution, CancellationToken ct)
+    {
+        var (usuario, negado) = await Permissoes.Exigir(user, db, Permissoes.CupomFiscal);
+        if (usuario is null) return negado!;
+        var cupom = await db.Cupons.SingleOrDefaultAsync(c => c.Id == id && c.EmpresaId == usuario.EmpresaId, ct);
+        if (cupom is null) return Results.NotFound();
+
+        var remetente = usuario.Empresa!.WhatsappRemetente;
+        if (string.IsNullOrEmpty(remetente) || !evolution.Configurada)
+            return Results.BadRequest(new { erro = "Conecte o WhatsApp da loja primeiro (Clientes → Mensagem automática)" });
+
+        var destino = Validacao.Telefone(req.Numero);
+        if (destino.Length == 0 && cupom.ClienteId is { } clienteId)
+            destino = await db.Clientes.Where(c => c.Id == clienteId).Select(c => c.Celular).SingleOrDefaultAsync(ct) ?? "";
+        if (destino.Length is not (10 or 11)) return Erro("numero", "Digite o WhatsApp do cliente com DDD");
+
+        byte[] pdf;
+        try
+        {
+            pdf = Convert.FromBase64String(req.Pdf ?? "");
+        }
+        catch (FormatException)
+        {
+            pdf = [];
+        }
+        if (pdf is not [0x25, 0x50, 0x44, 0x46, ..] || pdf.Length > 5 * 1024 * 1024)
+            return Results.BadRequest(new { erro = "Não foi possível montar o PDF do cupom. Tente de novo." });
+
+        var numero = cupom.Numero.ToString("D6");
+        var nome = cupom.ClienteNome?.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+        var legenda = $"Olá{(nome is null ? "" : $", {nome}")}! Segue o seu cupom Nº {numero} da {cupom.EmitenteNome}. "
+            + "Obrigado pela preferência!";
+        try
+        {
+            await evolution.EnviarDocumento(remetente, destino, legenda, pdf, "application/pdf", $"cupom-{numero}.pdf", ct);
+        }
+        catch (ErroEnvio ex)
+        {
+            return Results.BadRequest(new { erro = ex.Message });
+        }
+        return Results.Ok(new { numero = destino });
     }
 
     /// <summary>Cancela o cupom (fica registrado, com o motivo) e devolve ao estoque os produtos dele.</summary>
@@ -386,6 +450,8 @@ public static class CupomEndpoints
                 erros["itens"] = [$"Item {i + 1}: digite a descrição"];
             else if ((item.Descricao?.Trim().Length ?? 0) > 200)
                 erros["itens"] = [$"Item {i + 1}: descrição com no máximo 200 letras"];
+            else if ((item.Observacao?.Trim().Length ?? 0) > 500)
+                erros["itens"] = [$"Item {i + 1}: observação com no máximo 500 letras"];
             else if (item.Quantidade <= 0)
                 erros["itens"] = [$"Item {i + 1}: a quantidade precisa ser maior que zero"];
             else if (item.Quantidade > 999_999_999m || item.ValorUnitario > ValorMaximo)
@@ -440,7 +506,8 @@ public static class CupomEndpoints
         c.ClienteId, c.ClienteNome, c.ClienteDocumento, c.ClienteEndereco,
         c.Itens.OrderBy(i => i.Ordem)
             .Select(i => new CupomItemDto(
-                i.Id, i.ProdutoId, i.Descricao, i.Codigo, i.CodigoBarras, i.Quantidade, i.ValorUnitario, i.Total))
+                i.Id, i.ProdutoId, i.Descricao, i.Codigo, i.CodigoBarras, i.Quantidade, i.ValorUnitario, i.Total,
+                i.Observacao, i.Data))
             .ToList(),
         c.Subtotal, c.Desconto, c.Total, c.FormaPagamento, c.ValorPagamento1, c.FormaPagamento2, c.ValorPagamento2,
         c.ValorRecebido, c.ValorRecebido is { } recebido ? recebido - c.Total : null,

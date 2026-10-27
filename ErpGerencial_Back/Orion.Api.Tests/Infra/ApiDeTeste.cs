@@ -72,6 +72,7 @@ public class ApiDeTeste : WebApplicationFactory<Program>, IAsyncLifetime
             ["Backup:Pasta"] = PastaBackup,
             ["Banco:MigrarAoIniciar"] = "true",
             ["Email:Host"] = "",
+            ["Evolution:Chave"] = "chave-de-teste",
         }));
         builder.ConfigureServices(s =>
         {
@@ -142,6 +143,9 @@ public class EvolutionDeTeste : HttpMessageHandler
 {
     public System.Collections.Concurrent.ConcurrentDictionary<string, string> Estados { get; } = new();
 
+    /// <summary>Arquivos "enviados" (sendMedia), com o número de destino, a legenda e o arquivo em base64.</summary>
+    public System.Collections.Concurrent.ConcurrentQueue<JsonElement> Midias { get; } = new();
+
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
     {
         var caminho = request.RequestUri!.AbsolutePath;
@@ -162,6 +166,17 @@ public class EvolutionDeTeste : HttpMessageHandler
         {
             Estados[nome] = "connecting";
             return Json(HttpStatusCode.OK, new { pairingCode = "ABCD1234", code = "2@xyz", base64 = "data:image/png;base64,iVBORw0KGgo=" });
+        }
+        if (caminho.StartsWith("/chat/whatsappNumbers/"))
+        {
+            var dados = await request.Content!.ReadFromJsonAsync<JsonElement>(ct);
+            var numero = dados.GetProperty("numbers")[0].GetString()!;
+            return Json(HttpStatusCode.OK, new[] { new { exists = true, jid = $"{numero}@s.whatsapp.net", number = numero } });
+        }
+        if (caminho.StartsWith("/message/sendMedia/"))
+        {
+            Midias.Enqueue(await request.Content!.ReadFromJsonAsync<JsonElement>(ct));
+            return Json(HttpStatusCode.Created, new { key = new { id = "MENSAGEM-DE-TESTE" } });
         }
         return Json(HttpStatusCode.NotFound, new { });
     }

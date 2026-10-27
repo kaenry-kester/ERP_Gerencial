@@ -23,6 +23,7 @@ import { useErp } from '../contexto'
 import FaixaPagina from '../FaixaPagina'
 import { tem } from '../modulos'
 import SemAcesso from '../SemAcesso'
+import ValorFicha from '../ValorFicha'
 import BalaoMensagem from './BalaoMensagem'
 import { descreverIntervalo, formatarCadastro, formatarDataHora, proximosEnvios, situacaoManutencao } from './formatos'
 import JanelaEnvios from './JanelaEnvios'
@@ -31,10 +32,8 @@ import './clientes.css'
 
 const CLASSE_SITUACAO = { atrasada: 'lista-etiqueta alerta', proxima: 'lista-etiqueta atencao', 'em-dia': 'lista-etiqueta' }
 
-type Grupo = { titulo: string; itens: [string, string][] }
-
 /**
- * Detalhes do cliente: à esquerda a ficha (foto, contato, dados pessoais e endereço); à direita o WhatsApp automático
+ * Detalhes do cliente: à esquerda a ficha (mesmo desenho do cadastro, só para ver); à direita o WhatsApp automático
  * (próximos envios e a mensagem como o cliente recebe, só para ver). Mudar dados, calendário ou mensagem: botão Editar.
  */
 export default function ClientePage() {
@@ -129,52 +128,9 @@ export default function ClientePage() {
     }
   }
 
-  const telefone = (t: string | null) => (t ? formatarTelefone(t) : '—')
+  const telefone = (t: string | null) => (t ? formatarTelefone(t) : null)
   // "1980-05-20" → "20/05/1980"
-  const dia = (d: string | null) => (d ? d.split('-').reverse().join('/') : '—')
-  const contato: Grupo = {
-    titulo: 'Contato',
-    itens: [
-      ['Celular (WhatsApp)', formatarTelefone(cliente.celular)],
-      ['Celular 2', telefone(cliente.celular2)],
-      ['Fone residencial', telefone(cliente.telefoneResidencial)],
-      ['Fone comercial', telefone(cliente.telefoneComercial)],
-    ],
-  }
-  const pessoais: Grupo = {
-    titulo: 'Dados pessoais',
-    itens: [
-      ['CPF / CNPJ', cliente.documento ? formatarDocumento(cliente.documento) : '—'],
-      ['Data de nascimento', dia(cliente.dataNascimento)],
-      ['Cônjuge', cliente.conjuge ?? '—'],
-      ['Data da compra', dia(cliente.dataCompra)],
-    ],
-  }
-  const endereco: Grupo = {
-    titulo: 'Endereço',
-    itens: [
-      ['Rua', [cliente.logradouro, cliente.numeroEndereco].filter(Boolean).join(', ') || '—'],
-      ['Complemento', cliente.complemento ?? '—'],
-      ['Bairro', cliente.bairro ?? '—'],
-      ['Cidade', [cliente.cidade, cliente.uf].filter(Boolean).join(' / ') || '—'],
-      ['CEP', cliente.cep ? formatarCep(cliente.cep) : '—'],
-      ['Ponto de referência', cliente.pontoReferencia ?? '—'],
-    ],
-  }
-
-  const grupo = (g: Grupo) => (
-    <section key={g.titulo} className="detalhe-grupo" aria-label={g.titulo}>
-      <h2 className="detalhe-titulo">{g.titulo}</h2>
-      <dl className="detalhe-dados">
-        {g.itens.map(([rotulo, valor]) => (
-          <div key={rotulo} className="detalhe-dado">
-            <dt>{rotulo}</dt>
-            <dd title={valor}>{valor}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
-  )
+  const dia = (d: string | null) => (d ? d.split('-').reverse().join('/') : null)
 
   const abrirHistorico = () => {
     setEnvios(null)
@@ -234,22 +190,54 @@ export default function ClientePage() {
         {aviso && <AvisoPagina aviso={aviso} />}
 
         <div className="cliente-detalhe">
-          {/* Ficha: foto ao lado do contato e dos dados pessoais (como no registro em papel); endereço embaixo */}
+          {/* Ficha: o mesmo desenho do cadastro (foto, dados, aparelho e endereço), com os campos só para ver */}
           <div className="cliente-detalhe-ficha">
-            <div className="detalhe-com-foto">
-              <div className="detalhe-foto">
-                {cliente.fotoId ? (
-                  <img src={urlFotoCliente(cliente.fotoId)} alt={`Foto de ${cliente.nome}`} />
-                ) : (
-                  <span>Sem foto</span>
-                )}
+            <div className="ficha" role="group" aria-label="Registro de cliente">
+              <div className="ficha-topo c12">
+                <div className="foto-cliente">
+                  <div className="foto-cliente-quadro leitura">
+                    {cliente.fotoId ? (
+                      <img src={urlFotoCliente(cliente.fotoId)} alt={`Foto de ${cliente.nome}`} />
+                    ) : (
+                      <span className="foto-cliente-vazio">Sem foto</span>
+                    )}
+                  </div>
+                </div>
+                <div className="ficha-grade">
+                  <ValorFicha rotulo="Nome completo" valor={cliente.nome} className="c9" />
+                  <ValorFicha rotulo="CPF / CNPJ" valor={cliente.documento && formatarDocumento(cliente.documento)} className="c3" />
+
+                  <ValorFicha rotulo="Data de nascimento" valor={dia(cliente.dataNascimento)} className="c3" />
+                  <ValorFicha rotulo="Cônjuge" valor={cliente.conjuge} className="c6" />
+                  <ValorFicha rotulo="Data da compra" valor={dia(cliente.dataCompra)} className="c3" />
+
+                  <ValorFicha rotulo="Celular" valor={formatarTelefone(cliente.celular)} icone="/imgs/whatsapp.png" className="c3" />
+                  <ValorFicha rotulo="Celular 2" valor={telefone(cliente.celular2)} icone="/imgs/whatsapp.png" className="c3" />
+                  <ValorFicha rotulo="Fone residencial" valor={telefone(cliente.telefoneResidencial)} className="c3" />
+                  <ValorFicha rotulo="Fone comercial" valor={telefone(cliente.telefoneComercial)} className="c3" />
+                </div>
               </div>
-              <div className="detalhe-grupos">
-                {grupo(contato)}
-                {grupo(pessoais)}
+
+              <div className="ficha-aparelho c12">
+                <div className="ficha-grade">
+                  <ValorFicha rotulo="Item" valor={cliente.item} className="c3" />
+                  <ValorFicha rotulo="Marca" valor={cliente.marca} className="c2" />
+                  <ValorFicha rotulo="Modelo" valor={cliente.modelo} className="c2" />
+                  <ValorFicha rotulo="Observação" valor={cliente.observacao} className="c5" />
+                </div>
               </div>
+
+              <ValorFicha rotulo="CEP" valor={cliente.cep && formatarCep(cliente.cep)} className="c4" />
+              <ValorFicha rotulo="Endereço" valor={cliente.logradouro} className="c8" />
+
+              <ValorFicha rotulo="Número" valor={cliente.numeroEndereco} className="c3" />
+              <ValorFicha rotulo="Complemento" valor={cliente.complemento} className="c4" />
+              <ValorFicha rotulo="Bairro" valor={cliente.bairro} className="c5" />
+
+              <ValorFicha rotulo="Cidade" valor={cliente.cidade} className="c5" />
+              <ValorFicha rotulo="UF" valor={cliente.uf} className="c2" />
+              <ValorFicha rotulo="Ponto de referência" valor={cliente.pontoReferencia} className="c5" />
             </div>
-            {grupo(endereco)}
             <p className="erp-nota">Atualizado em {formatarCadastro(cliente.atualizadoEm)}</p>
           </div>
 

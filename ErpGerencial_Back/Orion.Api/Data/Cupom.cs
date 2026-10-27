@@ -92,6 +92,11 @@ public class CupomItem
     /// <summary>Código de barras do produto, copiado na emissão.</summary>
     public string? CodigoBarras { get; set; }
 
+    /// <summary>Detalhe do item (ex.: vindo do orçamento: "troca do refil da cozinha").</summary>
+    public string? Observacao { get; set; }
+    /// <summary>Dia do serviço (itens vindos do orçamento).</summary>
+    public DateOnly? Data { get; set; }
+
     public decimal Quantidade { get; set; }
     public decimal ValorUnitario { get; set; }
     public decimal Total { get; set; }

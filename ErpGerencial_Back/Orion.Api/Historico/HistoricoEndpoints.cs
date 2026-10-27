@@ -88,7 +88,7 @@ public static class HistoricoEndpoints
             var termo = $"%{busca.Trim()}%";
             var digitos = Validacao.NormalizarDocumento(busca);
             consulta = consulta.Where(c =>
-                EF.Functions.ILike(c.Nome, termo)
+                EF.Functions.ILike(EF.Functions.Unaccent(c.Nome), EF.Functions.Unaccent(termo))
                 || (digitos.Length >= 3 && (c.Celular.Contains(digitos) || (c.Documento != null && c.Documento.Contains(digitos)))));
         }
         var clientes = await consulta

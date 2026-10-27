@@ -191,13 +191,21 @@ export const listarUsuarios = (token: string) => requisicao<Usuario[]>('GET', '/
 
 export const criarUsuario = (
   token: string,
-  dados: { nome: string; email: string; telefone: string; senha: string; administrador: boolean },
+  dados: { nome: string; email: string; telefone: string; senha: string; administrador: boolean; emiteCupons: boolean },
 ) => requisicao<Usuario>('POST', '/api/usuarios', { corpo: dados, token })
 
 export const editarUsuario = (
   token: string,
   id: string,
-  dados: { nome: string; telefone: string; administrador: boolean; ativo: boolean; novaSenha?: string | null },
+  dados: {
+    nome: string
+    telefone: string
+    administrador: boolean
+    ativo: boolean
+    novaSenha?: string | null
+    /** Funcionário: pode emitir cupons, orçamentos e notas fiscais. */
+    emiteCupons: boolean
+  },
 ) => requisicao<Usuario>('PUT', `/api/usuarios/${id}`, { corpo: dados, token })
 
 // ---------- Produtos ----------
@@ -354,6 +362,11 @@ export type Cliente = {
   mensagemImagemId: string | null
   criadoEm: string
   atualizadoEm: string
+  /** Aparelho do cliente (ex.: "Purificador"), com marca, modelo e observação. */
+  item: string | null
+  marca: string | null
+  modelo: string | null
+  observacao: string | null
 }
 
 export type DadosCliente = {
@@ -386,6 +399,10 @@ export type DadosCliente = {
   envioEm: string | null
   /** Edição sem mexer no calendário: o servidor mantém o envio e o intervalo como estão (envioEm é ignorado). */
   manterEnvio?: boolean
+  item: string
+  marca: string
+  modelo: string
+  observacao: string
 }
 
 export type TipoIntervalo = 'meses' | 'data'
@@ -560,6 +577,10 @@ export type CupomItem = {
   quantidade: number
   valorUnitario: number
   total: number
+  /** Detalhe do item (ex.: vindo do orçamento). */
+  observacao: string | null
+  /** Dia do serviço ("2026-10-26"), nos itens vindos do orçamento. */
+  data: string | null
 }
 
 /** Cupom de venda / recibo. Emitente e cliente são copiados na emissão (a reimpressão sai igual). */
@@ -647,6 +668,69 @@ export const emitirCupom = (token: string, dados: DadosCupom) =>
 
 export const cancelarCupom = (token: string, id: string, motivo: string) =>
   requisicao<Cupom>('POST', `/api/cupons/${id}/cancelar`, { corpo: { motivo }, token })
+
+/** Manda o PDF do cupom (base64) pelo WhatsApp da loja; sem número, vai para o celular do cliente do cupom. */
+export const enviarCupomWhatsapp = (token: string, id: string, pdf: string, numero: string | null) =>
+  requisicao<{ numero: string }>('POST', `/api/cupons/${id}/whatsapp`, { corpo: { pdf, numero }, token })
+
+// ---------- Orçamentos ----------
+
+export type OrcamentoItem = {
+  id: string
+  servico: string
+  observacao: string | null
+  preco: number
+  quantidade: number
+  /** "2026-10-26" */
+  data: string | null
+  total: number
+}
+
+export type Orcamento = {
+  id: string
+  numero: number
+  clienteId: string | null
+  clienteNome: string | null
+  observacao: string | null
+  itens: OrcamentoItem[]
+  total: number
+  situacao: 'aberto' | 'finalizado'
+  /** Cupom gerado ao finalizar. */
+  cupomId: string | null
+  cupomNumero: number | null
+  finalizadoEm: string | null
+  criadoPor: string
+  criadoEm: string
+  atualizadoEm: string
+}
+
+export type DadosOrcamento = {
+  clienteId: string | null
+  clienteNome: string | null
+  observacao: string | null
+  itens: { servico: string; observacao: string | null; preco: number; quantidade: number; data: string | null }[]
+}
+
+export type ListaOrcamentos = { itens: Orcamento[]; total: number; pagina: number; tamanhoPagina: number }
+
+export const listarOrcamentos = (token: string, busca = '', pagina = 1) =>
+  requisicao<ListaOrcamentos>('GET', `/api/orcamentos?${parametros({ busca: busca.trim(), pagina })}`, { token })
+
+export const obterOrcamento = (token: string, id: string) =>
+  requisicao<Orcamento>('GET', `/api/orcamentos/${id}`, { token })
+
+export const criarOrcamento = (token: string, dados: DadosOrcamento) =>
+  requisicao<Orcamento>('POST', '/api/orcamentos', { corpo: dados, token })
+
+export const editarOrcamento = (token: string, id: string, dados: DadosOrcamento) =>
+  requisicao<Orcamento>('PUT', `/api/orcamentos/${id}`, { corpo: dados, token })
+
+export const excluirOrcamento = (token: string, id: string) =>
+  requisicao<void>('DELETE', `/api/orcamentos/${id}`, { token })
+
+/** Gera o cupom com os itens do orçamento. */
+export const finalizarOrcamento = (token: string, id: string, formaPagamento: FormaPagamento) =>
+  requisicao<Orcamento>('POST', `/api/orcamentos/${id}/finalizar`, { corpo: { formaPagamento }, token })
 
 export type TipoNota = 'cupom' | 'nota'
 

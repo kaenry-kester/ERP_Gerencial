@@ -80,11 +80,11 @@ public static class ProdutoEndpoints
         {
             var termo = $"%{busca.Trim()}%";
             consulta = consulta.Where(p =>
-                EF.Functions.ILike(p.Nome, termo)
-                || (p.Codigo != null && EF.Functions.ILike(p.Codigo, termo))
-                || (p.CodigoBarras != null && EF.Functions.ILike(p.CodigoBarras, termo))
-                || (p.Marca != null && EF.Functions.ILike(p.Marca, termo))
-                || (p.Modelo != null && EF.Functions.ILike(p.Modelo, termo)));
+                EF.Functions.ILike(EF.Functions.Unaccent(p.Nome), EF.Functions.Unaccent(termo))
+                || (p.Codigo != null && EF.Functions.ILike(EF.Functions.Unaccent(p.Codigo), EF.Functions.Unaccent(termo)))
+                || (p.CodigoBarras != null && EF.Functions.ILike(EF.Functions.Unaccent(p.CodigoBarras), EF.Functions.Unaccent(termo)))
+                || (p.Marca != null && EF.Functions.ILike(EF.Functions.Unaccent(p.Marca), EF.Functions.Unaccent(termo)))
+                || (p.Modelo != null && EF.Functions.ILike(EF.Functions.Unaccent(p.Modelo), EF.Functions.Unaccent(termo))));
         }
 
         var numeroPagina = Math.Max(1, pagina ?? 1);

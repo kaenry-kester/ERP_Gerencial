@@ -36,7 +36,11 @@ public record ClienteRequest(
     /// Na edição, o calendário não foi mexido: mantém o envio e o intervalo como estão no servidor (que pode já ter
     /// avançado o próximo envio enquanto o cadastro estava aberto). EnvioEm é ignorado.
     /// </summary>
-    bool ManterEnvio = false);
+    bool ManterEnvio = false,
+    string? Item = null,
+    string? Marca = null,
+    string? Modelo = null,
+    string? Observacao = null);
 
 /// <summary>Mensagem personalizada de um cliente (vazia: volta a usar a mensagem padrão da empresa).</summary>
 public record MensagemClienteRequest(string? Mensagem);
@@ -77,7 +81,11 @@ public record ClienteDto(
     /// <summary>Imagem da mensagem personalizada (ver /api/whatsapp/imagens/{id}); vazio quando não tem.</summary>
     Guid? MensagemImagemId,
     DateTime CriadoEm,
-    DateTime AtualizadoEm);
+    DateTime AtualizadoEm,
+    string? Item,
+    string? Marca,
+    string? Modelo,
+    string? Observacao);
 
 public record ListaClientes(List<ClienteDto> Itens, int Total, int Pagina, int TamanhoPagina);
 
@@ -125,13 +133,13 @@ public static class ClienteEndpoints
             var digitos = SoDigitos(busca);
             var termoDigitos = digitos.Length > 0 ? $"%{digitos}%" : null;
             consulta = consulta.Where(c =>
-                EF.Functions.ILike(c.Nome, termo)
+                EF.Functions.ILike(EF.Functions.Unaccent(c.Nome), EF.Functions.Unaccent(termo))
                 || (termoDigitos != null && (EF.Functions.Like(c.Celular, termoDigitos)
                     || (c.Cep != null && EF.Functions.Like(c.Cep, termoDigitos))
                     || (c.Documento != null && EF.Functions.Like(c.Documento, termoDigitos))))
-                || (c.Logradouro != null && EF.Functions.ILike(c.Logradouro, termo))
-                || (c.Bairro != null && EF.Functions.ILike(c.Bairro, termo))
-                || (c.Cidade != null && EF.Functions.ILike(c.Cidade, termo)));
+                || (c.Logradouro != null && EF.Functions.ILike(EF.Functions.Unaccent(c.Logradouro), EF.Functions.Unaccent(termo)))
+                || (c.Bairro != null && EF.Functions.ILike(EF.Functions.Unaccent(c.Bairro), EF.Functions.Unaccent(termo)))
+                || (c.Cidade != null && EF.Functions.ILike(EF.Functions.Unaccent(c.Cidade), EF.Functions.Unaccent(termo))));
         }
 
         var numeroPagina = Math.Max(1, pagina ?? 1);
@@ -359,6 +367,10 @@ public static class ClienteEndpoints
         Tamanho("rgInscricao", req.RgInscricao, 30);
         Tamanho("pontoReferencia", req.PontoReferencia, 200);
         Tamanho("conjuge", req.Conjuge, 200);
+        Tamanho("item", req.Item, 120);
+        Tamanho("marca", req.Marca, 80);
+        Tamanho("modelo", req.Modelo, 80);
+        Tamanho("observacao", req.Observacao, 2000);
         Tamanho("logradouro", req.Logradouro, 150);
         Tamanho("numeroEndereco", req.NumeroEndereco, 20);
         Tamanho("complemento", req.Complemento, 100);
@@ -390,6 +402,10 @@ public static class ClienteEndpoints
         c.TelefoneComercial = Opcional(SoDigitos(req.TelefoneComercial));
         c.Celular2 = Opcional(SoDigitos(req.Celular2));
         c.Conjuge = Opcional(req.Conjuge);
+        c.Item = Opcional(req.Item);
+        c.Marca = Opcional(req.Marca);
+        c.Modelo = Opcional(req.Modelo);
+        c.Observacao = Opcional(req.Observacao);
         c.DataCompra = req.DataCompra;
         c.Cep = Opcional(SoDigitos(req.Cep));
         c.Logradouro = Opcional(req.Logradouro);
@@ -462,5 +478,5 @@ public static class ClienteEndpoints
         new(c.Id, c.Numero, c.Nome, c.Celular, c.Documento, c.Produto, c.RgInscricao, c.DataNascimento, c.PontoReferencia,
             c.TelefoneResidencial, c.TelefoneComercial, c.Celular2, c.Conjuge, c.DataCompra, c.Cep, c.Logradouro, c.NumeroEndereco, c.Complemento,
             c.Bairro, c.Cidade, c.Uf, c.TipoIntervalo, c.IntervaloQuantidade, c.IntervaloUnidade, Proxima(c), c.MensagemWhatsapp,
-            c.EnvioEm, fotoId, mensagemImagemId, c.CriadoEm, c.AtualizadoEm);
+            c.EnvioEm, fotoId, mensagemImagemId, c.CriadoEm, c.AtualizadoEm, c.Item, c.Marca, c.Modelo, c.Observacao);
 }

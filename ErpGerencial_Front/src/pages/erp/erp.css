@@ -638,6 +638,27 @@
   font-weight: 600;
 }
 
+/* Funcionário: liberar cupons e notas fiscais (embaixo das duas opções de acesso) */
+.erp-emite-cupons {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 10px;
+  background: var(--azul-claro);
+}
+
+.erp-emite-cupons > span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.erp-emite-cupons > span > span {
+  font-size: 0.88rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--texto-suave);
+}
+
 /* Lista de usuários: linhas cinza clicáveis (mesmo estilo dos primeiros passos) */
 .erp-lista {
   list-style: none;

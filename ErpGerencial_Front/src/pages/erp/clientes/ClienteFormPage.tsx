@@ -71,6 +71,10 @@ const VAZIO: Valores = {
   bairro: '',
   cidade: '',
   uf: '',
+  item: '',
+  marca: '',
+  modelo: '',
+  observacao: '',
   envioDia: '',
   envioHora: '',
 }
@@ -156,6 +160,10 @@ const paraFormulario = (c: Cliente): Valores => ({
   bairro: c.bairro ?? '',
   cidade: c.cidade ?? '',
   uf: c.uf ?? '',
+  item: c.item ?? '',
+  marca: c.marca ?? '',
+  modelo: c.modelo ?? '',
+  observacao: c.observacao ?? '',
   ...paraCamposEnvio(c.envioEm),
 })
 
@@ -467,6 +475,16 @@ export default function ClienteFormPage() {
                 <CampoFicha {...campo('celular2')} rotulo="Celular 2" type="tel" inputMode="numeric" icone="/imgs/whatsapp.png" className="c3" />
                 <CampoFicha {...campo('telefoneResidencial')} rotulo="Fone residencial" type="tel" inputMode="numeric" className="c3" />
                 <CampoFicha {...campo('telefoneComercial')} rotulo="Fone comercial" type="tel" inputMode="numeric" className="c3" />
+              </div>
+            </div>
+
+            {/* Aparelho do cliente: item, marca, modelo e uma observação livre */}
+            <div className="ficha-aparelho c12">
+              <div className="ficha-grade">
+                <CampoFicha {...campo('item')} rotulo="Item" maxLength={120} placeholder="Ex.: Purificador" className="c3" />
+                <CampoFicha {...campo('marca')} rotulo="Marca" maxLength={80} className="c2" />
+                <CampoFicha {...campo('modelo')} rotulo="Modelo" maxLength={80} className="c2" />
+                <CampoFicha {...campo('observacao')} rotulo="Observação" maxLength={2000} className="c5" />
               </div>
             </div>
 

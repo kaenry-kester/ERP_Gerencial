@@ -102,17 +102,10 @@ public class EvolutionApi(HttpClient http, IConfiguration config)
     public async Task Enviar(string remetente, string destino, string texto, byte[]? imagem, string? tipoImagem, CancellationToken ct)
     {
         var instancia = Uri.EscapeDataString(remetente);
-
-        // Confere se o número tem WhatsApp (a Evolution também acerta o nono dígito dos celulares).
-        var (status, corpo) = await Chamar(HttpMethod.Post, $"/chat/whatsappNumbers/{instancia}", new { numbers = new[] { $"55{destino}" } }, ct);
-        if (status >= 300) throw new ErroEnvio($"Não foi possível conferir o número: {Detalhe(corpo)}");
-        var numero = corpo.ValueKind == JsonValueKind.Array && corpo.GetArrayLength() > 0 ? corpo[0] : default;
-        if (numero.ValueKind != JsonValueKind.Object || !numero.TryGetProperty("exists", out var existe) || !existe.GetBoolean())
-            throw new ErroEnvio("Este celular não tem WhatsApp ou o número está errado", passageiro: false);
-        var para = numero.TryGetProperty("jid", out var jid) && jid.GetString() is { Length: > 0 } j ? j : $"55{destino}";
+        var para = await Destinatario(instancia, destino, ct);
 
         // "delay": mostra "digitando..." por um instante antes de enviar, como uma pessoa faria.
-        (status, corpo) = imagem is { Length: > 0 }
+        var (status, corpo) = imagem is { Length: > 0 }
             ? await Chamar(HttpMethod.Post, $"/message/sendMedia/{instancia}", new
             {
                 number = para,
@@ -125,6 +118,41 @@ public class EvolutionApi(HttpClient http, IConfiguration config)
             }, ct)
             : await Chamar(HttpMethod.Post, $"/message/sendText/{instancia}", new { number = para, text = texto, delay = 1500 }, ct);
 
+        ConferirAceite(status, corpo);
+    }
+
+    /// <summary>Envia um arquivo (ex.: o PDF do cupom) com uma legenda. Mesmos erros de Enviar.</summary>
+    public async Task EnviarDocumento(
+        string remetente, string destino, string legenda, byte[] arquivo, string tipo, string nomeArquivo, CancellationToken ct)
+    {
+        var instancia = Uri.EscapeDataString(remetente);
+        var para = await Destinatario(instancia, destino, ct);
+        var (status, corpo) = await Chamar(HttpMethod.Post, $"/message/sendMedia/{instancia}", new
+        {
+            number = para,
+            mediatype = "document",
+            mimetype = tipo,
+            caption = legenda,
+            media = Convert.ToBase64String(arquivo),
+            fileName = nomeArquivo,
+            delay = 1500,
+        }, ct);
+        ConferirAceite(status, corpo);
+    }
+
+    /// <summary>Confere se o número tem WhatsApp (a Evolution também acerta o nono dígito dos celulares) e devolve o destino.</summary>
+    private async Task<string> Destinatario(string instancia, string destino, CancellationToken ct)
+    {
+        var (status, corpo) = await Chamar(HttpMethod.Post, $"/chat/whatsappNumbers/{instancia}", new { numbers = new[] { $"55{destino}" } }, ct);
+        if (status >= 300) throw new ErroEnvio($"Não foi possível conferir o número: {Detalhe(corpo)}");
+        var numero = corpo.ValueKind == JsonValueKind.Array && corpo.GetArrayLength() > 0 ? corpo[0] : default;
+        if (numero.ValueKind != JsonValueKind.Object || !numero.TryGetProperty("exists", out var existe) || !existe.GetBoolean())
+            throw new ErroEnvio("Este celular não tem WhatsApp ou o número está errado", passageiro: false);
+        return numero.TryGetProperty("jid", out var jid) && jid.GetString() is { Length: > 0 } j ? j : $"55{destino}";
+    }
+
+    private static void ConferirAceite(int status, JsonElement corpo)
+    {
         var aceita = corpo.ValueKind == JsonValueKind.Object && corpo.TryGetProperty("key", out var chave)
             && chave.TryGetProperty("id", out var id) && !string.IsNullOrEmpty(id.GetString());
         if (status >= 300 || !aceita) throw new ErroEnvio($"O WhatsApp não aceitou a mensagem: {Detalhe(corpo)}");

@@ -41,6 +41,12 @@ public class Cliente
 
     public string? Conjuge { get; set; }
 
+    /// <summary>Aparelho do cliente (ex.: "Purificador"), com marca, modelo e uma observação livre.</summary>
+    public string? Item { get; set; }
+    public string? Marca { get; set; }
+    public string? Modelo { get; set; }
+    public string? Observacao { get; set; }
+
     /// <summary>Dia da compra do produto.</summary>
     public DateOnly? DataCompra { get; set; }
 

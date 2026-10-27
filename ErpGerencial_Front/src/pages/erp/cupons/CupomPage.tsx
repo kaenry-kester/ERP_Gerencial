@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { avisarSalvo } from '../../../components/aviso-salvo/avisarSalvo'
 import CampoTexto from '../../../components/formulario/CampoTexto'
@@ -6,8 +6,16 @@ import type { Aviso } from '../../../components/formulario/FaixaAviso'
 import { IconeAlerta, IconeMais } from '../../../components/icones/Icones'
 import { IlustracaoCupomFiscal } from '../../../components/icones/Ilustracoes'
 import { useSessaoExpirada } from '../../../hooks/useSessaoExpirada'
-import { cancelarCupom, mensagemDe, obterCupom, rotuloPagamento, type Cupom } from '../../../services/api'
-import { formatarMoeda } from '../../../utils/validacao'
+import {
+  cancelarCupom,
+  enviarCupomWhatsapp,
+  mensagemDe,
+  obterCliente,
+  obterCupom,
+  rotuloPagamento,
+  type Cupom,
+} from '../../../services/api'
+import { formatarMoeda, formatarTelefone, telefoneValido } from '../../../utils/validacao'
 import AvisoPagina from '../AvisoPagina'
 import FaixaPagina from '../FaixaPagina'
 import { useErp } from '../contexto'
@@ -17,6 +25,7 @@ import { CupomTermico } from './ImpressaoCupom'
 import NotaGov from './NotaGov'
 import { LOGO_HORIZONTAL } from '../logoLoja'
 import { numeroCupom } from './numero'
+import { baixarArquivo, gerarPdfCupom } from './pdfCupom'
 import { useImpressao } from './useImpressao'
 import '../../../styles/acesso.css'
 import './cupons.css'
@@ -25,7 +34,7 @@ const MODULO = MODULOS.find((m) => m.id === 'cupom-fiscal')!
 
 const dataHora = (iso: string) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
 
-// Cupom emitido: pré-visualização do papel, imprimir (80 mm) e cancelar.
+// Cupom emitido: pré-visualização do papel, imprimir (80 mm), baixar em PDF, encaminhar pelo WhatsApp e cancelar.
 export default function CupomPage() {
   const { id } = useParams()
   const { sessao } = useErp()
@@ -39,6 +48,15 @@ export default function CupomPage() {
   // Logo da loja no topo do cupom
   const { imprimir, imprimindo, elemento } = useImpressao(cupom, LOGO_HORIZONTAL)
   const podeVer = podeAcessar(sessao.usuario, MODULO)
+  // PDF: o cupom montado fora da tela (mesmo desenho do impresso) é fotografado e vira o arquivo
+  const papelPdf = useRef<HTMLDivElement>(null)
+  const [gerandoPdf, setGerandoPdf] = useState(false)
+  const [whatsappAberto, setWhatsappAberto] = useState(false)
+  const [numeroWhatsapp, setNumeroWhatsapp] = useState('')
+  const [erroWhatsapp, setErroWhatsapp] = useState<string>()
+  // Erro do envio (WhatsApp desconectado, número sem WhatsApp...): aparece embaixo do campo, com espaço para o texto
+  const [falhaEnvio, setFalhaEnvio] = useState<string>()
+  const [enviandoWhatsapp, setEnviandoWhatsapp] = useState(false)
 
   useEffect(() => {
     if (!podeVer) return
@@ -93,6 +111,70 @@ export default function CupomPage() {
     }
   }
 
+  const montarPdf = async () => {
+    if (!papelPdf.current) throw new Error('sem cupom')
+    return gerarPdfCupom(papelPdf.current)
+  }
+
+  const baixarPdf = async () => {
+    setGerandoPdf(true)
+    setAviso(null)
+    try {
+      const { arquivo } = await montarPdf()
+      baixarArquivo(arquivo, `cupom-${numeroCupom(cupom.numero)}.pdf`)
+    } catch {
+      setAviso({ tipo: 'erro', texto: 'Não foi possível gerar o PDF. Tente de novo.' })
+    } finally {
+      setGerandoPdf(false)
+    }
+  }
+
+  /** Abre o campo do número já com o celular do cliente do cupom (quando tem). */
+  const abrirWhatsapp = () => {
+    setWhatsappAberto(true)
+    setErroWhatsapp(undefined)
+    setFalhaEnvio(undefined)
+    if (cupom.clienteId && !numeroWhatsapp)
+      obterCliente(sessao.token, cupom.clienteId)
+        .then((c) => setNumeroWhatsapp((atual) => atual || formatarTelefone(c.celular)))
+        .catch(() => {})
+  }
+
+  /** Sem número: a API manda para o celular do cliente do cupom. Se der errado, abre o campo com o aviso. */
+  const enviarPdf = async (numero: string | null) => {
+    setEnviandoWhatsapp(true)
+    setErroWhatsapp(undefined)
+    setFalhaEnvio(undefined)
+    try {
+      const { base64 } = await montarPdf()
+      const enviado = await enviarCupomWhatsapp(sessao.token, cupom.id, base64, numero)
+      setWhatsappAberto(false)
+      avisarSalvo('Cupom enviado pelo WhatsApp', `PDF enviado para ${formatarTelefone(enviado.numero)}`)
+    } catch (erro) {
+      if (sessaoExpirada(erro)) return
+      if (!numero) abrirWhatsapp()
+      setFalhaEnvio(erro instanceof Error && !('status' in erro) ? 'Não foi possível gerar o PDF.' : mensagemDe(erro))
+    } finally {
+      setEnviandoWhatsapp(false)
+    }
+  }
+
+  /** Cupom com cliente: um clique já envia para o celular dele. Sem cliente: pede o número. */
+  const encaminharWhatsapp = () => {
+    if (whatsappAberto) setWhatsappAberto(false)
+    else if (cupom.clienteId) void enviarPdf(null)
+    else abrirWhatsapp()
+  }
+
+  const enviarWhatsapp = () => {
+    if (!telefoneValido(numeroWhatsapp)) {
+      setErroWhatsapp(numeroWhatsapp ? 'Número incompleto' : 'Digite o WhatsApp do cliente')
+      document.getElementById('cupom-whatsapp')?.focus()
+      return
+    }
+    void enviarPdf(numeroWhatsapp)
+  }
+
   const acoes = (
     <Link to="/app/cupom-fiscal/novo" className="pagina-botao marinho">
       <IconeMais tamanho={20} />
@@ -128,6 +210,60 @@ export default function CupomPage() {
               <span aria-hidden="true">🖨️</span>
               Imprimir cupom fiscal
             </button>
+
+            {/* PDF do cupom: baixar no computador ou mandar para o cliente pelo WhatsApp da loja */}
+            <div className="cupom-pdf-botoes">
+              <button type="button" className="pagina-botao neutro" onClick={() => void baixarPdf()} disabled={gerandoPdf}>
+                <span aria-hidden="true">📄</span>
+                {gerandoPdf ? 'Gerando PDF...' : 'Baixar PDF'}
+              </button>
+              <button
+                type="button"
+                className="pagina-botao cupom-botao-whatsapp"
+                onClick={encaminharWhatsapp}
+                disabled={enviandoWhatsapp}
+                aria-expanded={whatsappAberto}
+              >
+                <img src="/imgs/whatsapp.png" alt="" aria-hidden="true" />
+                {enviandoWhatsapp && !whatsappAberto ? 'Enviando...' : 'Encaminhar para o WhatsApp'}
+              </button>
+            </div>
+            {whatsappAberto && (
+              <div className="cupom-whatsapp">
+                <CampoTexto
+                  id="cupom-whatsapp"
+                  rotulo="WhatsApp do cliente"
+                  type="tel"
+                  inputMode="numeric"
+                  placeholder="(16) 99999-9999"
+                  valor={numeroWhatsapp}
+                  onChange={(v) => {
+                    setNumeroWhatsapp(formatarTelefone(v))
+                    setErroWhatsapp(undefined)
+                  }}
+                  erro={erroWhatsapp}
+                />
+                {falhaEnvio && (
+                  <p className="cupom-whatsapp-erro" role="alert">
+                    {falhaEnvio}
+                  </p>
+                )}
+                <div className="cupom-cancelamento-botoes">
+                  <button
+                    type="button"
+                    className="pagina-botao cupom-botao-whatsapp"
+                    onClick={enviarWhatsapp}
+                    disabled={enviandoWhatsapp}
+                  >
+                    <img src="/imgs/whatsapp.png" alt="" aria-hidden="true" />
+                    {enviandoWhatsapp ? 'Enviando...' : 'Enviar PDF'}
+                  </button>
+                  <button type="button" className="pagina-botao neutro" onClick={() => setWhatsappAberto(false)}>
+                    Voltar
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Nota fiscal: emitida no site do governo (gov.br); aqui fica anotado o número */}
             <NotaGov cupom={cupom} />
@@ -197,6 +333,13 @@ export default function CupomPage() {
       </div>
 
       {elemento}
+
+      {/* Cupom para o PDF: fora da tela, com margem branca em volta */}
+      <div className="impressao" aria-hidden="true">
+        <div ref={papelPdf} className="cupom-pdf-papel">
+          <CupomTermico cupom={cupom} logoUrl={LOGO_HORIZONTAL} />
+        </div>
+      </div>
     </div>
   )
 }

@@ -35,6 +35,17 @@
   --pg-zebra: #f4f8fa;
 }
 
+/* Orçamentos: o verde-azulado (petróleo claro) da ilustração do módulo */
+.pagina.tema-orcamento {
+  --pg-faixa-1: var(--modulo-orcamento);
+  --pg-faixa-2: #124a4d;
+  --pg-suave: #c2e3e3;
+  --pg-lado: #e2f2f2;
+  --pg-cor: var(--modulo-orcamento);
+  --pg-titulo: #124a4d;
+  --pg-zebra: #f3f9f9;
+}
+
 .pagina.tema-preferencias,
 .pagina.tema-clientes {
   --pg-faixa-1: var(--azul-inicio);

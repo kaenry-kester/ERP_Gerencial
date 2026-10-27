@@ -7,10 +7,12 @@ using Orion.Api.Data;
 
 namespace Orion.Api.Usuarios;
 
-public record CriarUsuarioRequest(string Nome, string Email, string? Telefone, string Senha, bool Administrador);
+/// <summary>EmiteCupons: o funcionário pode emitir cupons, orçamentos e notas fiscais.</summary>
+public record CriarUsuarioRequest(string Nome, string Email, string? Telefone, string Senha, bool Administrador, bool EmiteCupons = false);
 
 /// <summary>NovaSenha: o administrador define uma senha nova para a pessoa (vazio = mantém a atual).</summary>
-public record EditarUsuarioRequest(string Nome, string? Telefone, bool Administrador, bool Ativo, string? NovaSenha = null);
+public record EditarUsuarioRequest(
+    string Nome, string? Telefone, bool Administrador, bool Ativo, string? NovaSenha = null, bool EmiteCupons = false);
 
 /// <summary>
 /// "Usuários e permissões" (como em Preferências → Usuários do Bling): o administrador
@@ -62,7 +64,7 @@ public static class UsuarioEndpoints
             Telefone = Validacao.Telefone(req.Telefone),
             EmpresaId = admin.EmpresaId,
             Administrador = req.Administrador,
-            Permissoes = Permissoes.De(req.Administrador),
+            Permissoes = Permissoes.De(req.Administrador, req.EmiteCupons),
         };
         novo.SenhaHash = hasher.HashPassword(novo, req.Senha);
         db.Usuarios.Add(novo);
@@ -99,7 +101,7 @@ public static class UsuarioEndpoints
         alvo.Nome = req.Nome.Trim();
         alvo.Telefone = Validacao.Telefone(req.Telefone);
         alvo.Administrador = req.Administrador;
-        alvo.Permissoes = Permissoes.De(req.Administrador);
+        alvo.Permissoes = Permissoes.De(req.Administrador, req.EmiteCupons);
         alvo.Ativo = req.Ativo;
         // Sem e-mail de recuperação (programa da loja), quem esquece a senha pede ao administrador
         if (!string.IsNullOrEmpty(req.NovaSenha)) alvo.SenhaHash = hasher.HashPassword(alvo, req.NovaSenha);

@@ -20,6 +20,8 @@ import AvisoSalvo from './components/aviso-salvo/AvisoSalvo'
 import CuponsPage from './pages/erp/cupons/CuponsPage'
 import CupomFormPage from './pages/erp/cupons/CupomFormPage'
 import CupomPage from './pages/erp/cupons/CupomPage'
+import OrcamentosPage from './pages/erp/orcamentos/OrcamentosPage'
+import OrcamentoFormPage from './pages/erp/orcamentos/OrcamentoFormPage'
 import FinanceiroPage from './pages/erp/financeiro/FinanceiroPage'
 import HistoricoPage from './pages/erp/historico/HistoricoPage'
 import HistoricoClientePage from './pages/erp/historico/HistoricoClientePage'
@@ -61,6 +63,9 @@ export default function App() {
           <Route path="cupom-fiscal" element={<CuponsPage />} />
           <Route path="cupom-fiscal/novo" element={<CupomFormPage />} />
           <Route path="cupom-fiscal/:id" element={<CupomPage />} />
+          <Route path="orcamento" element={<OrcamentosPage />} />
+          <Route path="orcamento/novo" element={<OrcamentoFormPage />} />
+          <Route path="orcamento/:id" element={<OrcamentoFormPage />} />
           <Route path="financeiro" element={<FinanceiroPage />} />
           <Route path="ordem-servico" element={<HistoricoPage />} />
           <Route path="ordem-servico/:id" element={<HistoricoClientePage />} />

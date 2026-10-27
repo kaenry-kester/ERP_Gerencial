@@ -32,7 +32,8 @@ const MODULO = MODULOS.find((m) => m.id === 'usuarios')!
  * Novo usuário (/app/usuarios/novo) ou edição (/app/usuarios/:id).
  * O administrador define o login (e-mail e senha), o WhatsApp (obrigatório: o código de acesso pode ir
  * para ele) e o tipo de acesso: "Administrador" acessa tudo;
- * "Funcionário" só vê produtos, vê clientes e cadastra clientes (regra fixa, conferida pela API).
+ * "Funcionário" vê produtos, vê clientes e cadastra clientes e, se marcado, emite cupons, orçamentos e notas fiscais
+ * (conferido pela API).
  */
 export default function UsuarioFormPage() {
   const { id } = useParams()
@@ -47,6 +48,7 @@ export default function UsuarioFormPage() {
   const [telefone, setTelefone] = useState('')
   const [senha, setSenha] = useState('')
   const [administrador, setAdministrador] = useState(false)
+  const [emiteCupons, setEmiteCupons] = useState(true)
   const [ativo, setAtivo] = useState(true)
   const [enviado, setEnviado] = useState(false)
   const [salvando, setSalvando] = useState(false)
@@ -73,6 +75,7 @@ export default function UsuarioFormPage() {
         setEmail(u.email)
         setTelefone(formatarTelefone(u.telefone ?? ''))
         setAdministrador(u.administrador)
+        setEmiteCupons(u.permissoes.includes('cupom-fiscal'))
         setAtivo(u.ativo)
       })
       .catch((erro) => ativoEfeito && !sessaoExpirada(erro) && setAviso({ tipo: 'erro', texto: mensagemDe(erro) }))
@@ -125,9 +128,9 @@ export default function UsuarioFormPage() {
     setAviso(null)
     try {
       if (novo) {
-        await criarUsuario(sessao.token, { nome, email, telefone, senha, administrador })
+        await criarUsuario(sessao.token, { nome, email, telefone, senha, administrador, emiteCupons })
       } else {
-        await editarUsuario(sessao.token, id!, { nome, telefone, administrador, ativo, novaSenha: senha || null })
+        await editarUsuario(sessao.token, id!, { nome, telefone, administrador, ativo, novaSenha: senha || null, emiteCupons })
       }
       avisarSalvo(novo ? 'Usuário cadastrado com sucesso' : 'Alterações feitas com sucesso', 'Usuário')
       navigate('/app/usuarios')
@@ -261,6 +264,16 @@ export default function UsuarioFormPage() {
                 </span>
               </label>
             </div>
+            {/* Só para o funcionário (o administrador já pode tudo) */}
+            {!administrador && (
+              <label className="erp-permissao erp-emite-cupons">
+                <input type="checkbox" checked={emiteCupons} onChange={(e) => setEmiteCupons(e.target.checked)} />
+                <span>
+                  <strong>Pode emitir cupons e notas fiscais</strong>
+                  <span>Emitir cupom, fazer orçamentos e abrir a emissão da nota fiscal (gov.br).</span>
+                </span>
+              </label>
+            )}
           </fieldset>
         </SecaoPagina>
 
