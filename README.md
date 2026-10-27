@@ -26,13 +26,6 @@ Sistema de gestão (ERP) feito para uma loja MEI que vende e instala purificador
 | **Banco de dados** | PostgreSQL, migrações do EF Core, extensão `unaccent`, backup automático com `pg_dump` |
 | **Integrações** | Evolution API (WhatsApp), Node.js, Python (conexão do celular), ViaCEP |
 
-| Camada | Tecnologias |
-|---|---|
-| **Front-end** | React, TypeScript, Vite, React Router, CSS (sem framework), html-to-image (PDF), Vitest, Oxlint |
-| **Back-end** | C# / ASP.NET Core 10 (Minimal APIs), Entity Framework Core, autenticação JWT, BackgroundService (tarefas agendadas), MailKit, xUnit (testes de integração) |
-| **Banco de dados** | PostgreSQL, migrações do EF Core, extensão `unaccent`, backup automático com `pg_dump` |
-| **Integrações** | Evolution API (WhatsApp), Node.js, Python (conexão do celular), ViaCEP |
-
 | Pastas | Organização |
 |---|---|
 | `ErpGerencial_Front` | Site (React + Vite + TypeScript) |
